@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Fonts */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+  --font-mono: var(--font-geist-mono);
+
+  /* ServiceDraft Purple Accent Family */
+  --color-sd-purple-50: #faf5ff;
+  --color-sd-purple-100: #f3e8ff;
+  --color-sd-purple-200: #e9d5ff;
+  --color-sd-purple-300: #d8b4fe;
+  --color-sd-purple-400: #c084fc;
+  --color-sd-purple-500: #a855f7;
+  --color-sd-purple-600: #9333ea;
+  --color-sd-purple-700: #7c3aed;
+  --color-sd-purple-800: #6b21a8;
+  --color-sd-purple-900: #49129b;
+
+  /* Background & Surface Colors */
+  --color-sd-dark-base: #000000;
+  --color-sd-dark-surface: #0f0520;
+  --color-sd-dark-elevated: #1a0a2e;
+  --color-sd-dark-gradient1: #260d3f;
+  --color-sd-dark-gradient2: #490557;
+
+  /* Text Colors */
+  --color-sd-text-primary: #ffffff;
+  --color-sd-text-secondary: #c4b5fd;
+  --color-sd-text-muted: #9ca3af;
+
+  /* Wave Animation Color */
+  --color-sd-wave: #c3abe2;
+
+  /* Card Border Radius */
+  --radius-card: 23px;
+
+  /* Box Shadows */
+  --shadow-glow-sm: 0 0 15px rgba(73, 18, 155, 0.3);
+  --shadow-glow-md: 0 0 40px rgba(73, 18, 155, 0.4);
+  --shadow-glow-lg: 0 0 60px rgba(73, 18, 155, 0.5);
+  --shadow-glow-purple: 0 0 20px rgba(168, 85, 247, 0.4);
+
+  /* Animations */
+  --animate-glow-pulse: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Custom Keyframes */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.6; }
+}
+
+/* CSS Custom Properties (for non-Tailwind usage) */
+:root {
+  --color-primary: #a855f7;
+  --color-primary-light: #c084fc;
+  --color-primary-dark: #9333ea;
+  --color-glow: #49129b;
+
+  --color-bg-base: #000000;
+  --color-bg-gradient-1: #260d3f;
+  --color-bg-gradient-2: #490557;
+
+  --color-surface: rgba(197, 173, 229, 0.05);
+  --color-surface-elevated: #1a0a2e;
+  --color-input-bg: #0f0520;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #c4b5fd;
+  --color-text-muted: #9ca3af;
+
+  --color-border: #000000;
+  --color-border-input: #6b21a8;
+
+  --color-wave: #c3abe2;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 23px;
+
+  --shadow-glow-sm: 0 0 15px rgba(73, 18, 155, 0.3);
+  --shadow-glow-md: 0 0 40px rgba(73, 18, 155, 0.4);
+  --shadow-glow-lg: 0 0 60px rgba(73, 18, 155, 0.5);
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s ease;
+}
+
+/* Base body styles */
+body {
+  background: linear-gradient(135deg, #260d3f 0%, #000000 50%, #490557 100%);
+  color: #ffffff;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+  min-height: 100vh;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0f0520;
+}
+::-webkit-scrollbar-thumb {
+  background: #6b21a8;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #7c3aed;
+}
