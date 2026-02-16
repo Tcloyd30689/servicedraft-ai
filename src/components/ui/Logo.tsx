@@ -12,9 +12,9 @@ interface LogoProps {
 }
 
 const sizeConfig: Record<LogoSize, { width: number; height: number }> = {
-  small: { width: 192, height: 48 },
-  medium: { width: 320, height: 80 },
-  large: { width: 600, height: 150 },
+  small: { width: 240, height: 60 },
+  medium: { width: 400, height: 100 },
+  large: { width: 800, height: 200 },
 };
 
 export default function Logo({ size = 'medium', glow = false, className }: LogoProps) {

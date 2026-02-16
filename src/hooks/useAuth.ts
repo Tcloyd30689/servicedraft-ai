@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
@@ -24,7 +23,6 @@ interface UseAuthReturn {
 }
 
 export function useAuth(): UseAuthReturn {
-  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,7 +30,7 @@ export function useAuth(): UseAuthReturn {
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
 
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string, userEmail?: string) => {
     try {
       const { data, error } = await supabase
         .from('users')
@@ -40,8 +38,52 @@ export function useAuth(): UseAuthReturn {
         .eq('id', userId)
         .single();
 
+      if (error && error.code === 'PGRST116') {
+        // No profile row exists — create one
+        console.warn('No profile found, creating one for user:', userId);
+        const { data: newProfile, error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: userId,
+            email: userEmail || '',
+            subscription_status: 'trial',
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Failed to create user profile:', insertError.message);
+          // Still set a minimal profile so the app doesn't break
+          setProfile({
+            id: userId,
+            email: userEmail || '',
+            username: null,
+            location: null,
+            position: null,
+            profile_picture_url: null,
+            subscription_status: 'trial',
+          });
+          return;
+        }
+
+        if (newProfile) {
+          setProfile(newProfile as UserProfile);
+        }
+        return;
+      }
+
       if (error) {
         console.error('Failed to fetch user profile:', error.message);
+        // Set a minimal profile so the dashboard still renders
+        setProfile({
+          id: userId,
+          email: userEmail || '',
+          username: null,
+          location: null,
+          position: null,
+          profile_picture_url: null,
+          subscription_status: 'trial',
+        });
         return;
       }
 
@@ -50,6 +92,16 @@ export function useAuth(): UseAuthReturn {
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
+      // Fallback profile so the app doesn't get stuck
+      setProfile({
+        id: userId,
+        email: userEmail || '',
+        username: null,
+        location: null,
+        position: null,
+        profile_picture_url: null,
+        subscription_status: 'trial',
+      });
     }
   }, [supabase]);
 
@@ -66,7 +118,7 @@ export function useAuth(): UseAuthReturn {
         setUser(authUser);
 
         if (authUser) {
-          await fetchProfile(authUser.id);
+          await fetchProfile(authUser.id, authUser.email || '');
         }
       } catch (err) {
         console.error('Error getting user:', err);
@@ -83,7 +135,7 @@ export function useAuth(): UseAuthReturn {
         setUser(currentUser);
 
         if (currentUser) {
-          await fetchProfile(currentUser.id);
+          await fetchProfile(currentUser.id, currentUser.email || '');
         } else {
           setProfile(null);
         }
@@ -101,11 +153,15 @@ export function useAuth(): UseAuthReturn {
       await supabase.auth.signOut();
       setUser(null);
       setProfile(null);
-      router.push('/');
+      // Hard redirect clears all client state and forces middleware to re-evaluate
+      // router.push() is client-side only and doesn't clear server session cookies
+      window.location.href = '/';
     } catch (err) {
       console.error('Sign out error:', err);
+      // Force redirect even if signOut errors
+      window.location.href = '/';
     }
-  }, [supabase, router]);
+  }, [supabase]);
 
   return { user, profile, loading, signOut, refreshProfile };
 }
