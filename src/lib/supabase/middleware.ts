@@ -43,15 +43,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Auth routes — redirect to main menu if already authenticated
-  const authRoutes = ['/login', '/signup'];
-  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
-
-  if (isAuthRoute && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/main-menu';
-    return NextResponse.redirect(url);
-  }
+  // Auth routes — /login and /signup handle their own routing client-side
+  // to support multi-step onboarding (email confirmation → access code → profile)
+  // No server-side redirect for authenticated users on auth routes
 
   return supabaseResponse;
 }

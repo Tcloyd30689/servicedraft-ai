@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Sparkles, LayoutDashboard, LogOut, HelpCircle, MessageSquare } from 'lucide-react';
@@ -12,13 +12,45 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import FAQContent from '@/components/layout/FAQContent';
 import SupportForm from '@/components/layout/SupportForm';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function MainMenuPage() {
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { profile, loading, signOut } = useAuth();
   const { resetAll } = useNarrativeStore();
   const [showFAQ, setShowFAQ] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
+
+  // Guard: redirect to onboarding if profile is incomplete
+  useEffect(() => {
+    if (loading) return;
+
+    if (profile) {
+      const needsPayment =
+        !profile.subscription_status || profile.subscription_status === 'trial';
+      const needsProfile = !needsPayment && !profile.username;
+
+      if (needsPayment) {
+        router.replace('/signup?step=2');
+      } else if (needsProfile) {
+        router.replace('/signup?step=3');
+      }
+    }
+  }, [loading, profile, router]);
+
+  // Show loading while checking onboarding status
+  if (loading || !profile || !profile.subscription_status ||
+      profile.subscription_status === 'trial' || !profile.username) {
+    return (
+      <div className="flex items-center justify-center min-h-screen px-4 py-8">
+        <LiquidCard size="spacious">
+          <div className="py-12">
+            <LoadingSpinner message="Loading..." />
+          </div>
+        </LiquidCard>
+      </div>
+    );
+  }
 
   const handleLogout = async () => {
     resetAll();

@@ -112,18 +112,26 @@ export function useAuth(): UseAuthReturn {
   }, [user, fetchProfile]);
 
   useEffect(() => {
+    let active = true;
+
     const getUser = async () => {
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser();
+
+        if (!active) return;
+
         setUser(authUser);
 
         if (authUser) {
           await fetchProfile(authUser.id, authUser.email || '');
         }
       } catch (err) {
+        // Ignore AbortError — happens during React strict mode remount
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        if (!active) return;
         console.error('Error getting user:', err);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
@@ -131,6 +139,8 @@ export function useAuth(): UseAuthReturn {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!active) return;
+
         const currentUser = session?.user ?? null;
         setUser(currentUser);
 
@@ -139,11 +149,12 @@ export function useAuth(): UseAuthReturn {
         } else {
           setProfile(null);
         }
-        setLoading(false);
+        if (active) setLoading(false);
       },
     );
 
     return () => {
+      active = false;
       subscription.unsubscribe();
     };
   }, [supabase, fetchProfile]);

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
@@ -14,10 +14,19 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 type Step = 1 | 2 | 3;
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>(1);
+  const searchParams = useSearchParams();
+  const urlStep = searchParams.get('step');
+
+  const [step, setStep] = useState<Step>(() => {
+    if (urlStep === '2') return 2;
+    if (urlStep === '3') return 3;
+    return 1;
+  });
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+  const [emailSent, setEmailSent] = useState(false);
 
   // Step 1: Account
   const [email, setEmail] = useState('');
@@ -33,7 +42,64 @@ export default function SignupPage() {
 
   const supabase = createClient();
 
-  // Step 1: Create account
+  // On mount: check auth status and determine the correct step
+  useEffect(() => {
+    let active = true;
+
+    const checkAuthStatus = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!active) return;
+
+        if (user) {
+          // User is authenticated — determine which step they need
+          if (user.email) setEmail(user.email);
+
+          const { data: profile } = await supabase
+            .from('users')
+            .select('subscription_status, username')
+            .eq('id', user.id)
+            .single();
+
+          if (!active) return;
+
+          if (profile) {
+            const needsPayment =
+              !profile.subscription_status || profile.subscription_status === 'trial';
+            const needsProfile = !needsPayment && !profile.username;
+
+            if (needsPayment) {
+              setStep(2);
+            } else if (needsProfile) {
+              setStep(3);
+            } else {
+              // Onboarding complete — redirect to main menu
+              router.replace('/main-menu');
+              return;
+            }
+          } else {
+            // No profile row yet — they need step 2 (payment/access code)
+            setStep(urlStep === '3' ? 3 : 2);
+          }
+        } else {
+          // Not authenticated — must start at step 1
+          setStep(1);
+        }
+      } catch (err) {
+        console.error('Error checking auth status:', err);
+        setStep(1);
+      }
+
+      if (active) setInitializing(false);
+    };
+
+    checkAuthStatus();
+
+    return () => { active = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Step 1: Create account — sends confirmation email
   const handleAccountCreation = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -60,7 +126,7 @@ export default function SignupPage() {
     }
 
     setLoading(false);
-    setStep(2);
+    setEmailSent(true);
   };
 
   // Step 2: Verify access code or payment
@@ -74,7 +140,7 @@ export default function SignupPage() {
 
     setLoading(true);
 
-    // Check access code against environment variable
+    // Validate access code
     const response = await fetch('/api/stripe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -89,13 +155,19 @@ export default function SignupPage() {
       return;
     }
 
-    // Update subscription status
+    // Update subscription status — upsert to handle missing profile row
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await supabase
         .from('users')
-        .update({ subscription_status: 'bypass' })
-        .eq('id', user.id);
+        .upsert(
+          {
+            id: user.id,
+            email: user.email || email,
+            subscription_status: 'bypass',
+          },
+          { onConflict: 'id' },
+        );
     }
 
     setLoading(false);
@@ -116,10 +188,12 @@ export default function SignupPage() {
       return;
     }
 
+    const username = (user.email || email).split('@')[0];
+
     const { error } = await supabase
       .from('users')
       .update({
-        username: email.split('@')[0],
+        username,
         location: location || null,
         position: position || null,
       })
@@ -140,6 +214,25 @@ export default function SignupPage() {
     2: 'Payment / Access Code',
     3: 'Complete Your Profile',
   };
+
+  // Show loading while determining auth state and correct step
+  if (initializing) {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+        <WaveBackground />
+        <div className="relative z-30 w-full max-w-md">
+          <div className="flex justify-center mb-8">
+            <Logo size="medium" glow />
+          </div>
+          <LiquidCard size="spacious">
+            <div className="py-12">
+              <LoadingSpinner message="Loading..." />
+            </div>
+          </LiquidCard>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
@@ -170,7 +263,7 @@ export default function SignupPage() {
           </div>
 
           <h1 className="text-2xl font-semibold text-white text-center mb-6">
-            {stepTitles[step]}
+            {emailSent ? 'Check Your Email' : stepTitles[step]}
           </h1>
 
           {loading ? (
@@ -179,8 +272,32 @@ export default function SignupPage() {
             </div>
           ) : (
             <>
+              {/* Email confirmation message (shown after step 1 signUp) */}
+              {emailSent && (
+                <div className="text-center space-y-4">
+                  <p className="text-[#c4b5fd] text-sm">
+                    We&apos;ve sent a confirmation link to{' '}
+                    <span className="text-white font-medium">{email}</span>.
+                  </p>
+                  <p className="text-[#c4b5fd] text-sm">
+                    Please check your inbox and click the link to confirm your email,
+                    then{' '}
+                    <Link
+                      href="/login"
+                      className="text-[#a855f7] hover:text-[#c084fc] underline transition-colors"
+                    >
+                      sign in
+                    </Link>{' '}
+                    to continue setting up your account.
+                  </p>
+                  <p className="text-[#9ca3af] text-xs mt-4">
+                    Didn&apos;t receive it? Check your spam folder or try signing up again.
+                  </p>
+                </div>
+              )}
+
               {/* Step 1: Account Creation */}
-              {step === 1 && (
+              {!emailSent && step === 1 && (
                 <form onSubmit={handleAccountCreation} className="space-y-1">
                   <Input
                     id="email"
@@ -216,7 +333,7 @@ export default function SignupPage() {
               )}
 
               {/* Step 2: Payment / Access Code */}
-              {step === 2 && (
+              {step === 2 && !emailSent && (
                 <form onSubmit={handlePaymentStep} className="space-y-1">
                   <p className="text-[#c4b5fd] text-sm mb-4 text-center">
                     Enter an access code to activate your account, or proceed with payment.
@@ -236,7 +353,7 @@ export default function SignupPage() {
               )}
 
               {/* Step 3: Profile Creation */}
-              {step === 3 && (
+              {step === 3 && !emailSent && (
                 <form onSubmit={handleProfileCreation} className="space-y-1">
                   <Input
                     id="location"
@@ -274,5 +391,29 @@ export default function SignupPage() {
         </LiquidCard>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+          <WaveBackground />
+          <div className="relative z-30 w-full max-w-md">
+            <div className="flex justify-center mb-8">
+              <Logo size="medium" glow />
+            </div>
+            <LiquidCard size="spacious">
+              <div className="py-12">
+                <LoadingSpinner message="Loading..." />
+              </div>
+            </LiquidCard>
+          </div>
+        </div>
+      }
+    >
+      <SignupContent />
+    </Suspense>
   );
 }

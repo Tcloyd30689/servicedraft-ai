@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-16
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 63 / 78 tasks complete (+ 9 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 13 post-build fixes applied)
 
 ---
 
@@ -124,11 +124,11 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Notes:** .env.local has Supabase, Gemini, and Stripe keys. STRIPE_WEBHOOK_SECRET and ACCESS_CODE are optional and will be added in Phase 8. .gitignore covers .env* files.
 
 ### 0.6 — Git Initial Commit
-- [ ] Stage all files: `git add .`
-- [ ] Commit: `git commit -m "Initial project setup with Next.js, Tailwind, and folder structure"`
-- [ ] Push to GitHub: `git push origin main`
-- **Completed:**
-- **Notes:** Deferring commit to user request — not auto-committing.
+- [x] Stage all files: `git add .`
+- [x] Commit: `git commit -m "Initial project setup with Next.js, Tailwind, and folder structure"`
+- [x] Push to GitHub: `git push origin main`
+- **Completed:** 2026-02-16
+- **Notes:** Committed as part of "Initial commit" (1f26f45).
 
 ---
 
@@ -210,9 +210,9 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Notes:** Logo copied to public/logo.png.
 
 ### 1.10 — Git Commit: Design System
-- [ ] Commit all design system components: `"Add design system: cards, buttons, inputs, modal, toast, spinner, wave background"`
-- **Completed:**
-- **Notes:** Deferring commit to user request.
+- [x] Commit all design system components: `"Add design system: cards, buttons, inputs, modal, toast, spinner, wave background"`
+- **Completed:** 2026-02-16
+- **Notes:** Included in "Initial commit" (1f26f45).
 
 ---
 
@@ -292,9 +292,9 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Notes:** Also includes refreshProfile function and auth state change listener. Database types in src/types/database.ts.
 
 ### 2.10 — Git Commit: Auth System
-- [ ] Commit: `"Add authentication system: login, signup, middleware, database schema"`
-- **Completed:**
-- **Notes:** Deferring commit to user request.
+- [x] Commit: `"Add authentication system: login, signup, middleware, database schema"`
+- **Completed:** 2026-02-16
+- **Notes:** Included in "Initial commit" (1f26f45).
 
 ---
 
@@ -350,9 +350,9 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Notes:** Currently logs to console. Email sending can be added later.
 
 ### 3.7 — Git Commit: Navigation & Layout
-- [ ] Commit: `"Add navigation, main menu, user popup, FAQ, and support"`
-- **Completed:**
-- **Notes:** Deferring commit to user request.
+- [x] Commit: `"Add navigation, main menu, user popup, FAQ, and support"`
+- **Completed:** 2026-02-16
+- **Notes:** Included in "Initial commit" (1f26f45).
 
 ---
 
@@ -421,9 +421,9 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Notes:** Hook-based global store with listener pattern. Also stores customization slider state.
 
 ### 4.8 — Git Commit: Input Page
-- [ ] Commit: `"Add input page with story type selection, dynamic fields, validation, and data compilation"`
-- **Completed:**
-- **Notes:** Deferring commit to user request.
+- [x] Commit: `"Add input page with story type selection, dynamic fields, validation, and data compilation"`
+- **Completed:** 2026-02-16
+- **Notes:** Included in "Initial commit" (1f26f45).
 
 ---
 
@@ -469,9 +469,9 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Notes:**
 
 ### 5.5 — Git Commit: API Routes
-- [ ] Commit: `"Add Gemini API integration: generate, customize, and proofread routes"`
-- **Completed:**
-- **Notes:**
+- [x] Commit: `"Add Gemini API integration: generate, customize, and proofread routes"`
+- **Completed:** 2026-02-16
+- **Notes:** Included in "Initial commit" (1f26f45).
 
 ---
 
@@ -562,9 +562,9 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Notes:** Two-column layout (left controls, right display) with responsive stacking on mobile.
 
 ### 6.10 — Git Commit: Narrative Page
-- [ ] Commit: `"Add generated narrative page with all controls: display, edit, customize, proofread, save, export"`
-- **Completed:**
-- **Notes:**
+- [x] Commit: `"Add generated narrative page with all controls: display, edit, customize, proofread, save, export"`
+- **Completed:** 2026-02-16
+- **Notes:** Included in "Initial commit" (1f26f45).
 
 ---
 
@@ -612,9 +612,9 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Notes:**
 
 ### 7.6 — Git Commit: Dashboard
-- [ ] Commit: `"Add user dashboard with profile management and saved narrative history"`
-- **Completed:**
-- **Notes:**
+- [x] Commit: `"Add user dashboard with profile management and saved narrative history"`
+- **Completed:** 2026-02-16
+- **Notes:** Included in "Initial commit" (1f26f45).
 
 ---
 
@@ -651,9 +651,9 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Notes:** Default code: SERVICEDRAFT2026. Already implemented in Phase 2, now integrated into updated stripe route.
 
 ### 8.5 — Git Commit: Stripe
-- [ ] Commit: `"Add Stripe subscription integration with webhook and access code bypass"`
-- **Completed:**
-- **Notes:**
+- [x] Commit: `"Add Stripe subscription integration with webhook and access code bypass"`
+- **Completed:** 2026-02-16
+- **Notes:** Included in "Initial commit" (1f26f45).
 
 ---
 
@@ -703,9 +703,9 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Notes:** ErrorBoundary component added to protected layout. Toast errors on all API calls. Dashboard shows empty state message.
 
 ### 9.6 — Git Commit: Polish
-- [ ] Commit: `"Add animations, micro-interactions, responsive design, and error handling"`
-- **Completed:**
-- **Notes:**
+- [x] Commit: `"Add animations, micro-interactions, responsive design, and error handling"`
+- **Completed:** 2026-02-16
+- **Notes:** Included in "Initial commit" (1f26f45).
 
 ---
 
@@ -816,24 +816,57 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Toast on success: "Suggested edits applied"
 - **Completed:** 2026-02-16
 
+### PB.10 — Auth Callback Route for Email Confirmation
+- [x] Created `src/app/auth/callback/route.ts` to handle Supabase PKCE code exchange
+- [x] Redirects to `/signup?step=2` after successful email confirmation
+- [x] Falls back to `/login` if code exchange fails
+- **Completed:** 2026-02-16
+- **Notes:** Requires `http://localhost:3000/auth/callback` to be added to Supabase Redirect URLs for seamless redirect. Currently using default Supabase redirect (email confirmed via default flow, user signs in to continue).
+
+### PB.11 — Signup/Login Multi-Step Onboarding Flow Fix
+- [x] Signup page reads `step` query param from URL to resume at correct step
+- [x] Signup checks auth status on mount and determines correct step based on profile
+- [x] After step 1 (signUp), shows "Check Your Email" message instead of advancing
+- [x] Step 2 uses upsert to handle missing profile row
+- [x] Login page checks onboarding status (subscription_status, username) after sign-in
+- [x] Login redirects to `/signup?step=2` or `?step=3` if onboarding incomplete
+- [x] Login redirects already-authenticated users based on profile status on mount
+- [x] Middleware no longer redirects authenticated users from `/signup` or `/login`
+- **Completed:** 2026-02-16
+- **Notes:** Profile creation page is no longer bypassed. Users must complete all 3 signup steps.
+
+### PB.12 — AbortError Fix in useAuth Hook
+- [x] Added `active` flag to useEffect to prevent state updates after unmount
+- [x] Added AbortError catch in getUser to suppress React strict mode noise
+- [x] Auth state change listener checks `active` flag before setting state
+- **Completed:** 2026-02-16
+
+### PB.13 — Main Menu Hooks Order & Onboarding Guard Fix
+- [x] Moved useState calls above early return guard to fix React hooks order violation
+- [x] Added onboarding guard: checks profile.subscription_status and profile.username
+- [x] Redirects to `/signup?step=2` or `?step=3` if onboarding incomplete
+- [x] Shows loading spinner while checking onboarding status
+- **Completed:** 2026-02-16
+
 ---
 
 ## SUMMARY COUNTS
 
 | Phase | Tasks | Complete |
 |-------|-------|----------|
-| Phase 0: Project Initialization | 6 | 5 |
-| Phase 1: Design System | 10 | 9 |
-| Phase 2: Authentication | 10 | 9 |
-| Phase 3: Navigation & Layout | 7 | 6 |
-| Phase 4: Input Page | 8 | 7 |
-| Phase 5: AI Integration | 5 | 4 |
-| Phase 6: Narrative Page | 10 | 9 |
-| Phase 7: Dashboard | 6 | 5 |
-| Phase 8: Stripe | 5 | 4 |
-| Phase 9: Polish | 6 | 5 |
+| Phase 0: Project Initialization | 6 | 6 |
+| Phase 1: Design System | 10 | 10 |
+| Phase 2: Authentication | 10 | 10 |
+| Phase 3: Navigation & Layout | 7 | 7 |
+| Phase 4: Input Page | 8 | 8 |
+| Phase 5: AI Integration | 5 | 5 |
+| Phase 6: Narrative Page | 10 | 10 |
+| Phase 7: Dashboard | 6 | 6 |
+| Phase 8: Stripe | 5 | 5 |
+| Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| **TOTAL** | **78** | **36** |
+| Post-Build Fixes | 13 | 13 |
+| **TOTAL** | **91** | **86** |
 
 ---
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -17,6 +17,50 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  const supabase = createClient();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    let active = true;
+
+    const checkAuth = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!active) return;
+
+        if (user) {
+          // Check onboarding status
+          const { data: profile } = await supabase
+            .from('users')
+            .select('subscription_status, username')
+            .eq('id', user.id)
+            .single();
+
+          if (!active) return;
+
+          if (!profile || !profile.subscription_status || profile.subscription_status === 'trial') {
+            router.replace('/signup?step=2');
+          } else if (!profile.username) {
+            router.replace('/signup?step=3');
+          } else {
+            router.replace('/main-menu');
+          }
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking auth:', err);
+      }
+
+      if (active) setCheckingAuth(false);
+    };
+
+    checkAuth();
+
+    return () => { active = false; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,9 +71,8 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    const supabase = createClient();
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -40,9 +83,49 @@ export default function LoginPage() {
       return;
     }
 
+    // Check onboarding status before routing
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('subscription_status, username')
+        .eq('id', data.user.id)
+        .single();
+
+      if (!profile || !profile.subscription_status || profile.subscription_status === 'trial') {
+        toast.success('Please complete your account setup');
+        router.push('/signup?step=2');
+        return;
+      }
+
+      if (!profile.username) {
+        toast.success('Please complete your profile');
+        router.push('/signup?step=3');
+        return;
+      }
+    }
+
     toast.success('Signed in successfully');
     router.push('/main-menu');
   };
+
+  // Show loading while checking auth
+  if (checkingAuth) {
+    return (
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+        <WaveBackground />
+        <div className="relative z-30 w-full max-w-md">
+          <div className="flex justify-center mb-8">
+            <Logo size="medium" glow />
+          </div>
+          <LiquidCard size="spacious">
+            <div className="py-12">
+              <LoadingSpinner message="Loading..." />
+            </div>
+          </LiquidCard>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
