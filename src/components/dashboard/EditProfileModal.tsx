@@ -5,12 +5,16 @@ import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
+import { POSITION_OPTIONS } from '@/constants/positions';
 
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
+  currentFirstName: string;
+  currentLastName: string;
   currentLocation: string;
   currentPosition: string;
   onSaved: () => void;
@@ -22,11 +26,15 @@ export default function EditProfileModal({
   isOpen,
   onClose,
   userId,
+  currentFirstName,
+  currentLastName,
   currentLocation,
   currentPosition,
   onSaved,
 }: EditProfileModalProps) {
   const [tab, setTab] = useState<Tab>('profile');
+  const [firstName, setFirstName] = useState(currentFirstName);
+  const [lastName, setLastName] = useState(currentLastName);
   const [location, setLocation] = useState(currentLocation);
   const [position, setPosition] = useState(currentPosition);
   const [saving, setSaving] = useState(false);
@@ -36,12 +44,26 @@ export default function EditProfileModal({
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleSaveProfile = async () => {
+    if (!firstName.trim() || !lastName.trim()) {
+      toast.error('First name and last name are required');
+      return;
+    }
+    if (!position) {
+      toast.error('Please select a position');
+      return;
+    }
+
     setSaving(true);
     try {
       const supabase = createClient();
       const { error } = await supabase
         .from('users')
-        .update({ location, position })
+        .update({
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          location,
+          position,
+        })
         .eq('id', userId);
 
       if (error) throw error;
@@ -110,16 +132,34 @@ export default function EditProfileModal({
       {tab === 'profile' && (
         <>
           <Input
+            label="First Name"
+            placeholder="John"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            required
+          />
+          <Input
+            label="Last Name"
+            placeholder="Doe"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            required
+          />
+          <Input
             label="Location"
             placeholder="e.g. Dallas, TX"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
           />
-          <Input
+          <Select
             label="Position"
-            placeholder="e.g. Service Advisor"
             value={position}
             onChange={(e) => setPosition(e.target.value)}
+            options={[
+              { value: '', label: 'Select your position...' },
+              ...POSITION_OPTIONS.map((p) => ({ value: p.value, label: p.label })),
+            ]}
+            required
           />
           <Button
             size="fullWidth"

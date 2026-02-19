@@ -72,6 +72,8 @@ export default function DashboardPage() {
         isOpen={editProfileOpen}
         onClose={() => setEditProfileOpen(false)}
         userId={user.id}
+        currentFirstName={profile.first_name || ''}
+        currentLastName={profile.last_name || ''}
         currentLocation={profile.location || ''}
         currentPosition={profile.position || ''}
         onSaved={refreshProfile}

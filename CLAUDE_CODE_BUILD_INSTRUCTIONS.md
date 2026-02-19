@@ -364,9 +364,11 @@ CREATE TABLE public.users (
   id UUID REFERENCES auth.users(id) PRIMARY KEY,
   email VARCHAR NOT NULL,
   username VARCHAR,
+  first_name VARCHAR,
+  last_name VARCHAR,
   location VARCHAR,
   position VARCHAR,
-  profile_picture_url VARCHAR,
+  profile_picture_url VARCHAR,  -- No longer used; position-based icons displayed instead
   subscription_status VARCHAR DEFAULT 'trial',
   stripe_customer_id VARCHAR,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -411,6 +413,36 @@ CREATE POLICY "Users can insert own narratives" ON public.narratives
 ```
 
 **IMPORTANT:** This SQL must be run manually by the user in the Supabase Dashboard. Claude Code should create the SQL file at `supabase/migrations/001_initial_schema.sql` AND instruct the user to run it. Add a `⚠️ BLOCKED:` note if the user hasn't confirmed the tables are created.
+
+### Signup Step 3: Profile Fields (Updated 2026-02-19)
+
+The signup profile creation step collects:
+- **First Name** (required) — saved as `first_name` in users table
+- **Last Name** (required) — saved as `last_name` in users table
+- **Location** (optional) — free text input
+- **Position** (required) — dropdown with predefined roles:
+  - Technician, Foreman, Diagnostician, Advisor, Manager, Warranty Clerk
+  - Defined in `src/constants/positions.ts` as `POSITION_OPTIONS`
+  - This field is used for analytics (Sprint 6 Admin Dashboard)
+
+### Position-Based Icon System (Added 2026-02-19)
+
+Profile pictures have been replaced with position-based icons. The mapping is:
+
+| Position | Icon (lucide-react) | Component |
+|----------|-------------------|-----------|
+| Technician | `Wrench` | Reflects logo wrench styling |
+| Foreman | `Hammer` | |
+| Diagnostician | `ScanLine` | Diagnostic/test light style |
+| Advisor | `PenLine` | |
+| Manager | `ClipboardList` | |
+| Warranty Clerk | `BookOpen` | |
+| (fallback) | `User` | When position is null/unknown |
+
+Implementation: `src/components/ui/PositionIcon.tsx`
+- Size variants: `small` (nav bar), `medium` (default), `large` (dashboard profile)
+- Styled with purple glow to match app theme
+- Used in: `ProfileSection.tsx`, `UserPopup.tsx`
 
 ---
 

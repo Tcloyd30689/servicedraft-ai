@@ -23,10 +23,10 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-02-16
+**Last Updated:** 2026-02-19
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 13 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 14 post-build fixes applied)
 
 ---
 
@@ -240,7 +240,7 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Set up Row Level Security (RLS) policies — users can only read/write their own data
 - [x] Create SQL migration file: `supabase/migrations/001_initial_schema.sql`
 - **Completed:** 2026-02-15
-- **Notes:** SQL migration includes auto-profile-creation trigger, updated_at trigger, and indexes. User must run the SQL in Supabase SQL Editor.
+- **Notes:** SQL migration includes auto-profile-creation trigger, updated_at trigger, and indexes. User must run the SQL in Supabase SQL Editor. **Updated 2026-02-19:** Added first_name, last_name columns via `supabase/migrations/002_add_name_fields_and_position_update.sql`. Position changed to dropdown with predefined roles. Profile picture replaced with position-based icons.
 
 ### 2.4 — Landing Page
 - [x] Build `src/app/page.tsx` — Landing Page with logo, LOGIN button, REQUEST ACCESS button
@@ -277,12 +277,11 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Notes:** Access code bypass implemented via /api/stripe route. Default code: SERVICEDRAFT2026. Full Stripe Elements integration deferred to Phase 8.
 
 ### 2.8 — Sign-Up Page (Step 3: Profile Creation)
-- [x] Step 3: Profile picture (optional upload), Location, Position fields
+- [x] Step 3: First Name (required), Last Name (required), Location, Position (dropdown) fields
 - [x] Save profile data to users table
-- [x] Profile picture upload to Supabase Storage
 - [x] Redirect to Main Menu on completion
-- **Completed:** 2026-02-15
-- **Notes:** Profile picture upload deferred — location and position fields functional. Profile pic upload can be added to dashboard later.
+- **Completed:** 2026-02-15 (Updated 2026-02-19)
+- **Notes:** **Updated 2026-02-19:** Added first_name, last_name as required fields. Position changed from text input to dropdown with predefined roles (Technician, Foreman, Diagnostician, Advisor, Manager, Warranty Clerk). Profile picture upload removed — replaced with position-based icons.
 
 ### 2.9 — Auth Context / Hook
 - [x] Create `src/hooks/useAuth.ts` — custom hook for accessing current user data
@@ -573,18 +572,17 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ### 7.1 — Profile Display Section
 - [x] Create `src/components/dashboard/ProfileSection.tsx`
-- [x] Displays: profile picture, username, internal ID, location, position
+- [x] Displays: position-based icon, full name, internal ID, location, position
 - [x] UPDATE button opens edit profile flow
-- **Completed:** 2026-02-15
-- **Notes:** Shows avatar placeholder with lucide User icon when no profile picture.
+- **Completed:** 2026-02-15 (Updated 2026-02-19)
+- **Notes:** **Updated 2026-02-19:** Profile picture replaced with position-based icon (PositionIcon component). Displays full name (first_name + last_name) instead of just username.
 
 ### 7.2 — Edit Profile Flow
-- [x] Update Profile Information modal (location, position)
-- [x] Change Password modal (old password, new password, confirm)
-- [x] Add/Update Profile Picture (image upload)
+- [x] Update Profile Information modal (first name, last name, location, position dropdown)
+- [x] Change Password modal (new password, confirm)
 - [x] Each saves to Supabase and shows toast confirmation
-- **Completed:** 2026-02-15
-- **Notes:** Tabbed modal with Profile Info and Change Password tabs. Profile picture upload deferred.
+- **Completed:** 2026-02-15 (Updated 2026-02-19)
+- **Notes:** **Updated 2026-02-19:** Added first_name and last_name fields. Position changed to dropdown. Profile picture upload removed.
 
 ### 7.3 — Saved Narrative History Table
 - [x] Create `src/components/dashboard/NarrativeHistory.tsx`
@@ -848,6 +846,20 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Shows loading spinner while checking onboarding status
 - **Completed:** 2026-02-16
 
+### PB.14 — User Profile System Overhaul: Name Fields, Position Dropdown, Position Icons
+- [x] Added `first_name` and `last_name` VARCHAR columns to users table (migration: `002_add_name_fields_and_position_update.sql`)
+- [x] Updated `src/types/database.ts` — added `first_name: string | null` and `last_name: string | null` to UserProfile interface
+- [x] Updated signup form (Step 3) — First Name and Last Name are now REQUIRED fields
+- [x] Changed Position field from open text input to `<select>` dropdown with predefined roles: Technician, Foreman, Diagnostician, Advisor, Manager, Warranty Clerk
+- [x] Created `src/constants/positions.ts` — shared position options constant
+- [x] Created `src/components/ui/PositionIcon.tsx` — position-based SVG icons using lucide-react (Wrench, Hammer, ScanLine, PenLine, ClipboardList, BookOpen)
+- [x] Updated `ProfileSection.tsx` — shows position icon instead of profile picture, displays full name
+- [x] Updated `UserPopup.tsx` — shows position icon instead of profile picture, displays full name
+- [x] Updated `EditProfileModal.tsx` — added first/last name fields, position dropdown instead of text input
+- [x] Updated `useAuth.ts` — added first_name, last_name to UserProfile interface and all fallback objects
+- **Completed:** 2026-02-19
+- **Notes:** profile_picture_url column kept in DB for backward compatibility but no longer used. Position dropdown will be used for analytics in Sprint 6 Admin Dashboard.
+
 ---
 
 ## SUMMARY COUNTS
@@ -865,8 +877,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 13 | 13 |
-| **TOTAL** | **91** | **86** |
+| Post-Build Fixes | 14 | 14 |
+| **TOTAL** | **92** | **87** |
 
 ---
 

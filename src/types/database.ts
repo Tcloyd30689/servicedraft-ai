@@ -2,6 +2,8 @@ export interface UserProfile {
   id: string;
   email: string;
   username: string | null;
+  first_name: string | null;
+  last_name: string | null;
   location: string | null;
   position: string | null;
   profile_picture_url: string | null;

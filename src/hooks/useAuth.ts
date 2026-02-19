@@ -8,6 +8,8 @@ interface UserProfile {
   id: string;
   email: string;
   username: string | null;
+  first_name: string | null;
+  last_name: string | null;
   location: string | null;
   position: string | null;
   profile_picture_url: string | null;
@@ -58,6 +60,8 @@ export function useAuth(): UseAuthReturn {
             id: userId,
             email: userEmail || '',
             username: null,
+            first_name: null,
+            last_name: null,
             location: null,
             position: null,
             profile_picture_url: null,
@@ -79,6 +83,8 @@ export function useAuth(): UseAuthReturn {
           id: userId,
           email: userEmail || '',
           username: null,
+          first_name: null,
+          last_name: null,
           location: null,
           position: null,
           profile_picture_url: null,
@@ -97,6 +103,8 @@ export function useAuth(): UseAuthReturn {
         id: userId,
         email: userEmail || '',
         username: null,
+        first_name: null,
+        last_name: null,
         location: null,
         position: null,
         profile_picture_url: null,

@@ -10,7 +10,9 @@ import LiquidCard from '@/components/ui/LiquidCard';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { POSITION_OPTIONS } from '@/constants/positions';
 
 type Step = 1 | 2 | 3;
 
@@ -37,6 +39,8 @@ function SignupContent() {
   const [accessCode, setAccessCode] = useState('');
 
   // Step 3: Profile
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [location, setLocation] = useState('');
   const [position, setPosition] = useState('');
 
@@ -178,6 +182,16 @@ function SignupContent() {
   const handleProfileCreation = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!firstName.trim() || !lastName.trim()) {
+      toast.error('First name and last name are required');
+      return;
+    }
+
+    if (!position) {
+      toast.error('Please select a position');
+      return;
+    }
+
     setLoading(true);
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -194,8 +208,10 @@ function SignupContent() {
       .from('users')
       .update({
         username,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
         location: location || null,
-        position: position || null,
+        position,
       })
       .eq('id', user.id);
 
@@ -356,6 +372,24 @@ function SignupContent() {
               {step === 3 && !emailSent && (
                 <form onSubmit={handleProfileCreation} className="space-y-1">
                   <Input
+                    id="firstName"
+                    label="First Name"
+                    type="text"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                  <Input
+                    id="lastName"
+                    label="Last Name"
+                    type="text"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
+                  <Input
                     id="location"
                     label="Location"
                     type="text"
@@ -363,13 +397,16 @@ function SignupContent() {
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                   />
-                  <Input
+                  <Select
                     id="position"
                     label="Position"
-                    type="text"
-                    placeholder="e.g., Technician, Service Advisor"
                     value={position}
                     onChange={(e) => setPosition(e.target.value)}
+                    options={[
+                      { value: '', label: 'Select your position...' },
+                      ...POSITION_OPTIONS.map((p) => ({ value: p.value, label: p.label })),
+                    ]}
+                    required
                   />
                   <Button type="submit" size="fullWidth">
                     COMPLETE SETUP
