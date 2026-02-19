@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
           new ImageRun({
             type: 'png',
             data: logoBuffer,
-            transformation: { width: 79, height: 61 }, // 15% smaller, 1.3:1 aspect ratio
+            transformation: { width: 55, height: 43 }, // 30% smaller, 1.3:1 aspect ratio
           }),
         ],
         alignment: AlignmentType.RIGHT,
