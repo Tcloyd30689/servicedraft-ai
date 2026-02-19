@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
@@ -24,163 +24,180 @@ interface UseAuthReturn {
   refreshProfile: () => Promise<void>;
 }
 
-export function useAuth(): UseAuthReturn {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+// --------------- Module-level shared state ---------------
+// Same pattern as narrativeStore — one state, many subscribers.
 
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
+interface AuthState {
+  user: User | null;
+  profile: UserProfile | null;
+  loading: boolean;
+}
 
-  const fetchProfile = useCallback(async (userId: string, userEmail?: string) => {
-    try {
-      const { data, error } = await supabase
+let authState: AuthState = { user: null, profile: null, loading: true };
+const listeners = new Set<() => void>();
+let initialized = false;
+let authSubscription: { unsubscribe: () => void } | null = null;
+
+const supabase = createClient();
+
+function notify() {
+  listeners.forEach((fn) => fn());
+}
+
+function setAuthState(partial: Partial<AuthState>) {
+  authState = { ...authState, ...partial };
+  notify();
+}
+
+function buildFallbackProfile(userId: string, email: string): UserProfile {
+  return {
+    id: userId,
+    email,
+    username: null,
+    first_name: null,
+    last_name: null,
+    location: null,
+    position: null,
+    profile_picture_url: null,
+    subscription_status: 'trial',
+  };
+}
+
+async function fetchProfileForUser(userId: string, userEmail?: string) {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error && error.code === 'PGRST116') {
+      // No profile row exists — create one
+      console.warn('No profile found, creating one for user:', userId);
+      const { data: newProfile, error: insertError } = await supabase
         .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error && error.code === 'PGRST116') {
-        // No profile row exists — create one
-        console.warn('No profile found, creating one for user:', userId);
-        const { data: newProfile, error: insertError } = await supabase
-          .from('users')
-          .insert({
-            id: userId,
-            email: userEmail || '',
-            subscription_status: 'trial',
-          })
-          .select()
-          .single();
-
-        if (insertError) {
-          console.error('Failed to create user profile:', insertError.message);
-          // Still set a minimal profile so the app doesn't break
-          setProfile({
-            id: userId,
-            email: userEmail || '',
-            username: null,
-            first_name: null,
-            last_name: null,
-            location: null,
-            position: null,
-            profile_picture_url: null,
-            subscription_status: 'trial',
-          });
-          return;
-        }
-
-        if (newProfile) {
-          setProfile(newProfile as UserProfile);
-        }
-        return;
-      }
-
-      if (error) {
-        console.error('Failed to fetch user profile:', error.message);
-        // Set a minimal profile so the dashboard still renders
-        setProfile({
+        .insert({
           id: userId,
           email: userEmail || '',
-          username: null,
-          first_name: null,
-          last_name: null,
-          location: null,
-          position: null,
-          profile_picture_url: null,
           subscription_status: 'trial',
-        });
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Failed to create user profile:', insertError.message);
+        setAuthState({ profile: buildFallbackProfile(userId, userEmail || '') });
         return;
       }
 
-      if (data) {
-        setProfile(data as UserProfile);
+      if (newProfile) {
+        setAuthState({ profile: newProfile as UserProfile });
+      }
+      return;
+    }
+
+    if (error) {
+      console.error('Failed to fetch user profile:', error.message);
+      setAuthState({ profile: buildFallbackProfile(userId, userEmail || '') });
+      return;
+    }
+
+    if (data) {
+      setAuthState({ profile: data as UserProfile });
+    }
+  } catch (err) {
+    console.error('Error fetching profile:', err);
+    setAuthState({ profile: buildFallbackProfile(userId, userEmail || '') });
+  }
+}
+
+function initializeAuth() {
+  if (initialized) return;
+  initialized = true;
+
+  // Initial fetch
+  (async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      setAuthState({ user: authUser });
+
+      if (authUser) {
+        await fetchProfileForUser(authUser.id, authUser.email || '');
       }
     } catch (err) {
-      console.error('Error fetching profile:', err);
-      // Fallback profile so the app doesn't get stuck
-      setProfile({
-        id: userId,
-        email: userEmail || '',
-        username: null,
-        first_name: null,
-        last_name: null,
-        location: null,
-        position: null,
-        profile_picture_url: null,
-        subscription_status: 'trial',
-      });
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      console.error('Error getting user:', err);
+    } finally {
+      setAuthState({ loading: false });
     }
-  }, [supabase]);
+  })();
 
-  const refreshProfile = useCallback(async () => {
-    if (user) {
-      await fetchProfile(user.id);
-    }
-  }, [user, fetchProfile]);
+  // Auth state change listener — single global subscription
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (_event, session) => {
+      const currentUser = session?.user ?? null;
+      setAuthState({ user: currentUser });
 
-  useEffect(() => {
-    let active = true;
-
-    const getUser = async () => {
-      try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-
-        if (!active) return;
-
-        setUser(authUser);
-
-        if (authUser) {
-          await fetchProfile(authUser.id, authUser.email || '');
-        }
-      } catch (err) {
-        // Ignore AbortError — happens during React strict mode remount
-        if (err instanceof DOMException && err.name === 'AbortError') return;
-        if (!active) return;
-        console.error('Error getting user:', err);
-      } finally {
-        if (active) setLoading(false);
+      if (currentUser) {
+        await fetchProfileForUser(currentUser.id, currentUser.email || '');
+      } else {
+        setAuthState({ profile: null });
       }
-    };
+      setAuthState({ loading: false });
+    },
+  );
 
-    getUser();
+  authSubscription = subscription;
+}
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (!active) return;
+// --------------- Hook ---------------
 
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
+export function useAuth(): UseAuthReturn {
+  const [, forceUpdate] = useState(0);
 
-        if (currentUser) {
-          await fetchProfile(currentUser.id, currentUser.email || '');
-        } else {
-          setProfile(null);
-        }
-        if (active) setLoading(false);
-      },
-    );
+  // Subscribe to shared state changes
+  useEffect(() => {
+    const listener = () => forceUpdate((c) => c + 1);
+    listeners.add(listener);
+
+    // Initialize on first mount across the entire app
+    initializeAuth();
 
     return () => {
-      active = false;
-      subscription.unsubscribe();
+      listeners.delete(listener);
+
+      // Tear down global subscription when no consumers remain
+      if (listeners.size === 0 && authSubscription) {
+        authSubscription.unsubscribe();
+        authSubscription = null;
+        initialized = false;
+        authState = { user: null, profile: null, loading: true };
+      }
     };
-  }, [supabase, fetchProfile]);
+  }, []);
+
+  const refreshProfile = useCallback(async () => {
+    if (authState.user) {
+      await fetchProfileForUser(authState.user.id, authState.user.email || '');
+    }
+  }, []);
 
   const signOut = useCallback(async () => {
     try {
       await supabase.auth.signOut();
-      setUser(null);
-      setProfile(null);
-      // Hard redirect clears all client state and forces middleware to re-evaluate
-      // router.push() is client-side only and doesn't clear server session cookies
+      setAuthState({ user: null, profile: null });
       window.location.href = '/';
     } catch (err) {
       console.error('Sign out error:', err);
-      // Force redirect even if signOut errors
       window.location.href = '/';
     }
-  }, [supabase]);
+  }, []);
 
-  return { user, profile, loading, signOut, refreshProfile };
+  return {
+    user: authState.user,
+    profile: authState.profile,
+    loading: authState.loading,
+    signOut,
+    refreshProfile,
+  };
 }

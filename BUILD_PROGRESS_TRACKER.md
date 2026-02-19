@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-19
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 14 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 15 post-build fixes applied)
 
 ---
 
@@ -860,6 +860,15 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Completed:** 2026-02-19
 - **Notes:** profile_picture_url column kept in DB for backward compatibility but no longer used. Position dropdown will be used for analytics in Sprint 6 Admin Dashboard.
 
+### PB.15 — UserPopup Stale Profile Data (Icon & Position Not Updating)
+- [x] Root cause: `useAuth()` hook used component-local `useState` — each consumer (UserPopup, dashboard, main-menu, narrative, SupportForm) had independent profile copies
+- [x] Refactored `useAuth.ts` to use module-level shared state pattern (same as `narrativeStore.ts`)
+- [x] Single shared `authState` object with listener-based notification across all consumers
+- [x] Single Supabase auth subscription (no longer duplicated per component)
+- [x] `refreshProfile()` from any component now updates all mounted consumers immediately
+- **Completed:** 2026-02-19
+- **Notes:** UserPopup.tsx itself was correct — it was already reading `profile?.position`. The underlying data source (`useAuth`) was the problem. After editing profile in EditProfileModal, all components (UserPopup, ProfileSection, etc.) now show updated position icon and text instantly.
+
 ---
 
 ## SUMMARY COUNTS
@@ -877,8 +886,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 14 | 14 |
-| **TOTAL** | **92** | **87** |
+| Post-Build Fixes | 15 | 15 |
+| **TOTAL** | **93** | **88** |
 
 ---
 
