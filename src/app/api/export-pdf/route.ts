@@ -53,24 +53,18 @@ export async function POST(request: NextRequest) {
     };
 
     // ══════════════════════════════════════════════
-    // LOGO — page header area, right-aligned (above body content)
+    // LOGO — read for footer placement (bottom-right of every page)
     // ══════════════════════════════════════════════
-    const logoSize = 25.4; // 1 inch in mm
+    const logoWidth = 28;    // ~1.1 in, 15% smaller + aspect-corrected (1.3:1)
+    const logoHeight = 21.5; // ~0.85 in
+    let logoBase64: string | null = null;
     try {
       const logoPath = path.join(process.cwd(), 'public', 'ServiceDraft-ai-tight logo.PNG');
       const logoBuffer = fs.readFileSync(logoPath);
-      const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
-      doc.addImage(logoBase64, 'PNG', pageWidth - mR - logoSize, 5, logoSize, logoSize);
+      logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
     } catch {
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'italic');
-      doc.setTextColor(120, 120, 120);
-      doc.text('ServiceDraft.AI', pageWidth - mR, 12, { align: 'right' });
-      doc.setTextColor(0, 0, 0);
+      // logo unavailable — footer image will be skipped
     }
-
-    // Body content starts below the header logo area
-    y = logoSize + 8;
 
     // ══════════════════════════════════════════════
     // TWO-COLUMN HEADER
@@ -161,6 +155,22 @@ export async function POST(request: NextRequest) {
         if (i < sections.length - 1) {
           y += 8;
         }
+      }
+    }
+
+    // ══════════════════════════════════════════════
+    // FOOTER LOGO — bottom-right of every page
+    // ══════════════════════════════════════════════
+    if (logoBase64) {
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.addImage(
+          logoBase64, 'PNG',
+          pageWidth - mR - logoWidth,
+          pageHeight - logoHeight - 5,
+          logoWidth, logoHeight
+        );
       }
     }
 

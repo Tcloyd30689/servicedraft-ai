@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   Document,
-  Header,
+  Footer,
   Packer,
   Paragraph,
   TextRun,
@@ -40,24 +40,24 @@ export async function POST(request: NextRequest) {
     const roNumber = vehicleInfo?.roNumber || '';
 
     // ══════════════════════════════════════════════
-    // LOGO — document header, right-aligned (above body content)
+    // LOGO — document footer, right-aligned (bottom of every page)
     // ══════════════════════════════════════════════
-    let headerParagraph: Paragraph;
+    let footerParagraph: Paragraph;
     try {
       const logoPath = path.join(process.cwd(), 'public', 'ServiceDraft-ai-tight logo.PNG');
       const logoBuffer = fs.readFileSync(logoPath);
-      headerParagraph = new Paragraph({
+      footerParagraph = new Paragraph({
         children: [
           new ImageRun({
             type: 'png',
             data: logoBuffer,
-            transformation: { width: 72, height: 72 }, // ~1 inch
+            transformation: { width: 79, height: 61 }, // 15% smaller, 1.3:1 aspect ratio
           }),
         ],
         alignment: AlignmentType.RIGHT,
       });
     } catch {
-      headerParagraph = new Paragraph({
+      footerParagraph = new Paragraph({
         children: [
           new TextRun({
             text: 'ServiceDraft.AI',
@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
     // ── Build document ──
     const doc = new Document({
       sections: [{
-        headers: { default: new Header({ children: [headerParagraph] }) },
+        footers: { default: new Footer({ children: [footerParagraph] }) },
         children,
       }],
     });
