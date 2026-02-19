@@ -5,12 +5,24 @@ import {
   Paragraph,
   TextRun,
   AlignmentType,
-  Header,
   ImageRun,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
   BorderStyle,
+  UnderlineType,
 } from 'docx';
 import fs from 'fs';
 import path from 'path';
+
+// Invisible border config for layout tables
+const noBorders = {
+  top: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+  right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,95 +32,155 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No narrative data provided' }, { status: 400 });
     }
 
-    // --- Header with logo (top-right letterhead) ---
-    let headerChildren: Paragraph[];
-    try {
-      const logoBwPath = path.join(process.cwd(), 'public', 'logo-bw.png');
-      const logoFallbackPath = path.join(process.cwd(), 'public', 'logo.png');
-      const logoPath = fs.existsSync(logoBwPath) ? logoBwPath : logoFallbackPath;
-      const logoBuffer = fs.readFileSync(logoPath);
+    const children: (Paragraph | Table)[] = [];
+    const vYear = vehicleInfo?.year || '';
+    const vMake = vehicleInfo?.make || '';
+    const vModel = vehicleInfo?.model || '';
+    const roNumber = vehicleInfo?.roNumber || '';
 
-      headerChildren = [
+    // ══════════════════════════════════════════════
+    // LOGO — right-aligned, ~1 inch square
+    // ══════════════════════════════════════════════
+    try {
+      const logoPath = path.join(process.cwd(), 'public', 'ServiceDraft-ai-tight logo.PNG');
+      const logoBuffer = fs.readFileSync(logoPath);
+      children.push(
         new Paragraph({
           children: [
             new ImageRun({
               type: 'png',
               data: logoBuffer,
-              transformation: { width: 120, height: 30 },
+              transformation: { width: 72, height: 72 }, // ~1 inch
             }),
           ],
           alignment: AlignmentType.RIGHT,
-        }),
-      ];
+          spacing: { after: 120 },
+        })
+      );
     } catch {
-      // Fallback: text-based logo
-      headerChildren = [
+      children.push(
         new Paragraph({
           children: [
             new TextRun({
               text: 'ServiceDraft.AI',
               italics: true,
-              size: 16,
+              size: 18,
               font: 'Arial',
               color: '888888',
             }),
           ],
           alignment: AlignmentType.RIGHT,
-        }),
-      ];
-    }
-
-    // --- Document body ---
-    const children: Paragraph[] = [];
-
-    // Vehicle info header
-    const vehicleParts = [vehicleInfo?.year, vehicleInfo?.make, vehicleInfo?.model].filter(Boolean);
-    if (vehicleParts.length > 0) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: vehicleParts.join(' ').toUpperCase(),
-              bold: true,
-              size: 28, // 14pt in half-points
-              font: 'Arial',
-            }),
-          ],
+          spacing: { after: 120 },
         })
       );
     }
 
-    if (vehicleInfo?.roNumber) {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: `R.O.# ${vehicleInfo.roNumber}`,
-              bold: true,
-              size: 22, // 11pt
-              font: 'Arial',
-            }),
-          ],
-        })
-      );
-    }
-
-    // Separator line
-    children.push(
+    // ══════════════════════════════════════════════
+    // TWO-COLUMN HEADER (invisible table)
+    // ══════════════════════════════════════════════
+    // Helper: label:value paragraph for vehicle info
+    const labelValue = (label: string, value: string): Paragraph =>
       new Paragraph({
-        children: [],
-        border: {
-          bottom: {
-            style: BorderStyle.SINGLE,
-            size: 6,
-            color: '000000',
-          },
-        },
-        spacing: { after: 200 },
+        children: [
+          new TextRun({ text: label, bold: true, size: 22, font: 'Arial' }),
+          new TextRun({ text: value, size: 22, font: 'Arial' }),
+        ],
+        spacing: { after: 40 },
+      });
+
+    const leftCellChildren: Paragraph[] = [
+      // "Vehicle Information:" bold underlined
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'Vehicle Information:',
+            bold: true,
+            underline: { type: UnderlineType.SINGLE },
+            size: 22, // 11pt
+            font: 'Arial',
+          }),
+        ],
+        spacing: { after: 80 },
+      }),
+      labelValue('YEAR: ', vYear),
+      labelValue('MAKE: ', vMake),
+      labelValue('MODEL: ', vModel),
+    ];
+
+    const rightCellChildren: Paragraph[] = [
+      // "Repair Order #:" bold underlined
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'Repair Order #:',
+            bold: true,
+            underline: { type: UnderlineType.SINGLE },
+            size: 22, // 11pt
+            font: 'Arial',
+          }),
+        ],
+        alignment: AlignmentType.RIGHT,
+        spacing: { after: 80 },
+      }),
+      // R.O. number large and bold
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: roNumber,
+            bold: true,
+            size: 40, // 20pt
+            font: 'Arial',
+          }),
+        ],
+        alignment: AlignmentType.RIGHT,
+      }),
+    ];
+
+    children.push(
+      new Table({
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                children: leftCellChildren,
+                width: { size: 55, type: WidthType.PERCENTAGE },
+                borders: noBorders,
+              }),
+              new TableCell({
+                children: rightCellChildren,
+                width: { size: 45, type: WidthType.PERCENTAGE },
+                borders: noBorders,
+              }),
+            ],
+          }),
+        ],
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: noBorders,
       })
     );
 
-    // --- Narrative Content ---
+    // ══════════════════════════════════════════════
+    // TITLE — "REPAIR NARRATIVE"
+    // ══════════════════════════════════════════════
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'REPAIR NARRATIVE',
+            bold: true,
+            underline: { type: UnderlineType.SINGLE },
+            size: 36, // 18pt
+            font: 'Arial',
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 400, after: 400 },
+      })
+    );
+
+    // ══════════════════════════════════════════════
+    // NARRATIVE BODY
+    // ══════════════════════════════════════════════
     if (displayFormat === 'block') {
       children.push(
         new Paragraph({
@@ -119,11 +191,11 @@ export async function POST(request: NextRequest) {
               font: 'Arial',
             }),
           ],
-          spacing: { line: 360 }, // 1.5 line spacing (240 = single)
+          spacing: { line: 360 }, // 1.5 line spacing
         })
       );
     } else {
-      // C/C/C format with section headers
+      // C/C/C format
       const sections = [
         { title: 'CONCERN:', content: narrative.concern },
         { title: 'CAUSE:', content: narrative.cause },
@@ -131,20 +203,24 @@ export async function POST(request: NextRequest) {
       ];
 
       for (const section of sections) {
+        // Section header: 13pt bold italic underlined
         children.push(
           new Paragraph({
             children: [
               new TextRun({
                 text: section.title,
                 bold: true,
-                size: 28, // 14pt
+                italics: true,
+                underline: { type: UnderlineType.SINGLE },
+                size: 26, // 13pt
                 font: 'Arial',
               }),
             ],
-            spacing: { before: 240 },
+            spacing: { before: 300 },
           })
         );
 
+        // Section body: 11pt regular
         children.push(
           new Paragraph({
             children: [
@@ -154,26 +230,18 @@ export async function POST(request: NextRequest) {
                 font: 'Arial',
               }),
             ],
-            spacing: { line: 360, after: 120 },
+            spacing: { line: 360, after: 200 },
           })
         );
       }
     }
 
-    // --- Create document ---
+    // ── Build document ──
     const doc = new Document({
-      sections: [
-        {
-          headers: {
-            default: new Header({ children: headerChildren }),
-          },
-          children,
-        },
-      ],
+      sections: [{ children }],
     });
 
     const buffer = await Packer.toBuffer(doc);
-
     const filename = vehicleInfo?.roNumber
       ? `narrative_RO${vehicleInfo.roNumber}.docx`
       : `narrative_${new Date().toISOString().slice(0, 10)}.docx`;
@@ -186,9 +254,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('DOCX export error:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate Word document' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to generate Word document' }, { status: 500 });
   }
 }

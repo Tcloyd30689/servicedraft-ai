@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import { Copy, Printer, FileDown, FileText } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
+import { downloadExport } from '@/lib/exportUtils';
+import type { ExportPayload } from '@/lib/exportUtils';
 import type { NarrativeData } from '@/stores/narrativeStore';
 
 interface ShareExportModalProps {
@@ -41,6 +43,23 @@ export default function ShareExportModal({
     const roLine = vehicleInfo?.roNumber ? `R.O. #${vehicleInfo.roNumber}` : '';
     return [vehicleLine, roLine].filter(Boolean).join(' — ');
   };
+
+  /** Build the normalized payload used by both PDF and DOCX exports */
+  const buildPayload = (): ExportPayload => ({
+    narrative: {
+      block_narrative: narrative.block_narrative,
+      concern: narrative.concern,
+      cause: narrative.cause,
+      correction: narrative.correction,
+    },
+    displayFormat,
+    vehicleInfo: {
+      year: vehicleInfo?.year || '',
+      make: vehicleInfo?.make || '',
+      model: vehicleInfo?.model || '',
+      roNumber: vehicleInfo?.roNumber || '',
+    },
+  });
 
   const handleCopy = async () => {
     try {
@@ -108,34 +127,10 @@ export default function ShareExportModal({
     onClose();
   };
 
-  const triggerDownload = (blob: Blob, filename: string) => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   const handleDownloadPdf = async () => {
     setIsGeneratingPdf(true);
     try {
-      const res = await fetch('/api/export-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ narrative, displayFormat, vehicleInfo }),
-      });
-
-      if (!res.ok) throw new Error('PDF generation failed');
-
-      const blob = await res.blob();
-      const filename = vehicleInfo?.roNumber
-        ? `narrative_RO${vehicleInfo.roNumber}.pdf`
-        : `narrative_${new Date().toISOString().slice(0, 10)}.pdf`;
-
-      triggerDownload(blob, filename);
+      await downloadExport('pdf', buildPayload());
       toast.success('PDF downloaded');
       onClose();
     } catch {
@@ -148,20 +143,7 @@ export default function ShareExportModal({
   const handleDownloadDocx = async () => {
     setIsGeneratingDocx(true);
     try {
-      const res = await fetch('/api/export-docx', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ narrative, displayFormat, vehicleInfo }),
-      });
-
-      if (!res.ok) throw new Error('DOCX generation failed');
-
-      const blob = await res.blob();
-      const filename = vehicleInfo?.roNumber
-        ? `narrative_RO${vehicleInfo.roNumber}.docx`
-        : `narrative_${new Date().toISOString().slice(0, 10)}.docx`;
-
-      triggerDownload(blob, filename);
+      await downloadExport('docx', buildPayload());
       toast.success('Word document downloaded');
       onClose();
     } catch {

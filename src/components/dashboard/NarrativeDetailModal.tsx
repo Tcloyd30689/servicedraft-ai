@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Copy, Printer } from 'lucide-react';
+import { Copy, Printer, FileDown, FileText } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
+import { downloadExport } from '@/lib/exportUtils';
+import type { ExportPayload } from '@/lib/exportUtils';
 import type { Narrative } from '@/types/database';
 
 interface NarrativeDetailModalProps {
@@ -17,10 +20,30 @@ export default function NarrativeDetailModal({
   onClose,
   narrative,
 }: NarrativeDetailModalProps) {
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
+
   if (!narrative) return null;
 
   const dateStr = new Date(narrative.created_at).toLocaleDateString();
   const timeStr = new Date(narrative.created_at).toLocaleTimeString();
+
+  /** Normalize saved-narrative fields to the shared ExportPayload format */
+  const buildPayload = (): ExportPayload => ({
+    narrative: {
+      block_narrative: narrative.full_narrative || '',
+      concern: narrative.concern || '',
+      cause: narrative.cause || '',
+      correction: narrative.correction || '',
+    },
+    displayFormat: 'ccc',
+    vehicleInfo: {
+      year: narrative.vehicle_year ? String(narrative.vehicle_year) : '',
+      make: narrative.vehicle_make || '',
+      model: narrative.vehicle_model || '',
+      roNumber: narrative.ro_number || '',
+    },
+  });
 
   const handleCopy = async () => {
     const text = `CONCERN:\n${narrative.concern || ''}\n\nCAUSE:\n${narrative.cause || ''}\n\nCORRECTION:\n${narrative.correction || ''}`;
@@ -33,12 +56,23 @@ export default function NarrativeDetailModal({
   };
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error('Please allow popups to print');
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '-9999px';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) {
+      toast.error('Failed to prepare print content');
+      document.body.removeChild(iframe);
       return;
     }
-    printWindow.document.write(`
+
+    doc.open();
+    doc.write(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -60,12 +94,44 @@ export default function NarrativeDetailModal({
         <p style="white-space:pre-wrap;">${narrative.cause || ''}</p>
         <h3>CORRECTION</h3>
         <p style="white-space:pre-wrap;">${narrative.correction || ''}</p>
-        <script>window.print();</script>
       </body>
       </html>
     `);
-    printWindow.document.close();
+    doc.close();
+
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 1000);
   };
+
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      await downloadExport('pdf', buildPayload());
+      toast.success('PDF downloaded');
+    } catch {
+      toast.error('Failed to generate PDF');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleDownloadDocx = async () => {
+    setIsGeneratingDocx(true);
+    try {
+      await downloadExport('docx', buildPayload());
+      toast.success('Word document downloaded');
+    } catch {
+      toast.error('Failed to generate Word document');
+    } finally {
+      setIsGeneratingDocx(false);
+    }
+  };
+
+  const isExporting = isGeneratingPdf || isGeneratingDocx;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Saved Narrative" width="max-w-[700px]">
@@ -102,7 +168,7 @@ export default function NarrativeDetailModal({
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <Button
           variant="secondary"
           size="medium"
@@ -120,6 +186,26 @@ export default function NarrativeDetailModal({
         >
           <Printer size={15} />
           PRINT
+        </Button>
+        <Button
+          variant="secondary"
+          size="medium"
+          onClick={handleDownloadPdf}
+          disabled={isExporting}
+          className="flex items-center gap-2"
+        >
+          <FileDown size={15} />
+          {isGeneratingPdf ? 'PDF...' : 'PDF'}
+        </Button>
+        <Button
+          variant="secondary"
+          size="medium"
+          onClick={handleDownloadDocx}
+          disabled={isExporting}
+          className="flex items-center gap-2"
+        >
+          <FileText size={15} />
+          {isGeneratingDocx ? 'DOCX...' : 'WORD'}
         </Button>
       </div>
     </Modal>

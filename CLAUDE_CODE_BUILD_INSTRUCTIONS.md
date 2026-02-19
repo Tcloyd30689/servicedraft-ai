@@ -646,37 +646,39 @@ The narrative page needs access to:
 
 This state should persist across the input → narrative page navigation. Use React Context or a simple store.
 
-### Export System (Overhauled 2026-02-19)
+### Export System (Redesigned 2026-02-19)
 
-The Share/Export modal provides four options: Copy to Clipboard, Print, Download as PDF, and Download as Word Document.
+The Share/Export modal provides four options: Copy to Clipboard, Print, Download as PDF, and Download as Word Document. Both the narrative page and the dashboard's saved narrative modal share the same export paths.
+
+**Shared Export Utility** (`src/lib/exportUtils.ts`):
+- `ExportPayload` interface: normalizes data from both the narrative page (fieldValues-based) and dashboard (Narrative type with vehicle_year/vehicle_make/vehicle_model)
+- `downloadExport(type, payload)`: calls the appropriate API route and triggers file download
+- Used by `ShareExportModal` (narrative page) and `NarrativeDetailModal` (dashboard)
+
+**Export Logo File:** `/public/ServiceDraft-ai-tight logo.PNG` — small square SD icon logo, positioned top-right (~1 inch wide). Falls back to italic text "ServiceDraft.AI" if file not found.
+
+**Document Layout Specification** (identical for PDF and DOCX):
+1. **Logo**: top-right corner, ~1 inch square
+2. **Two-column header**:
+   - LEFT: "Vehicle Information:" (11pt bold underlined), then YEAR/MAKE/MODEL label:value lines (labels 11pt bold, values 11pt regular)
+   - RIGHT: "Repair Order #:" (11pt bold underlined), then R.O. number (20pt bold, right-aligned)
+3. **Title**: "REPAIR NARRATIVE" — 18pt bold underlined, centered, generous spacing before/after
+4. **C/C/C sections**: headers (CONCERN:/CAUSE:/CORRECTION:) at 13pt bold italic underlined, body at 11pt regular, generous spacing between sections
+5. **Block format**: same header/title, then flowing paragraph body at 11pt regular
+
+**Font:** Helvetica (PDF, built-in) / Arial (DOCX). Both are visually near-identical.
 
 **PDF Generation** (`src/app/api/export-pdf/route.ts`):
-- Uses the `jspdf` npm package for server-side PDF generation
-- POST endpoint receives: `{ narrative, displayFormat, vehicleInfo }`
-- Document layout (US Letter):
-  - Logo in top-right corner (letterhead style, 35mm x 9mm)
-  - Vehicle info header: "YEAR MAKE MODEL" in 14pt bold
-  - R.O.# line in 11pt bold
-  - Separator line
-  - Narrative content: 11pt body text with 1.5 line spacing
-  - C/C/C format: section headers (CONCERN, CAUSE, CORRECTION) at 14pt bold
-  - Automatic page breaks for long content
-- Logo loading priority: `public/logo-bw.png` → `public/logo.png` → text fallback
+- Uses `jspdf` package, US Letter format, coordinate-based positioning
+- Custom underline helper (jsPDF has no native underline)
+- Automatic page breaks for long narratives
 
 **Word (.docx) Generation** (`src/app/api/export-docx/route.ts`):
-- Uses the `docx` npm package for server-side .docx generation
-- POST endpoint receives same payload as PDF
-- Same formatting rules as PDF:
-  - Logo in document header (right-aligned, 120x30px)
-  - Vehicle info in 14pt bold Arial, R.O.# in 11pt bold
-  - Section headers at 14pt bold, body at 11pt with 1.5 line spacing
-  - Separator line between header and content
+- Uses `docx` package with native underline/bold/italic support
+- Invisible-border `Table` for two-column header layout
+- `ImageRun` for logo, `UnderlineType.SINGLE` for underlined text
 
-**New npm packages installed:**
-- `jspdf` — PDF document generation (works in Node.js)
-- `docx` — Word document (.docx) generation
-
-**B&W Logo:** Place an optimized B&W logo at `public/logo-bw.png` for best results. If not present, falls back to `public/logo.png` then to italic text "ServiceDraft.AI".
+**npm packages:** `jspdf` (PDF generation), `docx` (Word document generation)
 
 ---
 

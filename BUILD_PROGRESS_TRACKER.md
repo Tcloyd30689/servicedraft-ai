@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-19
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 22 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 23 post-build fixes applied)
 
 ---
 
@@ -548,8 +548,8 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Print Generated Narrative (browser print dialog)
 - [x] Download as PDF Document (real PDF via server-side jsPDF generation)
 - [x] Download as Word Document (.docx via server-side docx package)
-- **Completed:** 2026-02-15 (Overhauled 2026-02-19)
-- **Notes:** **Overhauled 2026-02-19:** Export system rebuilt — real PDF generation via `jsPDF` (API route: `src/app/api/export-pdf/route.ts`), Word (.docx) export via `docx` package (API route: `src/app/api/export-docx/route.ts`). Professional formatting: logo letterhead (top-right), vehicle info header in bold 14pt, R.O.# styling, C/C/C section title formatting (14pt bold headers, 11pt body). B&W logo uses `public/logo-bw.png` if available, falls back to `public/logo.png`, then to text. Loading states shown during generation.
+- **Completed:** 2026-02-15 (Overhauled 2026-02-19, Layout redesigned 2026-02-19)
+- **Notes:** **Layout redesigned 2026-02-19:** Export layout completely redesigned — two-column header with vehicle info (left) and R.O.# (right), SD icon logo (`ServiceDraft-ai-tight logo.PNG`) top-right, centered "REPAIR NARRATIVE" title (18pt bold underlined), bold/italic/underlined C/C/C section headers (13pt), generous spacing between sections. Same formatting applied to both fresh narrative exports AND saved narrative exports from dashboard. All export paths use shared `downloadExport()` utility from `src/lib/exportUtils.ts`.
 
 ### 6.9 — Generated Narrative Page Assembly
 - [x] Build `src/app/(protected)/narrative/page.tsx`
@@ -931,6 +931,21 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Completed:** 2026-02-19
 - **Notes:** Previous implementation generated a plain .txt file labeled as PDF. Now generates real PDF and Word documents suitable for warranty documentation. User can create an optimized `public/logo-bw.png` for best results in exported documents.
 
+### PB.23 — Export Document Layout Redesign & Unified Export Paths
+- [x] Redesigned PDF and DOCX export layout: SD icon logo (top-right, ~1 inch), two-column header (Vehicle Info left, R.O.# right), centered "REPAIR NARRATIVE" title, styled C/C/C sections
+- [x] Logo: uses `/public/ServiceDraft-ai-tight logo.PNG` (small square SD icon), removed references to old logo files
+- [x] Two-column header: "Vehicle Information:" bold underlined with YEAR/MAKE/MODEL labels (11pt bold) and values (11pt regular) on left; "Repair Order #:" bold underlined with R.O. number (20pt bold) on right
+- [x] Title: "REPAIR NARRATIVE" at 18pt bold underlined, centered, with generous spacing before/after
+- [x] C/C/C section headers: 13pt bold italic underlined; body text: 11pt regular; generous spacing between sections
+- [x] Block format: same header/title, flowing paragraph body at 11pt regular
+- [x] Created shared export utility `src/lib/exportUtils.ts` — `ExportPayload` interface + `downloadExport()` function used by all export callers
+- [x] Updated `ShareExportModal.tsx` to use shared `downloadExport()` utility
+- [x] Updated `NarrativeDetailModal.tsx` — added PDF and DOCX export buttons, normalizes `Narrative` type fields (vehicle_year→year, vehicle_make→make, vehicle_model→model, ro_number→roNumber) to `ExportPayload` format
+- [x] Fixed dashboard print: replaced `window.open()` popup approach with hidden iframe printing (same as narrative page)
+- [x] All 4 export paths (PDF from narrative, DOCX from narrative, PDF from dashboard, DOCX from dashboard) now produce identical document formatting
+- **Completed:** 2026-02-19
+- **Notes:** Font: Helvetica (PDF) / Arial (DOCX). DOCX uses invisible-border Table for two-column header layout. PDF uses coordinate-based positioning. Both routes read the same logo file and apply the same layout specification.
+
 ---
 
 ## SUMMARY COUNTS
@@ -948,8 +963,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 22 | 22 |
-| **TOTAL** | **100** | **95** |
+| Post-Build Fixes | 23 | 23 |
+| **TOTAL** | **101** | **96** |
 
 ---
 
