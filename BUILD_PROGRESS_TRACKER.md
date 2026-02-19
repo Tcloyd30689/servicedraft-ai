@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-19
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 23 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 25 post-build fixes applied)
 
 ---
 
@@ -946,6 +946,21 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Completed:** 2026-02-19
 - **Notes:** Font: Helvetica (PDF) / Arial (DOCX). DOCX uses invisible-border Table for two-column header layout. PDF uses coordinate-based positioning. Both routes read the same logo file and apply the same layout specification.
 
+### PB.24 — Move Export Logo to Footer & Fix R.O.# Overlap
+- [x] Moved SD logo from document header/body to document **footer** (bottom-right of every page)
+- [x] PDF: logo drawn after all body content, looped across all pages at `pageHeight - logoHeight - 5`
+- [x] DOCX: logo moved from `Header` component to `Footer` component (repeats on every page)
+- [x] Removed logo from body/header area — two-column header (Vehicle Info left, R.O.# right) no longer overlaps with logo
+- **Completed:** 2026-02-19
+
+### PB.25 — Export Logo Resize & Aspect Ratio Fix
+- [x] Reduced logo size by ~40% total from original 1-inch square (15% initial reduction + 30% additional)
+- [x] Applied 1.3:1 width-to-height aspect ratio — logo image is wider than tall, prevents squished appearance
+- [x] PDF dimensions: 19.6mm × 15mm (was 25.4mm × 25.4mm)
+- [x] DOCX dimensions: 55px × 43px (was 72px × 72px)
+- [x] Applied to all export paths (narrative page PDF/DOCX + dashboard saved narrative PDF/DOCX)
+- **Completed:** 2026-02-19
+
 ---
 
 ## SUMMARY COUNTS
@@ -963,8 +978,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 23 | 23 |
-| **TOTAL** | **101** | **96** |
+| Post-Build Fixes | 25 | 25 |
+| **TOTAL** | **103** | **98** |
 
 ---
 

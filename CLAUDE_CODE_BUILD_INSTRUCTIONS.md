@@ -655,10 +655,10 @@ The Share/Export modal provides four options: Copy to Clipboard, Print, Download
 - `downloadExport(type, payload)`: calls the appropriate API route and triggers file download
 - Used by `ShareExportModal` (narrative page) and `NarrativeDetailModal` (dashboard)
 
-**Export Logo File:** `/public/ServiceDraft-ai-tight logo.PNG` — small square SD icon logo, positioned top-right (~1 inch wide). Falls back to italic text "ServiceDraft.AI" if file not found.
+**Export Logo File:** `/public/ServiceDraft-ai-tight logo.PNG` — small square SD icon logo, placed in the document **footer** (bottom-right of every page). Dimensions: 19.6×15mm (PDF) / 55×43px (DOCX) with 1.3:1 width-to-height aspect ratio to prevent squishing. Falls back to italic text "ServiceDraft.AI" if file not found.
 
 **Document Layout Specification** (identical for PDF and DOCX):
-1. **Logo**: top-right corner, ~1 inch square
+1. **Footer logo**: bottom-right of every page, right-aligned, aspect-corrected (1.3:1 w:h ratio)
 2. **Two-column header**:
    - LEFT: "Vehicle Information:" (11pt bold underlined), then YEAR/MAKE/MODEL label:value lines (labels 11pt bold, values 11pt regular)
    - RIGHT: "Repair Order #:" (11pt bold underlined), then R.O. number (20pt bold, right-aligned)
@@ -672,11 +672,13 @@ The Share/Export modal provides four options: Copy to Clipboard, Print, Download
 - Uses `jspdf` package, US Letter format, coordinate-based positioning
 - Custom underline helper (jsPDF has no native underline)
 - Automatic page breaks for long narratives
+- Logo drawn in footer area after all body content, looped across all pages
 
 **Word (.docx) Generation** (`src/app/api/export-docx/route.ts`):
 - Uses `docx` package with native underline/bold/italic support
 - Invisible-border `Table` for two-column header layout
-- `ImageRun` for logo, `UnderlineType.SINGLE` for underlined text
+- Logo placed in `Footer` component (repeats on every page)
+- `ImageRun` for logo with `type: 'png'`, `UnderlineType.SINGLE` for underlined text
 
 **npm packages:** `jspdf` (PDF generation), `docx` (Word document generation)
 
