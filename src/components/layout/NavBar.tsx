@@ -20,7 +20,7 @@ export default function NavBar() {
   return (
     <nav className="fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-6 bg-black/80 backdrop-blur-[8px] border-b border-[rgba(168,85,247,0.2)] z-[100]">
       {/* Left: Logo */}
-      <Link href="/main-menu">
+      <Link href="/main-menu" className="flex items-center">
         <Logo size="small" />
       </Link>
 

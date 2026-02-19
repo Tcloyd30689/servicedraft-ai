@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-19
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 18 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 21 post-build fixes applied)
 
 ---
 
@@ -670,8 +670,8 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Active press scale on buttons (0.98)
 - [x] Card hover glow enhancement
 - [x] Input focus ring animations
-- **Completed:** 2026-02-15
-- **Notes:** All already implemented in Phase 1 components.
+- **Completed:** 2026-02-15 (Updated 2026-02-19)
+- **Notes:** **Updated 2026-02-19:** Framer Motion whileHover/whileTap added to LiquidCard, Button, StoryTypeSelector, and main menu bottom links. Spring transition config (stiffness: 400, damping: 25) for snappy motion. See PB.19-PB.21.
 
 ### 9.3 — Loading States Audit
 - [x] Verify ALL API calls show loading spinner with contextual message
@@ -892,6 +892,29 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Completed:** 2026-02-19
 - **Notes:** Uses `resize: none` + `overflow: hidden` + `scrollHeight` resize pattern. Starts at 2 rows, expands as needed.
 
+### PB.19 — Framer Motion Hover/Tap Animations on All Interactive Elements
+- [x] LiquidCard.tsx: Converted to motion.div with whileHover={{ scale: 1.02, boxShadow: purple glow }} and whileTap={{ scale: 0.98 }}
+- [x] Button.tsx: Converted to motion.button with whileHover={{ scale: 1.05, boxShadow: purple glow }} and whileTap={{ scale: 0.95 }}
+- [x] StoryTypeSelector.tsx: Converted to motion.button with whileHover={{ scale: 1.03 }} and whileTap={{ scale: 0.97 }}
+- [x] Main menu FAQ/SUPPORT links: Added whileHover/whileTap animations
+- [x] All use spring transition (stiffness: 400, damping: 25) for snappy, premium motion
+- [x] Disabled buttons skip hover/tap animations
+- **Completed:** 2026-02-19
+- **Notes:** Root cause was CSS-only hover effects with no Framer Motion whileHover/whileTap properties. Fixed by converting all interactive elements to motion components.
+
+### PB.20 — Logo Vertical Centering in NavBar
+- [x] Added `flex items-center` to the Link wrapper around the Logo in NavBar.tsx
+- [x] Logo now perfectly vertically centered within 64px nav bar height
+- **Completed:** 2026-02-19
+- **Notes:** Root cause was Link wrapper had no flex alignment, logo was offset within the 64px-tall nav despite items-center on parent.
+
+### PB.21 — Page Transition Animations Verified
+- [x] All four protected pages (main-menu, input, narrative, dashboard) have Framer Motion entrance animations
+- [x] All use motion.div with initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+- [x] Wave background runs continuously on all protected pages via protected layout
+- **Completed:** 2026-02-19
+- **Notes:** Page transitions were already implemented correctly. Verified all pages have consistent fade-in + slide-up entrance animation.
+
 ---
 
 ## SUMMARY COUNTS
@@ -909,8 +932,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 18 | 18 |
-| **TOTAL** | **96** | **91** |
+| Post-Build Fixes | 21 | 21 |
+| **TOTAL** | **99** | **94** |
 
 ---
 

@@ -717,6 +717,45 @@ For text entry fields where content may exceed one line, use `AutoTextarea` (`sr
 - Starts at `rows={2}`, grows as needed
 - Short metadata fields (R.O.#, Year, Make, Model) use standard `<Input>` instead
 
+### Framer Motion Animation Standards (Added 2026-02-19)
+
+All interactive elements use Framer Motion `whileHover` and `whileTap` for premium feel. CSS-only hover effects are insufficient.
+
+**Spring transition config (used everywhere):**
+```tsx
+const springTransition = { type: 'spring', stiffness: 400, damping: 25 };
+```
+
+**Hover/Tap scale values by element type:**
+
+| Element | whileHover scale | whileTap scale | boxShadow on hover |
+|---------|-----------------|----------------|-------------------|
+| LiquidCard | 1.02 | 0.98 | `0 0 25px rgba(168, 85, 247, 0.4)` |
+| Button | 1.05 | 0.95 | `0 0 20px rgba(168, 85, 247, 0.3)` |
+| StoryTypeSelector cards | 1.03 | 0.97 | `0 0 20px rgba(168, 85, 247, 0.3)` |
+| Small links (FAQ, etc.) | 1.08 | 0.95 | none |
+
+**Rules:**
+- Disabled buttons: pass `undefined` for whileHover/whileTap (no animation when disabled)
+- LiquidCard: controlled by `hover` prop (default true), set `hover={false}` to disable
+- Button uses `motion.button` — interface extends `Omit<ButtonHTMLAttributes, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart'>` to avoid type conflicts with Framer Motion
+
+### Page Transition Pattern (Added 2026-02-19)
+
+Every protected page wraps its main content in a `motion.div` with a fade-in + slide-up entrance:
+
+```tsx
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5, ease: 'easeOut' }}
+>
+  {/* Page content */}
+</motion.div>
+```
+
+The animated wave background runs continuously on all protected pages via `WaveBackground` in `src/app/(protected)/layout.tsx`.
+
 ---
 
 ## APPENDIX: COMMON PATTERNS

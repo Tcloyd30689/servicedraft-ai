@@ -1,12 +1,13 @@
 'use client';
 
 import { type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost';
 type ButtonSize = 'small' | 'medium' | 'large' | 'fullWidth';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart'> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   children: ReactNode;
@@ -15,13 +16,13 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const variantClasses: Record<ButtonVariant, string> = {
   primary: [
     'bg-[#a855f7] text-white',
-    'hover:bg-[#9333ea] hover:shadow-[0_0_20px_rgba(168,85,247,0.4)]',
-    'active:bg-[#7c3aed] active:scale-[0.98]',
-    'disabled:bg-[#4b5563] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100',
+    'hover:bg-[#9333ea]',
+    'active:bg-[#7c3aed]',
+    'disabled:bg-[#4b5563] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none',
   ].join(' '),
   secondary: [
     'bg-transparent text-[#a855f7] border border-[#a855f7]',
-    'hover:bg-[rgba(168,85,247,0.1)] hover:shadow-[0_0_15px_rgba(168,85,247,0.2)]',
+    'hover:bg-[rgba(168,85,247,0.1)]',
     'active:bg-[rgba(168,85,247,0.2)]',
     'disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none',
   ].join(' '),
@@ -40,25 +41,31 @@ const sizeClasses: Record<ButtonSize, string> = {
   fullWidth: 'py-3.5 px-6 text-base w-full',
 };
 
+const springTransition = { type: 'spring' as const, stiffness: 400, damping: 25 };
+
 export default function Button({
   variant = 'primary',
   size = 'large',
   className,
   children,
+  disabled,
   ...props
 }: ButtonProps) {
   return (
-    <button
+    <motion.button
       className={cn(
         'font-semibold rounded-lg cursor-pointer',
-        'transition-all duration-200',
         variantClasses[variant],
         sizeClasses[size],
         className,
       )}
+      whileHover={disabled ? undefined : { scale: 1.05, boxShadow: '0 0 20px rgba(168, 85, 247, 0.3)' }}
+      whileTap={disabled ? undefined : { scale: 0.95 }}
+      transition={springTransition}
+      disabled={disabled}
       {...props}
     >
       {children}
-    </button>
+    </motion.button>
   );
 }

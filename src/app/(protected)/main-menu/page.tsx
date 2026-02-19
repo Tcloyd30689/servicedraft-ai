@@ -140,14 +140,17 @@ export default function MainMenuPage() {
               transition={{ duration: 0.4, delay: 0.6 }}
             >
               {bottomItems.map((item) => (
-                <button
+                <motion.button
                   key={item.label}
                   onClick={item.onClick}
                   className="flex items-center gap-1.5 text-[#9ca3af] text-sm hover:text-[#c084fc] transition-colors cursor-pointer"
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 >
                   {item.icon}
                   {item.label}
-                </button>
+                </motion.button>
               ))}
             </motion.div>
           </div>
