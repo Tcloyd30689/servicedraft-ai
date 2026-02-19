@@ -53,21 +53,24 @@ export async function POST(request: NextRequest) {
     };
 
     // ══════════════════════════════════════════════
-    // LOGO — top-right corner, ~1 inch wide
+    // LOGO — page header area, right-aligned (above body content)
     // ══════════════════════════════════════════════
     const logoSize = 25.4; // 1 inch in mm
     try {
       const logoPath = path.join(process.cwd(), 'public', 'ServiceDraft-ai-tight logo.PNG');
       const logoBuffer = fs.readFileSync(logoPath);
       const logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
-      doc.addImage(logoBase64, 'PNG', pageWidth - mR - logoSize, y, logoSize, logoSize);
+      doc.addImage(logoBase64, 'PNG', pageWidth - mR - logoSize, 5, logoSize, logoSize);
     } catch {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(120, 120, 120);
-      doc.text('ServiceDraft.AI', pageWidth - mR, y + 6, { align: 'right' });
+      doc.text('ServiceDraft.AI', pageWidth - mR, 12, { align: 'right' });
       doc.setTextColor(0, 0, 0);
     }
+
+    // Body content starts below the header logo area
+    y = logoSize + 8;
 
     // ══════════════════════════════════════════════
     // TWO-COLUMN HEADER
@@ -113,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Move y past the header section (logo height or field list, whichever is taller)
-    y = Math.max(fieldY + 8, y + logoSize + 4);
+    y = fieldY + 8;
 
     // ══════════════════════════════════════════════
     // TITLE — "REPAIR NARRATIVE"

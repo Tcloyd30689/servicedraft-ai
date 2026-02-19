@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   Document,
+  Header,
   Packer,
   Paragraph,
   TextRun,
@@ -39,40 +40,35 @@ export async function POST(request: NextRequest) {
     const roNumber = vehicleInfo?.roNumber || '';
 
     // ══════════════════════════════════════════════
-    // LOGO — right-aligned, ~1 inch square
+    // LOGO — document header, right-aligned (above body content)
     // ══════════════════════════════════════════════
+    let headerParagraph: Paragraph;
     try {
       const logoPath = path.join(process.cwd(), 'public', 'ServiceDraft-ai-tight logo.PNG');
       const logoBuffer = fs.readFileSync(logoPath);
-      children.push(
-        new Paragraph({
-          children: [
-            new ImageRun({
-              type: 'png',
-              data: logoBuffer,
-              transformation: { width: 72, height: 72 }, // ~1 inch
-            }),
-          ],
-          alignment: AlignmentType.RIGHT,
-          spacing: { after: 120 },
-        })
-      );
+      headerParagraph = new Paragraph({
+        children: [
+          new ImageRun({
+            type: 'png',
+            data: logoBuffer,
+            transformation: { width: 72, height: 72 }, // ~1 inch
+          }),
+        ],
+        alignment: AlignmentType.RIGHT,
+      });
     } catch {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: 'ServiceDraft.AI',
-              italics: true,
-              size: 18,
-              font: 'Arial',
-              color: '888888',
-            }),
-          ],
-          alignment: AlignmentType.RIGHT,
-          spacing: { after: 120 },
-        })
-      );
+      headerParagraph = new Paragraph({
+        children: [
+          new TextRun({
+            text: 'ServiceDraft.AI',
+            italics: true,
+            size: 18,
+            font: 'Arial',
+            color: '888888',
+          }),
+        ],
+        alignment: AlignmentType.RIGHT,
+      });
     }
 
     // ══════════════════════════════════════════════
@@ -238,7 +234,10 @@ export async function POST(request: NextRequest) {
 
     // ── Build document ──
     const doc = new Document({
-      sections: [{ children }],
+      sections: [{
+        headers: { default: new Header({ children: [headerParagraph] }) },
+        children,
+      }],
     });
 
     const buffer = await Packer.toBuffer(doc);
