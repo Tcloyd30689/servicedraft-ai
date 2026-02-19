@@ -646,6 +646,38 @@ The narrative page needs access to:
 
 This state should persist across the input → narrative page navigation. Use React Context or a simple store.
 
+### Export System (Overhauled 2026-02-19)
+
+The Share/Export modal provides four options: Copy to Clipboard, Print, Download as PDF, and Download as Word Document.
+
+**PDF Generation** (`src/app/api/export-pdf/route.ts`):
+- Uses the `jspdf` npm package for server-side PDF generation
+- POST endpoint receives: `{ narrative, displayFormat, vehicleInfo }`
+- Document layout (US Letter):
+  - Logo in top-right corner (letterhead style, 35mm x 9mm)
+  - Vehicle info header: "YEAR MAKE MODEL" in 14pt bold
+  - R.O.# line in 11pt bold
+  - Separator line
+  - Narrative content: 11pt body text with 1.5 line spacing
+  - C/C/C format: section headers (CONCERN, CAUSE, CORRECTION) at 14pt bold
+  - Automatic page breaks for long content
+- Logo loading priority: `public/logo-bw.png` → `public/logo.png` → text fallback
+
+**Word (.docx) Generation** (`src/app/api/export-docx/route.ts`):
+- Uses the `docx` npm package for server-side .docx generation
+- POST endpoint receives same payload as PDF
+- Same formatting rules as PDF:
+  - Logo in document header (right-aligned, 120x30px)
+  - Vehicle info in 14pt bold Arial, R.O.# in 11pt bold
+  - Section headers at 14pt bold, body at 11pt with 1.5 line spacing
+  - Separator line between header and content
+
+**New npm packages installed:**
+- `jspdf` — PDF document generation (works in Node.js)
+- `docx` — Word document (.docx) generation
+
+**B&W Logo:** Place an optimized B&W logo at `public/logo-bw.png` for best results. If not present, falls back to `public/logo.png` then to italic text "ServiceDraft.AI".
+
 ---
 
 ## PHASE 7: DASHBOARD — KEY IMPLEMENTATION NOTES

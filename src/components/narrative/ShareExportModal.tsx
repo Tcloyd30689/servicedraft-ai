@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Copy, Printer, FileDown } from 'lucide-react';
+import { Copy, Printer, FileDown, FileText } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import type { NarrativeData } from '@/stores/narrativeStore';
@@ -22,7 +22,8 @@ export default function ShareExportModal({
   displayFormat,
   vehicleInfo,
 }: ShareExportModalProps) {
-  const printRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
 
   const getTextContent = (): string => {
     if (displayFormat === 'block') {
@@ -57,7 +58,6 @@ export default function ShareExportModal({
       ? narrative.block_narrative
       : `CONCERN:\n${narrative.concern}\n\nCAUSE:\n${narrative.cause}\n\nCORRECTION:\n${narrative.correction}`;
 
-    // Create a hidden iframe for printing
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.left = '-9999px';
@@ -101,7 +101,6 @@ export default function ShareExportModal({
     iframe.contentWindow?.focus();
     iframe.contentWindow?.print();
 
-    // Clean up after a delay
     setTimeout(() => {
       document.body.removeChild(iframe);
     }, 1000);
@@ -109,40 +108,70 @@ export default function ShareExportModal({
     onClose();
   };
 
-  const handleDownloadPdf = () => {
-    const header = getVehicleHeader();
-    const content = displayFormat === 'block'
-      ? narrative.block_narrative
-      : `CONCERN:\n${narrative.concern}\n\nCAUSE:\n${narrative.cause}\n\nCORRECTION:\n${narrative.correction}`;
-
-    // Build a simple text-based file and trigger download
-    const docContent = [
-      'ServiceDraft.AI - Generated Narrative',
-      header ? header : '',
-      '─'.repeat(50),
-      '',
-      content,
-      '',
-      '─'.repeat(50),
-      `Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
-    ].filter((line, i) => i !== 1 || line !== '').join('\n');
-
-    const blob = new Blob([docContent], { type: 'text/plain;charset=utf-8' });
+  const triggerDownload = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const filename = vehicleInfo?.roNumber
-      ? `narrative_RO${vehicleInfo.roNumber}.txt`
-      : `narrative_${new Date().toISOString().slice(0, 10)}.txt`;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
-    toast.success('Narrative downloaded');
-    onClose();
   };
+
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const res = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ narrative, displayFormat, vehicleInfo }),
+      });
+
+      if (!res.ok) throw new Error('PDF generation failed');
+
+      const blob = await res.blob();
+      const filename = vehicleInfo?.roNumber
+        ? `narrative_RO${vehicleInfo.roNumber}.pdf`
+        : `narrative_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+      triggerDownload(blob, filename);
+      toast.success('PDF downloaded');
+      onClose();
+    } catch {
+      toast.error('Failed to generate PDF');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleDownloadDocx = async () => {
+    setIsGeneratingDocx(true);
+    try {
+      const res = await fetch('/api/export-docx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ narrative, displayFormat, vehicleInfo }),
+      });
+
+      if (!res.ok) throw new Error('DOCX generation failed');
+
+      const blob = await res.blob();
+      const filename = vehicleInfo?.roNumber
+        ? `narrative_RO${vehicleInfo.roNumber}.docx`
+        : `narrative_${new Date().toISOString().slice(0, 10)}.docx`;
+
+      triggerDownload(blob, filename);
+      toast.success('Word document downloaded');
+      onClose();
+    } catch {
+      toast.error('Failed to generate Word document');
+    } finally {
+      setIsGeneratingDocx(false);
+    }
+  };
+
+  const isExporting = isGeneratingPdf || isGeneratingDocx;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Share / Export Story">
@@ -171,15 +200,24 @@ export default function ShareExportModal({
           variant="secondary"
           size="fullWidth"
           onClick={handleDownloadPdf}
+          disabled={isExporting}
           className="flex items-center justify-center gap-3"
         >
           <FileDown size={18} />
-          DOWNLOAD AS PDF DOCUMENT
+          {isGeneratingPdf ? 'GENERATING PDF...' : 'DOWNLOAD AS PDF DOCUMENT'}
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="fullWidth"
+          onClick={handleDownloadDocx}
+          disabled={isExporting}
+          className="flex items-center justify-center gap-3"
+        >
+          <FileText size={18} />
+          {isGeneratingDocx ? 'GENERATING DOCUMENT...' : 'DOWNLOAD AS WORD DOCUMENT'}
         </Button>
       </div>
-
-      {/* Hidden print container */}
-      <div ref={printRef} style={{ display: 'none' }} />
     </Modal>
   );
 }

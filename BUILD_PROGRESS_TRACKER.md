@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-19
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 21 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 22 post-build fixes applied)
 
 ---
 
@@ -546,9 +546,10 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] SHARE/EXPORT STORY button opens export options modal
 - [x] Copy Text to Clipboard (with toast confirmation)
 - [x] Print Generated Narrative (browser print dialog)
-- [x] Download as PDF Document (generate PDF on the fly)
-- **Completed:** 2026-02-15
-- **Notes:** PDF uses browser print-to-PDF dialog for lightweight implementation.
+- [x] Download as PDF Document (real PDF via server-side jsPDF generation)
+- [x] Download as Word Document (.docx via server-side docx package)
+- **Completed:** 2026-02-15 (Overhauled 2026-02-19)
+- **Notes:** **Overhauled 2026-02-19:** Export system rebuilt — real PDF generation via `jsPDF` (API route: `src/app/api/export-pdf/route.ts`), Word (.docx) export via `docx` package (API route: `src/app/api/export-docx/route.ts`). Professional formatting: logo letterhead (top-right), vehicle info header in bold 14pt, R.O.# styling, C/C/C section title formatting (14pt bold headers, 11pt body). B&W logo uses `public/logo-bw.png` if available, falls back to `public/logo.png`, then to text. Loading states shown during generation.
 
 ### 6.9 — Generated Narrative Page Assembly
 - [x] Build `src/app/(protected)/narrative/page.tsx`
@@ -915,6 +916,21 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Completed:** 2026-02-19
 - **Notes:** Page transitions were already implemented correctly. Verified all pages have consistent fade-in + slide-up entrance animation.
 
+### PB.22 — Export System Overhaul: Real PDF & Word Document Generation
+- [x] Installed `jspdf` for server-side PDF generation and `docx` for Word (.docx) generation
+- [x] Created API route `src/app/api/export-pdf/route.ts` — generates real PDF documents with jsPDF
+- [x] Created API route `src/app/api/export-docx/route.ts` — generates .docx files with the docx package
+- [x] Both exports include: logo letterhead (top-right), vehicle info header (14pt bold), R.O.# line, separator, narrative content (11pt body)
+- [x] C/C/C format: section headers (CONCERN, CAUSE, CORRECTION) at 14pt bold with content under each
+- [x] Block format: flowing paragraph with 1.5 line spacing
+- [x] Automatic page breaks for long narratives (PDF)
+- [x] Updated `ShareExportModal.tsx` — PDF button now calls real API route, added "DOWNLOAD AS WORD DOCUMENT" button with FileText icon
+- [x] Loading states during PDF/DOCX generation ("GENERATING PDF...", "GENERATING DOCUMENT...")
+- [x] Logo priority: `public/logo-bw.png` → `public/logo.png` → text fallback ("ServiceDraft.AI")
+- [x] Removed unused printRef and hidden div from ShareExportModal
+- **Completed:** 2026-02-19
+- **Notes:** Previous implementation generated a plain .txt file labeled as PDF. Now generates real PDF and Word documents suitable for warranty documentation. User can create an optimized `public/logo-bw.png` for best results in exported documents.
+
 ---
 
 ## SUMMARY COUNTS
@@ -932,8 +948,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 21 | 21 |
-| **TOTAL** | **99** | **94** |
+| Post-Build Fixes | 22 | 22 |
+| **TOTAL** | **100** | **95** |
 
 ---
 
