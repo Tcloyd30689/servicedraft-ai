@@ -10,6 +10,7 @@ import { useNarrativeStore } from '@/stores/narrativeStore';
 import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import AutoTextarea from '@/components/ui/AutoTextarea';
 import StoryTypeSelector from '@/components/input/StoryTypeSelector';
 import ConditionalField from '@/components/input/ConditionalField';
 
@@ -104,26 +105,40 @@ export default function InputPage() {
               {/* Required fields (1-5) */}
               {fields
                 .filter((f) => f.required)
-                .map((field) => (
-                  <Input
-                    key={field.id}
-                    id={field.id}
-                    label={`${field.label} *`}
-                    placeholder={field.placeholder}
-                    value={
-                      field.id === 'ro_number'
-                        ? state.roNumber
-                        : state.fieldValues[field.id] || ''
+                .map((field) => {
+                  const isShortField = ['ro_number', 'year', 'make', 'model'].includes(field.id);
+                  const fieldValue =
+                    field.id === 'ro_number'
+                      ? state.roNumber
+                      : state.fieldValues[field.id] || '';
+                  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+                    if (field.id === 'ro_number') {
+                      setRoNumber(e.target.value);
+                    } else {
+                      setFieldValue(field.id, e.target.value);
                     }
-                    onChange={(e) => {
-                      if (field.id === 'ro_number') {
-                        setRoNumber(e.target.value);
-                      } else {
-                        setFieldValue(field.id, e.target.value);
-                      }
-                    }}
-                  />
-                ))}
+                  };
+
+                  return isShortField ? (
+                    <Input
+                      key={field.id}
+                      id={field.id}
+                      label={`${field.label} *`}
+                      placeholder={field.placeholder}
+                      value={fieldValue}
+                      onChange={handleChange}
+                    />
+                  ) : (
+                    <AutoTextarea
+                      key={field.id}
+                      id={field.id}
+                      label={`${field.label} *`}
+                      placeholder={field.placeholder}
+                      value={fieldValue}
+                      onChange={handleChange}
+                    />
+                  );
+                })}
 
               {/* Conditional fields (6+) */}
               {fields.filter((f) => f.hasDropdown).length > 0 && (

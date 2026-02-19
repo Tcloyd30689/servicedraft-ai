@@ -188,9 +188,9 @@ export default function NarrativePage() {
           cause: state.narrative.cause,
           correction: state.narrative.correction,
           storyType: state.storyType,
-          year: state.fieldValues['vehicle_year'] || '',
-          make: state.fieldValues['vehicle_make'] || '',
-          model: state.fieldValues['vehicle_model'] || '',
+          year: state.fieldValues['year'] || '',
+          make: state.fieldValues['make'] || '',
+          model: state.fieldValues['model'] || '',
         }),
       });
 
@@ -250,11 +250,11 @@ export default function NarrativePage() {
       const { error } = await supabase.from('narratives').insert({
         user_id: user.id,
         ro_number: state.roNumber || null,
-        vehicle_year: state.fieldValues['vehicle_year']
-          ? parseInt(state.fieldValues['vehicle_year'], 10) || null
+        vehicle_year: state.fieldValues['year']
+          ? parseInt(state.fieldValues['year'], 10) || null
           : null,
-        vehicle_make: state.fieldValues['vehicle_make'] || null,
-        vehicle_model: state.fieldValues['vehicle_model'] || null,
+        vehicle_make: state.fieldValues['make'] || null,
+        vehicle_model: state.fieldValues['model'] || null,
         concern: state.narrative.concern,
         cause: state.narrative.cause,
         correction: state.narrative.correction,
@@ -502,9 +502,9 @@ export default function NarrativePage() {
         narrative={state.narrative}
         displayFormat={state.displayFormat}
         vehicleInfo={{
-          year: state.fieldValues['vehicle_year'] || '',
-          make: state.fieldValues['vehicle_make'] || '',
-          model: state.fieldValues['vehicle_model'] || '',
+          year: state.fieldValues['year'] || '',
+          make: state.fieldValues['make'] || '',
+          model: state.fieldValues['model'] || '',
           roNumber: state.roNumber || '',
         }}
       />

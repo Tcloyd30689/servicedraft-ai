@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-19
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 15 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 18 post-build fixes applied)
 
 ---
 
@@ -869,6 +869,29 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Completed:** 2026-02-19
 - **Notes:** UserPopup.tsx itself was correct — it was already reading `profile?.position`. The underlying data source (`useAuth`) was the problem. After editing profile in EditProfileModal, all components (UserPopup, ProfileSection, etc.) now show updated position icon and text instantly.
 
+### PB.16 — Vehicle Information Not Saving to Dashboard Narratives
+- [x] Field ID mismatch corrected — save function now uses `year`, `make`, `model` matching fieldConfig.ts
+- [x] Fixed in `handleSave`, `handleProofread`, and `ShareExportModal` vehicleInfo in `src/app/(protected)/narrative/page.tsx`
+- [x] All 6 occurrences of `vehicle_year`/`vehicle_make`/`vehicle_model` replaced with `year`/`make`/`model`
+- **Completed:** 2026-02-19
+- **Notes:** Vehicle info is metadata for saved records and exports only — not sent to AI for generation.
+
+### PB.17 — Saved Narrative Modal Too Transparent
+- [x] Modal opacity increased to 85% — bg changed from `rgba(197,173,229,0.05)` to `rgba(15,10,30,0.85)`
+- [x] Blur increased from `backdrop-blur-sm` (4px) to `backdrop-blur-xl` (24px)
+- [x] Updated in `src/components/ui/Modal.tsx`
+- **Completed:** 2026-02-19
+- **Notes:** Modal now renders as a solid dark card. Text is fully readable without background bleed-through.
+
+### PB.18 — Input Page Text Fields Don't Wrap or Expand
+- [x] Created `src/components/ui/AutoTextarea.tsx` — auto-expanding textarea with same styling as Input
+- [x] Input page: `customer_concern` (required field 5) now uses AutoTextarea
+- [x] ConditionalField.tsx: all conditional fields (6+) now use auto-expanding `<textarea>` instead of `<input type="text">`
+- [x] Short fields (R.O.#, Year, Make, Model) remain as single-line inputs
+- [x] Text wraps to next line, field height grows with content, no horizontal scrolling
+- **Completed:** 2026-02-19
+- **Notes:** Uses `resize: none` + `overflow: hidden` + `scrollHeight` resize pattern. Starts at 2 rows, expands as needed.
+
 ---
 
 ## SUMMARY COUNTS
@@ -886,8 +909,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 15 | 15 |
-| **TOTAL** | **93** | **88** |
+| Post-Build Fixes | 18 | 18 |
+| **TOTAL** | **96** | **91** |
 
 ---
 

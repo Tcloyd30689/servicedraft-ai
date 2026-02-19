@@ -691,6 +691,34 @@ Required variables:
 
 ---
 
+## APPENDIX: CONVENTIONS & STANDARDS (Added 2026-02-19)
+
+### Field ID Convention
+
+**CRITICAL:** Always use field IDs as defined in `src/constants/fieldConfig.ts`. The IDs are:
+- `ro_number`, `year`, `make`, `model`, `customer_concern` (required fields)
+- `codes_present`, `diagnostics_performed`, `root_cause`, `recommended_action`, `repair_performed`, `repair_verification` (conditional fields)
+
+When accessing field values in the narrative store: `state.fieldValues['year']` (NOT `state.fieldValues['vehicle_year']`).
+
+### Modal Opacity & Blur Standards
+
+Modals use a solid dark background so text is fully readable without background bleed-through:
+- **Modal panel:** `bg-[rgba(15,10,30,0.85)]` with `backdrop-blur-xl` (24px)
+- **Modal backdrop:** `bg-black/70` with `backdrop-blur-[4px]`
+- **LiquidCard** (non-modal): `bg-[rgba(197,173,229,0.05)]` with `backdrop-blur-sm` — lighter for in-page cards
+
+### Auto-Expanding Textarea Pattern
+
+For text entry fields where content may exceed one line, use `AutoTextarea` (`src/components/ui/AutoTextarea.tsx`):
+- Text wraps to the next line when it reaches field width
+- Field height grows automatically as the user types
+- Uses `resize: none` + `overflow: hidden` + `scrollHeight` auto-resize on input
+- Starts at `rows={2}`, grows as needed
+- Short metadata fields (R.O.#, Year, Make, Model) use standard `<Input>` instead
+
+---
+
 ## APPENDIX: COMMON PATTERNS
 
 ### API Call Pattern (Client Side)

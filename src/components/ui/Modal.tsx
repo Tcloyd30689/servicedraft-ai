@@ -54,8 +54,8 @@ export default function Modal({
           {/* Modal */}
           <motion.div
             className={`fixed z-50 top-1/2 left-1/2 w-[90vw] ${width} max-h-[85vh] overflow-y-auto
-              bg-[rgba(197,173,229,0.05)] border-2 border-black rounded-[23px]
-              backdrop-blur-sm shadow-[0_0_60px_rgba(73,18,155,0.5)]`}
+              bg-[rgba(15,10,30,0.85)] border-2 border-black rounded-[23px]
+              backdrop-blur-xl shadow-[0_0_60px_rgba(73,18,155,0.5)]`}
             style={{ x: '-50%', y: '-50%' }}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}

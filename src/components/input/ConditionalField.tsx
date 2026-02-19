@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useCallback, useEffect } from 'react';
 import { Sparkles } from 'lucide-react';
 import type { FieldConfig, DropdownOption } from '@/constants/fieldConfig';
 import { dropdownOptions } from '@/constants/fieldConfig';
@@ -23,6 +24,19 @@ export default function ConditionalField({
   const isInclude = dropdownSelection === 'include';
   const isGenerate = dropdownSelection === 'generate';
   const isDontInclude = dropdownSelection === 'dont_include';
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const resize = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+
+  useEffect(() => {
+    if (isInclude) resize();
+  }, [value, isInclude, resize]);
 
   return (
     <div className={cn(
@@ -54,14 +68,18 @@ export default function ConditionalField({
         </select>
       </div>
 
-      {/* Input field — only shown for "Include Information" */}
+      {/* Text field — only shown for "Include Information" */}
       {isInclude && (
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
+          rows={2}
           value={value}
-          onChange={(e) => onValueChange(e.target.value)}
+          onChange={(e) => {
+            onValueChange(e.target.value);
+            resize();
+          }}
           placeholder={field.placeholder}
-          className="w-full p-3 bg-[#0f0520] border border-[#6b21a8] rounded-lg text-white placeholder-[#9ca3af] focus:outline-none focus:border-[#a855f7] focus:shadow-[0_0_0_3px_rgba(168,85,247,0.2)] hover:border-[#7c3aed] transition-all duration-200"
+          className="w-full p-3 leading-relaxed resize-none overflow-hidden bg-[#0f0520] border border-[#6b21a8] rounded-lg text-white placeholder-[#9ca3af] focus:outline-none focus:border-[#a855f7] focus:shadow-[0_0_0_3px_rgba(168,85,247,0.2)] hover:border-[#7c3aed] transition-all duration-200"
         />
       )}
 
