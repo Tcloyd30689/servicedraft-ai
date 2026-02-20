@@ -48,13 +48,12 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
     root.style.setProperty('--bg-elevated', '#e2e8f0');
     root.style.setProperty('--bg-modal', 'rgba(255, 255, 255, 0.95)');
     root.style.setProperty('--bg-nav', 'rgba(255, 255, 255, 0.9)');
-    root.style.setProperty('--bg-card', `rgba(${accent.rgb.join(', ')}, 0.08)`);
+    root.style.setProperty('--bg-card', 'var(--accent-8)');
     root.style.setProperty('--text-primary', '#0f172a');
     root.style.setProperty('--text-muted', '#64748b');
     root.style.setProperty('--card-border', accent.border);
     root.style.setProperty('--modal-border', accent.border);
-    root.style.setProperty('--scrollbar-track', '#e2e8f0');
-    root.style.setProperty('--body-bg', `linear-gradient(135deg, #f0f2f5 0%, #ffffff 50%, #e8eaee 100%)`);
+    root.style.setProperty('--scrollbar-track', 'var(--bg-elevated)');
   }
 }
 

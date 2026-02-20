@@ -232,27 +232,15 @@ export function buildCssVars(accent: AccentColor): Record<string, string> {
     '--bg-gradient-2': accent.gradient2,
     '--bg-input': accent.bgInput,
     '--bg-elevated': accent.bgElevated,
-    '--bg-card': `rgba(${r}, ${g}, ${b}, 0.05)`,
     '--bg-modal': isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 10, 30, 0.85)',
     '--bg-nav': isLight ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
 
     // Text
     '--text-primary': isLight ? '#0f172a' : '#ffffff',
-    '--text-secondary': accent.textSecondary,
     '--text-muted': isLight ? '#64748b' : '#9ca3af',
 
     // Wave
     '--wave-color': `${wr}, ${wg}, ${wb}`,
-
-    // Scrollbar
-    '--scrollbar-track': accent.bgInput,
-    '--scrollbar-thumb': accent.border,
-    '--scrollbar-thumb-hover': accent.hover,
-
-    // Body gradient (for <body> background)
-    '--body-bg': isLight
-      ? `linear-gradient(135deg, ${accent.gradient1} 0%, #ffffff 50%, ${accent.gradient2} 100%)`
-      : `linear-gradient(135deg, ${accent.gradient1} 0%, #000000 50%, ${accent.gradient2} 100%)`,
 
     // Card border for dark/light
     '--card-border': isLight ? accent.border : '#000000',

@@ -1,6 +1,7 @@
 'use client';
 
 import { type SelectHTMLAttributes, forwardRef } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
@@ -21,29 +22,34 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             {label}
           </label>
         )}
-        <select
-          ref={ref}
-          id={id}
-          className={cn(
-            'w-full p-3 pr-10',
-            'bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg',
-            'text-[var(--text-primary)] cursor-pointer',
-            'appearance-none',
-            'bg-[url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23c4b5fd%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E")] bg-no-repeat bg-[right_12px_center]',
-            'focus:outline-none focus:border-[var(--accent-hover)] focus:shadow-[0_0_0_3px_var(--accent-20)]',
-            'hover:border-[var(--accent-primary)]',
-            'transition-all duration-200',
-            error && 'border-red-500 focus:border-red-500',
-            className,
-          )}
-          {...props}
-        >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            ref={ref}
+            id={id}
+            className={cn(
+              'w-full p-3 pr-10',
+              'bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg',
+              'text-[var(--text-primary)] cursor-pointer',
+              'appearance-none',
+              'focus:outline-none focus:border-[var(--accent-hover)] focus:shadow-[0_0_0_3px_var(--accent-20)]',
+              'hover:border-[var(--accent-primary)]',
+              'transition-all duration-200',
+              error && 'border-red-500 focus:border-red-500',
+              className,
+            )}
+            {...props}
+          >
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            size={16}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none"
+          />
+        </div>
         {error && (
           <p className="mt-1 text-sm text-red-400">{error}</p>
         )}

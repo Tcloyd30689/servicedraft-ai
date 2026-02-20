@@ -65,10 +65,10 @@
   --bg-gradient-2: #490557;
   --bg-input: #0f0520;
   --bg-elevated: #1a0a2e;
-  --bg-card: rgba(147, 51, 234, 0.05);
+  --bg-card: var(--accent-5);
   --bg-modal: rgba(15, 10, 30, 0.85);
   --bg-nav: rgba(0, 0, 0, 0.8);
-  --body-bg: linear-gradient(135deg, #260d3f 0%, #000000 50%, #490557 100%);
+  --body-bg: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-primary) 50%, var(--bg-gradient-2) 100%);
 
   /* ---- Card / Modal borders ---- */
   --card-border: #000000;
@@ -76,16 +76,16 @@
 
   /* ---- Text ---- */
   --text-primary: #ffffff;
-  --text-secondary: #c4b5fd;
+  --text-secondary: var(--accent-text);
   --text-muted: #9ca3af;
 
   /* ---- Wave (RGB components for canvas use) ---- */
   --wave-color: 195, 171, 226;
 
   /* ---- Scrollbar ---- */
-  --scrollbar-track: #0f0520;
-  --scrollbar-thumb: #6b21a8;
-  --scrollbar-thumb-hover: #a855f7;
+  --scrollbar-track: var(--bg-input);
+  --scrollbar-thumb: var(--accent-border);
+  --scrollbar-thumb-hover: var(--accent-hover);
 
   /* ---- Legacy (kept for transition) ---- */
   --radius-sm: 6px;
