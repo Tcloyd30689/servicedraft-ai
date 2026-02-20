@@ -173,11 +173,11 @@ export default function LoginPage() {
             </form>
           )}
 
-          <p className="text-center text-sm text-[#9ca3af] mt-6">
+          <p className="text-center text-sm text-[var(--text-muted)] mt-6">
             Don&apos;t have an account?{' '}
             <Link
               href="/signup"
-              className="text-[#a855f7] hover:text-[#c084fc] transition-colors"
+              className="text-[var(--accent-hover)] hover:text-[var(--accent-bright)] transition-colors"
             >
               Request Access
             </Link>

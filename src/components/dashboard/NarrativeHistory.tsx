@@ -58,17 +58,17 @@ export default function NarrativeHistory({ userId }: NarrativeHistoryProps) {
   return (
     <LiquidCard size="standard">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-        <h2 className="text-lg font-semibold text-white">Saved Narratives</h2>
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Saved Narratives</h2>
 
         {/* Search */}
         <div className="relative w-full sm:w-64">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
             type="text"
             placeholder="Search narratives..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-[#0f0520] border border-[#6b21a8] rounded-lg text-white placeholder-[#9ca3af] focus:outline-none focus:border-[#a855f7] transition-colors"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
           />
         </div>
       </div>
@@ -78,7 +78,7 @@ export default function NarrativeHistory({ userId }: NarrativeHistoryProps) {
           <LoadingSpinner size="small" message="Loading saved narratives..." />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-8 text-[#9ca3af]">
+        <div className="text-center py-8 text-[var(--text-muted)]">
           {narratives.length === 0
             ? 'No saved narratives yet. Generate and save a story to see it here.'
             : 'No narratives match your search.'}
@@ -87,14 +87,14 @@ export default function NarrativeHistory({ userId }: NarrativeHistoryProps) {
         <div className="overflow-x-auto -mx-6 px-6">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[rgba(168,85,247,0.15)]">
-                <th className="text-left py-2 px-2 text-[#c4b5fd] font-medium">Date</th>
-                <th className="text-left py-2 px-2 text-[#c4b5fd] font-medium">Time</th>
-                <th className="text-left py-2 px-2 text-[#c4b5fd] font-medium">R.O. #</th>
-                <th className="text-left py-2 px-2 text-[#c4b5fd] font-medium">Year</th>
-                <th className="text-left py-2 px-2 text-[#c4b5fd] font-medium">Make</th>
-                <th className="text-left py-2 px-2 text-[#c4b5fd] font-medium">Model</th>
-                <th className="text-left py-2 px-2 text-[#c4b5fd] font-medium">Saved Story</th>
+              <tr className="border-b border-[var(--accent-15)]">
+                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Date</th>
+                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Time</th>
+                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">R.O. #</th>
+                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Year</th>
+                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Make</th>
+                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Model</th>
+                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Saved Story</th>
               </tr>
             </thead>
             <tbody>
@@ -105,15 +105,15 @@ export default function NarrativeHistory({ userId }: NarrativeHistoryProps) {
                   <tr
                     key={n.id}
                     onClick={() => setSelectedNarrative(n)}
-                    className="border-b border-[rgba(168,85,247,0.08)] hover:bg-[rgba(168,85,247,0.05)] cursor-pointer transition-colors"
+                    className="border-b border-[var(--accent-8)] hover:bg-[var(--accent-5)] cursor-pointer transition-colors"
                   >
-                    <td className="py-2.5 px-2 text-[#9ca3af]">{date.toLocaleDateString()}</td>
-                    <td className="py-2.5 px-2 text-[#9ca3af]">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                    <td className="py-2.5 px-2 text-white">{n.ro_number || '—'}</td>
-                    <td className="py-2.5 px-2 text-[#9ca3af]">{n.vehicle_year || '—'}</td>
-                    <td className="py-2.5 px-2 text-[#9ca3af]">{n.vehicle_make || '—'}</td>
-                    <td className="py-2.5 px-2 text-[#9ca3af]">{n.vehicle_model || '—'}</td>
-                    <td className="py-2.5 px-2 text-[#9ca3af] truncate max-w-[150px]">
+                    <td className="py-2.5 px-2 text-[var(--text-muted)]">{date.toLocaleDateString()}</td>
+                    <td className="py-2.5 px-2 text-[var(--text-muted)]">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td className="py-2.5 px-2 text-[var(--text-primary)]">{n.ro_number || '—'}</td>
+                    <td className="py-2.5 px-2 text-[var(--text-muted)]">{n.vehicle_year || '—'}</td>
+                    <td className="py-2.5 px-2 text-[var(--text-muted)]">{n.vehicle_make || '—'}</td>
+                    <td className="py-2.5 px-2 text-[var(--text-muted)]">{n.vehicle_model || '—'}</td>
+                    <td className="py-2.5 px-2 text-[var(--text-muted)] truncate max-w-[150px]">
                       {preview}{preview.length >= 30 ? '...' : ''}
                     </td>
                   </tr>

@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-19
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 25 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 26 post-build fixes applied)
 
 ---
 
@@ -961,6 +961,25 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Applied to all export paths (narrative page PDF/DOCX + dashboard saved narrative PDF/DOCX)
 - **Completed:** 2026-02-19
 
+### PB.26 — Accent Color Theming System (Full Implementation)
+- [x] Created `src/lib/constants/themeColors.ts` — 9 accent colors (Violet, Red, Orange, Yellow, Green, Blue, Pink, White, Black) with full derived values (hex, rgb, hover, bright, border, deep, textSecondary, waveRgb, logoFile, gradient, bgInput, bgElevated)
+- [x] Created `src/components/ThemeProvider.tsx` — React context provider with `useTheme()` hook, localStorage persistence (`sd-accent-color`, `sd-color-mode`), runtime CSS variable injection via `document.documentElement.style.setProperty()`
+- [x] Rewrote `src/app/globals.css` — comprehensive `:root` block with 40+ CSS custom properties defaulting to Violet; body background uses `var(--body-bg)`, scrollbar styling uses CSS vars
+- [x] Wrapped app in ThemeProvider (`src/app/layout.tsx`)
+- [x] Replaced ALL hardcoded purple/violet color values across entire `src/` directory (30+ component files) with CSS variable references:
+  - `#a855f7` → `var(--accent-hover)`, `#9333ea` → `var(--accent-primary)`, `#c084fc` → `var(--accent-bright)`
+  - `#6b21a8` → `var(--accent-border)`, `#49129b` → `var(--accent-deep)`, `#c4b5fd` → `var(--text-secondary)`
+  - `#0f0520` → `var(--bg-input)`, `rgba(197,173,229,0.05)` → `var(--bg-card)`, `rgba(15,10,30,0.85)` → `var(--bg-modal)`
+  - All `rgba(168,85,247,...)` opacity variants → `var(--accent-10)`, `var(--accent-20)`, etc.
+  - All `boxShadow` glow effects → `var(--shadow-glow-sm)`, `var(--shadow-glow-md)`, `var(--shadow-glow-lg)`
+  - `#9ca3af` → `var(--text-muted)`, `#ffffff` → `var(--text-primary)`
+- [x] Updated `Logo.tsx` — dynamically loads accent-colored logo PNG from `accent.logoFile`, glow uses `var(--accent-50)`
+- [x] WaveBackground reads `--wave-color` CSS variable via `getComputedStyle()` for dynamic wave color
+- [x] Light/dark mode support — Black accent auto-activates light mode; ThemeProvider overrides bg/text vars accordingly
+- [x] 9 accent-colored logo files added to `public/`: logo-violet.PNG, logo-red.PNG, logo-orange.PNG, logo-yellow.PNG, logo-green.PNG, logo-blue.PNG, logo-pink.PNG, logo-white.PNG, logo-black.PNG
+- **Completed:** 2026-02-19
+- **Notes:** This is the foundation for all future UI work. Every component now uses CSS variables instead of hardcoded colors. Changing the accent color updates the entire app in real-time. `buildCssVars()` generates all property values from a single accent color config object. New components should always use `var(--accent-*)` references, never hardcoded hex values.
+
 ---
 
 ## SUMMARY COUNTS
@@ -978,8 +997,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 25 | 25 |
-| **TOTAL** | **103** | **98** |
+| Post-Build Fixes | 26 | 26 |
+| **TOTAL** | **104** | **99** |
 
 ---
 

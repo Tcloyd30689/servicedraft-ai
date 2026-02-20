@@ -334,7 +334,7 @@ export default function NarrativePage() {
                 className="w-full flex items-center justify-between text-white font-semibold text-sm cursor-pointer"
               >
                 <span className="flex items-center gap-2">
-                  <Settings size={16} className="text-[#a855f7]" />
+                  <Settings size={16} className="text-[var(--accent-hover)]" />
                   AI OUTPUT CUSTOMIZATION
                 </span>
                 <span className="text-[#9ca3af] text-xs">

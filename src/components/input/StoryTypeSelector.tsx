@@ -37,25 +37,25 @@ export default function StoryTypeSelector({ selected, onSelect }: StoryTypeSelec
           className={cn(
             'flex flex-col items-center gap-3 p-6 rounded-xl border-2 cursor-pointer',
             selected === option.type
-              ? 'border-[#a855f7] bg-[rgba(168,85,247,0.1)] shadow-[0_0_20px_rgba(168,85,247,0.3)]'
-              : 'border-[#6b21a8] bg-[rgba(197,173,229,0.03)]',
+              ? 'border-[var(--accent-hover)] bg-[var(--accent-10)] shadow-[var(--shadow-glow-sm)]'
+              : 'border-[var(--accent-border)] bg-[var(--accent-3)]',
           )}
-          whileHover={{ scale: 1.03, boxShadow: '0 0 20px rgba(168, 85, 247, 0.3)' }}
+          whileHover={{ scale: 1.03, boxShadow: 'var(--shadow-glow-sm)' }}
           whileTap={{ scale: 0.97 }}
           transition={springTransition}
         >
           <div className={cn(
-            selected === option.type ? 'text-[#a855f7]' : 'text-[#9ca3af]',
+            selected === option.type ? 'text-[var(--accent-hover)]' : 'text-[var(--text-muted)]',
           )}>
             {option.icon}
           </div>
           <span className={cn(
             'font-semibold text-sm',
-            selected === option.type ? 'text-white' : 'text-[#c4b5fd]',
+            selected === option.type ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]',
           )}>
             {option.label}
           </span>
-          <span className="text-xs text-[#9ca3af] text-center">
+          <span className="text-xs text-[var(--text-muted)] text-center">
             {option.description}
           </span>
         </motion.button>

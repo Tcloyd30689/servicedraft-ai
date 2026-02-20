@@ -47,16 +47,16 @@ export default function ProofreadResults({
         <span className={`${rating.color} text-white text-xs font-bold px-3 py-1 rounded-full`}>
           {rating.label}
         </span>
-        <span className="text-[#c4b5fd] text-sm">{data.summary}</span>
+        <span className="text-[var(--text-secondary)] text-sm">{data.summary}</span>
       </div>
 
       {/* Flagged Issues */}
       <div>
-        <h4 className="text-sm font-medium text-[#c4b5fd] uppercase tracking-wide mb-2">
+        <h4 className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-2">
           Flagged Issues
         </h4>
-        <div className="bg-[#0f0520] border border-[#6b21a8] rounded-lg p-3 min-h-[60px]">
-          <p className="text-white text-sm whitespace-pre-wrap leading-relaxed">
+        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3 min-h-[60px]">
+          <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">
             {animate ? issuesText.displayText : (
               data.flagged_issues.length > 0
                 ? data.flagged_issues.map((issue, i) => `${i + 1}. ${issue}`).join('\n')
@@ -68,11 +68,11 @@ export default function ProofreadResults({
 
       {/* Suggested Edits */}
       <div>
-        <h4 className="text-sm font-medium text-[#c4b5fd] uppercase tracking-wide mb-2">
+        <h4 className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-2">
           Suggested Edits
         </h4>
-        <div className="bg-[#0f0520] border border-[#6b21a8] rounded-lg p-3 min-h-[60px]">
-          <p className="text-white text-sm whitespace-pre-wrap leading-relaxed">
+        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3 min-h-[60px]">
+          <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">
             {animate ? editsText.displayText : (
               data.suggested_edits.length > 0
                 ? data.suggested_edits.map((edit, i) => `${i + 1}. ${edit}`).join('\n')

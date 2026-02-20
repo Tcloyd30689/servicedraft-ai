@@ -69,7 +69,7 @@ Follow these at ALL times during the build:
 - Use **Tailwind CSS** for all styling — no separate CSS files except `globals.css`
 - Use the **custom Tailwind theme** extensions defined in Phase 0, Task 0.4
 - For one-off styles that Tailwind can't handle, use inline `style={}` or `globals.css`
-- Follow the UI Design Spec exactly for colors, spacing, border radius, and effects
+- **CRITICAL: Use CSS variables for ALL colors** — never hardcode hex values like `#a855f7` or `rgba(168,85,247,0.3)`. Use `var(--accent-hover)`, `var(--accent-30)`, etc. See the "Accent Color Theming System" appendix below for the full variable reference.
 
 ### Error Handling
 - Every API call must be wrapped in try/catch
@@ -727,6 +727,127 @@ Required variables:
 
 ---
 
+## APPENDIX: ACCENT COLOR THEMING SYSTEM (Added 2026-02-19)
+
+### Overview
+
+The entire app uses CSS custom properties for all accent colors, backgrounds, text, borders, shadows, and glow effects. The theme is controlled by `ThemeProvider` (`src/components/ThemeProvider.tsx`) which applies CSS variables to `document.documentElement` at runtime. Changing the accent color updates every component instantly.
+
+### Architecture
+
+```
+src/lib/constants/themeColors.ts    → Color definitions & buildCssVars()
+src/components/ThemeProvider.tsx     → React context, localStorage persistence, CSS injection
+src/app/globals.css                 → :root defaults (Violet), CSS variable declarations
+src/app/layout.tsx                  → <ThemeProvider> wraps the entire app
+public/logo-{color}.PNG             → 9 accent-colored logo files
+```
+
+### How to Use in Components
+
+**NEVER** hardcode hex colors. **ALWAYS** use CSS variable references via Tailwind arbitrary values:
+
+```tsx
+// CORRECT — uses CSS variables
+<div className="bg-[var(--bg-card)] border-[var(--accent-border)] text-[var(--text-primary)]">
+<button className="bg-[var(--accent-hover)] hover:bg-[var(--accent-primary)] text-white">
+<span className="text-[var(--text-secondary)]">Secondary text</span>
+<div className="shadow-[var(--shadow-glow-md)]">Glowing card</div>
+
+// WRONG — hardcoded colors
+<div className="bg-purple-600 text-[#c4b5fd]">
+<button className="bg-[#a855f7]">
+```
+
+### CSS Variable Reference
+
+| Variable | Purpose | Default (Violet) |
+|----------|---------|-------------------|
+| `--accent-primary` | Main accent color | `#9333ea` |
+| `--accent-hover` | Hover/interactive accent | `#a855f7` |
+| `--accent-bright` | Brightest accent (links, highlights) | `#c084fc` |
+| `--accent-border` | Border color for inputs/cards | `#6b21a8` |
+| `--accent-deep` | Darkest accent (deep glow) | `#49129b` |
+| `--accent-text` | Text secondary (accent-tinted) | `#c4b5fd` |
+| `--accent-3` through `--accent-50` | Accent at 3%-50% opacity | `rgba(r,g,b,0.XX)` |
+| `--shadow-glow-sm` | Small glow shadow | `0 0 15px rgba(...)` |
+| `--shadow-glow-md` | Medium glow shadow | `0 0 40px rgba(...)` |
+| `--shadow-glow-lg` | Large glow shadow | `0 0 60px rgba(...)` |
+| `--shadow-glow-accent` | Accent glow for interactive | `0 0 20px rgba(...)` |
+| `--bg-primary` | Page background base | `#000000` |
+| `--bg-input` | Input field background | `#0f0520` |
+| `--bg-elevated` | Elevated surface | `#1a0a2e` |
+| `--bg-card` | Card background (low opacity) | `rgba(r,g,b,0.05)` |
+| `--bg-modal` | Modal background (high opacity) | `rgba(15,10,30,0.85)` |
+| `--bg-nav` | Nav bar background | `rgba(0,0,0,0.8)` |
+| `--body-bg` | Full body gradient | `linear-gradient(...)` |
+| `--text-primary` | Primary text | `#ffffff` |
+| `--text-secondary` | Secondary text (accent-tinted) | `#c4b5fd` |
+| `--text-muted` | Muted/subtle text | `#9ca3af` |
+| `--wave-color` | Wave RGB for canvas | `195, 171, 226` |
+| `--card-border` | Card border color | `#000000` |
+| `--modal-border` | Modal border color | `#000000` |
+
+### Using Framer Motion boxShadow with CSS Variables
+
+For Framer Motion `whileHover` boxShadow, pass the CSS variable string directly:
+
+```tsx
+<motion.div
+  whileHover={{ scale: 1.02, boxShadow: 'var(--shadow-glow-accent)' }}
+  whileTap={{ scale: 0.98 }}
+  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+>
+```
+
+### Using the Theme Context
+
+```tsx
+import { useTheme } from '@/components/ThemeProvider';
+
+function MyComponent() {
+  const { accent, setAccentColor, colorMode, toggleColorMode } = useTheme();
+
+  // accent.logoFile → '/logo-violet.PNG'
+  // accent.key → 'violet'
+  // accent.name → 'Violet'
+  // accent.isLightMode → false
+}
+```
+
+### 9 Available Accent Colors
+
+| Color | Key | Hex | Light Mode? |
+|-------|-----|-----|-------------|
+| Violet | `violet` | `#9333ea` | No (default) |
+| Red | `red` | `#dc2626` | No |
+| Orange | `orange` | `#ea580c` | No |
+| Yellow | `yellow` | `#eab308` | No |
+| Green | `green` | `#84cc16` | No |
+| Blue | `blue` | `#2563eb` | No |
+| Pink | `pink` | `#d946ef` | No |
+| White | `white` | `#e2e8f0` | No |
+| Black | `black` | `#1e293b` | Yes (auto-activates light mode) |
+
+### Logo System
+
+Each accent color has a matching logo file in `public/`. The `Logo` component (`src/components/ui/Logo.tsx`) reads `accent.logoFile` from the theme context and renders the matching PNG. The original `logo.png` is kept as a fallback.
+
+### Light/Dark Mode
+
+- **Dark mode** is the default for all accent colors except Black
+- **Black accent** automatically activates light mode (white backgrounds, dark text)
+- `ThemeProvider` handles mode switching by overriding `--bg-primary`, `--text-primary`, `--text-muted`, `--bg-modal`, `--bg-nav` when in light mode
+- Preferences persist in localStorage under `sd-color-mode`
+
+### Adding a New Accent Color
+
+1. Add a new entry to `ACCENT_COLORS` array in `src/lib/constants/themeColors.ts`
+2. Add a matching logo PNG to `public/logo-{key}.PNG`
+3. That's it — `buildCssVars()` auto-generates all derived CSS properties
+
+---
+
 ## APPENDIX: CONVENTIONS & STANDARDS (Added 2026-02-19)
 
 ### Field ID Convention
@@ -740,9 +861,9 @@ When accessing field values in the narrative store: `state.fieldValues['year']` 
 ### Modal Opacity & Blur Standards
 
 Modals use a solid dark background so text is fully readable without background bleed-through:
-- **Modal panel:** `bg-[rgba(15,10,30,0.85)]` with `backdrop-blur-xl` (24px)
+- **Modal panel:** `bg-[var(--bg-modal)]` with `backdrop-blur-xl` (24px), `border-[var(--modal-border)]`
 - **Modal backdrop:** `bg-black/70` with `backdrop-blur-[4px]`
-- **LiquidCard** (non-modal): `bg-[rgba(197,173,229,0.05)]` with `backdrop-blur-sm` — lighter for in-page cards
+- **LiquidCard** (non-modal): `bg-[var(--bg-card)]` with `backdrop-blur-sm`, `border-[var(--card-border)]` — lighter for in-page cards
 
 ### Auto-Expanding Textarea Pattern
 
@@ -766,9 +887,9 @@ const springTransition = { type: 'spring', stiffness: 400, damping: 25 };
 
 | Element | whileHover scale | whileTap scale | boxShadow on hover |
 |---------|-----------------|----------------|-------------------|
-| LiquidCard | 1.02 | 0.98 | `0 0 25px rgba(168, 85, 247, 0.4)` |
-| Button | 1.05 | 0.95 | `0 0 20px rgba(168, 85, 247, 0.3)` |
-| StoryTypeSelector cards | 1.03 | 0.97 | `0 0 20px rgba(168, 85, 247, 0.3)` |
+| LiquidCard | 1.02 | 0.98 | `var(--shadow-glow-accent)` |
+| Button | 1.05 | 0.95 | `var(--shadow-glow-sm)` |
+| StoryTypeSelector cards | 1.03 | 0.97 | `var(--shadow-glow-sm)` |
 | Small links (FAQ, etc.) | 1.08 | 0.95 | none |
 
 **Rules:**

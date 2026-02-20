@@ -42,11 +42,15 @@ export default function WaveBackground() {
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // Read the wave color from CSS custom property
+      const style = getComputedStyle(document.documentElement);
+      const waveRgb = style.getPropertyValue('--wave-color').trim() || '195, 171, 226';
+
       const centerY = canvas.height / 2;
 
       for (const wave of waves) {
         ctx.beginPath();
-        ctx.strokeStyle = `rgba(195, 171, 226, ${wave.opacity})`;
+        ctx.strokeStyle = `rgba(${waveRgb}, ${wave.opacity})`;
         ctx.lineWidth = 1.5;
 
         for (let x = 0; x <= canvas.width; x += 2) {

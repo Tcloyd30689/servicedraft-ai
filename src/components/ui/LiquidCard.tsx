@@ -30,14 +30,14 @@ export default function LiquidCard({
   return (
     <motion.div
       className={cn(
-        'relative bg-[rgba(197,173,229,0.05)]',
-        'border-2 border-black rounded-[23px]',
+        'relative bg-[var(--bg-card)]',
+        'border-2 border-[var(--card-border)] rounded-[23px]',
         'backdrop-blur-sm',
-        'shadow-[0_0_40px_rgba(73,18,155,0.4)]',
+        'shadow-[var(--shadow-glow-md)]',
         sizeClasses[size],
         className,
       )}
-      whileHover={hover ? { scale: 1.02, boxShadow: '0 0 25px rgba(168, 85, 247, 0.4)' } : undefined}
+      whileHover={hover ? { scale: 1.02, boxShadow: 'var(--shadow-glow-accent)' } : undefined}
       whileTap={hover ? { scale: 0.98 } : undefined}
       transition={springTransition}
     >

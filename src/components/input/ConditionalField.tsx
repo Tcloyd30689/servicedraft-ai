@@ -45,10 +45,10 @@ export default function ConditionalField({
     )}>
       {/* Label row with dropdown */}
       <div className="flex items-center justify-between gap-3 mb-2">
-        <label className="text-[#c4b5fd] text-sm font-medium flex items-center gap-1.5">
+        <label className="text-[var(--text-secondary)] text-sm font-medium flex items-center gap-1.5">
           {field.label}
           {isGenerate && (
-            <span className="inline-flex items-center gap-1 text-[10px] bg-[rgba(168,85,247,0.2)] text-[#c084fc] px-1.5 py-0.5 rounded">
+            <span className="inline-flex items-center gap-1 text-[10px] bg-[var(--accent-20)] text-[var(--accent-bright)] px-1.5 py-0.5 rounded">
               <Sparkles size={10} />
               AI
             </span>
@@ -58,7 +58,7 @@ export default function ConditionalField({
         <select
           value={dropdownSelection}
           onChange={(e) => onDropdownChange(e.target.value as DropdownOption)}
-          className="text-xs bg-[#0f0520] border border-[#6b21a8] rounded-md px-2 py-1.5 text-[#c4b5fd] cursor-pointer focus:outline-none focus:border-[#a855f7] appearance-none"
+          className="text-xs bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-md px-2 py-1.5 text-[var(--text-secondary)] cursor-pointer focus:outline-none focus:border-[var(--accent-hover)] appearance-none"
         >
           {dropdownOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -79,14 +79,14 @@ export default function ConditionalField({
             resize();
           }}
           placeholder={field.placeholder}
-          className="w-full p-3 leading-relaxed resize-none overflow-hidden bg-[#0f0520] border border-[#6b21a8] rounded-lg text-white placeholder-[#9ca3af] focus:outline-none focus:border-[#a855f7] focus:shadow-[0_0_0_3px_rgba(168,85,247,0.2)] hover:border-[#7c3aed] transition-all duration-200"
+          className="w-full p-3 leading-relaxed resize-none overflow-hidden bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] focus:shadow-[0_0_0_3px_var(--accent-20)] hover:border-[var(--accent-primary)] transition-all duration-200"
         />
       )}
 
       {/* AI generate indicator */}
       {isGenerate && (
-        <div className="p-3 bg-[rgba(168,85,247,0.05)] border border-dashed border-[#6b21a8] rounded-lg">
-          <p className="text-xs text-[#9ca3af] italic">
+        <div className="p-3 bg-[var(--accent-5)] border border-dashed border-[var(--accent-border)] rounded-lg">
+          <p className="text-xs text-[var(--text-muted)] italic">
             AI will generate the most probable {field.label.toLowerCase()} based on your other inputs.
           </p>
         </div>

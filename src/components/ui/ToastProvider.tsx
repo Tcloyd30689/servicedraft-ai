@@ -9,9 +9,9 @@ export default function ToastProvider() {
       toastOptions={{
         duration: 3000,
         style: {
-          background: 'rgba(197, 173, 229, 0.05)',
-          color: '#ffffff',
-          border: '1px solid rgba(168, 85, 247, 0.3)',
+          background: 'var(--bg-card)',
+          color: 'var(--text-primary)',
+          border: '1px solid var(--accent-30)',
           backdropFilter: 'blur(8px)',
           borderRadius: '12px',
           fontSize: '14px',
@@ -19,11 +19,11 @@ export default function ToastProvider() {
         },
         success: {
           style: {
-            border: '1px solid rgba(168, 85, 247, 0.5)',
-            boxShadow: '0 0 20px rgba(73, 18, 155, 0.3)',
+            border: '1px solid var(--accent-50)',
+            boxShadow: 'var(--shadow-glow-sm)',
           },
           iconTheme: {
-            primary: '#a855f7',
+            primary: 'var(--accent-hover)',
             secondary: '#ffffff',
           },
         },

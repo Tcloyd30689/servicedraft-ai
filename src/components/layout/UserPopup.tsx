@@ -34,7 +34,7 @@ export default function UserPopup() {
       {/* Avatar trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="cursor-pointer transition-all duration-200 hover:shadow-[0_0_15px_rgba(168,85,247,0.4)] rounded-full"
+        className="cursor-pointer transition-all duration-200 hover:shadow-[0_0_15px_var(--accent-40)] rounded-full"
         aria-label="User menu"
       >
         <PositionIcon position={profile?.position ?? null} size="small" />
@@ -42,18 +42,18 @@ export default function UserPopup() {
 
       {/* Popup dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-12 w-64 bg-[rgba(197,173,229,0.05)] border border-[rgba(168,85,247,0.3)] rounded-xl backdrop-blur-md shadow-[0_0_30px_rgba(73,18,155,0.4)] p-4">
-          <div className="mb-3 pb-3 border-b border-[rgba(168,85,247,0.15)]">
-            <p className="text-white font-medium text-sm truncate">
+        <div className="absolute right-0 top-12 w-64 bg-[var(--bg-card)] border border-[var(--accent-30)] rounded-xl backdrop-blur-md shadow-[var(--shadow-glow-md)] p-4">
+          <div className="mb-3 pb-3 border-b border-[var(--accent-15)]">
+            <p className="text-[var(--text-primary)] font-medium text-sm truncate">
               {profile?.first_name || profile?.last_name
                 ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
                 : profile?.username || profile?.email || 'User'}
             </p>
             {profile?.location && (
-              <p className="text-[#9ca3af] text-xs mt-1">{profile.location}</p>
+              <p className="text-[var(--text-muted)] text-xs mt-1">{profile.location}</p>
             )}
             {profile?.position && (
-              <p className="text-[#9ca3af] text-xs">{profile.position}</p>
+              <p className="text-[var(--text-muted)] text-xs">{profile.position}</p>
             )}
           </div>
 
@@ -61,7 +61,7 @@ export default function UserPopup() {
             <Link
               href="/dashboard"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2 text-[#c4b5fd] text-sm px-3 py-2 rounded-md hover:bg-[rgba(168,85,247,0.1)] hover:text-white transition-all"
+              className="flex items-center gap-2 text-[var(--text-secondary)] text-sm px-3 py-2 rounded-md hover:bg-[var(--accent-10)] hover:text-[var(--text-primary)] transition-all"
             >
               <LayoutDashboard size={16} />
               User Dashboard
@@ -72,7 +72,7 @@ export default function UserPopup() {
                 resetAll();
                 await signOut();
               }}
-              className="flex items-center gap-2 text-[#c4b5fd] text-sm px-3 py-2 rounded-md hover:bg-[rgba(168,85,247,0.1)] hover:text-white transition-all cursor-pointer w-full text-left"
+              className="flex items-center gap-2 text-[var(--text-secondary)] text-sm px-3 py-2 rounded-md hover:bg-[var(--accent-10)] hover:text-[var(--text-primary)] transition-all cursor-pointer w-full text-left"
             >
               <LogOut size={16} />
               Log Out

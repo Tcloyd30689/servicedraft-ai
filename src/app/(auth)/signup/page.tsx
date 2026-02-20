@@ -269,9 +269,9 @@ function SignupContent() {
                 key={s}
                 className={`w-3 h-3 rounded-full transition-all duration-300 ${
                   s === step
-                    ? 'bg-[#a855f7] shadow-[0_0_10px_rgba(168,85,247,0.5)]'
+                    ? 'bg-[var(--accent-hover)] shadow-[0_0_10px_var(--accent-50)]'
                     : s < step
-                      ? 'bg-[#7c3aed]'
+                      ? 'bg-[var(--accent-primary)]'
                       : 'bg-[#4b5563]'
                 }`}
               />
@@ -291,22 +291,22 @@ function SignupContent() {
               {/* Email confirmation message (shown after step 1 signUp) */}
               {emailSent && (
                 <div className="text-center space-y-4">
-                  <p className="text-[#c4b5fd] text-sm">
+                  <p className="text-[var(--text-secondary)] text-sm">
                     We&apos;ve sent a confirmation link to{' '}
-                    <span className="text-white font-medium">{email}</span>.
+                    <span className="text-[var(--text-primary)] font-medium">{email}</span>.
                   </p>
-                  <p className="text-[#c4b5fd] text-sm">
+                  <p className="text-[var(--text-secondary)] text-sm">
                     Please check your inbox and click the link to confirm your email,
                     then{' '}
                     <Link
                       href="/login"
-                      className="text-[#a855f7] hover:text-[#c084fc] underline transition-colors"
+                      className="text-[var(--accent-hover)] hover:text-[var(--accent-bright)] underline transition-colors"
                     >
                       sign in
                     </Link>{' '}
                     to continue setting up your account.
                   </p>
-                  <p className="text-[#9ca3af] text-xs mt-4">
+                  <p className="text-[var(--text-muted)] text-xs mt-4">
                     Didn&apos;t receive it? Check your spam folder or try signing up again.
                   </p>
                 </div>
@@ -351,7 +351,7 @@ function SignupContent() {
               {/* Step 2: Payment / Access Code */}
               {step === 2 && !emailSent && (
                 <form onSubmit={handlePaymentStep} className="space-y-1">
-                  <p className="text-[#c4b5fd] text-sm mb-4 text-center">
+                  <p className="text-[var(--text-secondary)] text-sm mb-4 text-center">
                     Enter an access code to activate your account, or proceed with payment.
                   </p>
                   <Input
@@ -416,11 +416,11 @@ function SignupContent() {
             </>
           )}
 
-          <p className="text-center text-sm text-[#9ca3af] mt-6">
+          <p className="text-center text-sm text-[var(--text-muted)] mt-6">
             Already have an account?{' '}
             <Link
               href="/login"
-              className="text-[#a855f7] hover:text-[#c084fc] transition-colors"
+              className="text-[var(--accent-hover)] hover:text-[var(--accent-bright)] transition-colors"
             >
               Sign In
             </Link>

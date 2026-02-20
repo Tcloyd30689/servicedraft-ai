@@ -31,14 +31,14 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 px-4">
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-white mb-2">
+            <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
               Something went wrong
             </h2>
-            <p className="text-[#9ca3af] text-sm mb-4">
+            <p className="text-[var(--text-muted)] text-sm mb-4">
               An unexpected error occurred. Please try refreshing the page.
             </p>
             {this.state.error && (
-              <p className="text-red-400 text-xs font-mono bg-[#0f0520] rounded-lg p-3 mb-4 max-w-md mx-auto">
+              <p className="text-red-400 text-xs font-mono bg-[var(--bg-input)] rounded-lg p-3 mb-4 max-w-md mx-auto">
                 {this.state.error.message}
               </p>
             )}

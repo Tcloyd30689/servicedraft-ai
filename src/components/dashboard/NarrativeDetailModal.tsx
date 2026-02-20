@@ -136,34 +136,34 @@ export default function NarrativeDetailModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Saved Narrative" width="max-w-[700px]">
       {/* Meta Info */}
-      <div className="flex flex-wrap gap-4 text-sm text-[#9ca3af] mb-4">
-        <span><span className="text-[#c4b5fd]">R.O. #:</span> {narrative.ro_number || 'N/A'}</span>
-        <span><span className="text-[#c4b5fd]">Vehicle:</span> {narrative.vehicle_year || ''} {narrative.vehicle_make || ''} {narrative.vehicle_model || ''}</span>
-        <span><span className="text-[#c4b5fd]">Saved:</span> {dateStr} {timeStr}</span>
-        <span><span className="text-[#c4b5fd]">Type:</span> {narrative.story_type === 'diagnostic_only' ? 'Diagnostic Only' : 'Repair Complete'}</span>
+      <div className="flex flex-wrap gap-4 text-sm text-[var(--text-muted)] mb-4">
+        <span><span className="text-[var(--text-secondary)]">R.O. #:</span> {narrative.ro_number || 'N/A'}</span>
+        <span><span className="text-[var(--text-secondary)]">Vehicle:</span> {narrative.vehicle_year || ''} {narrative.vehicle_make || ''} {narrative.vehicle_model || ''}</span>
+        <span><span className="text-[var(--text-secondary)]">Saved:</span> {dateStr} {timeStr}</span>
+        <span><span className="text-[var(--text-secondary)]">Type:</span> {narrative.story_type === 'diagnostic_only' ? 'Diagnostic Only' : 'Repair Complete'}</span>
       </div>
 
       {/* Concern */}
       <div className="mb-4">
-        <h4 className="text-sm font-medium text-[#a855f7] uppercase tracking-wide mb-1">Concern</h4>
-        <div className="bg-[#0f0520] border border-[#6b21a8] rounded-lg p-3">
-          <p className="text-white text-sm whitespace-pre-wrap leading-relaxed">{narrative.concern || '—'}</p>
+        <h4 className="text-sm font-medium text-[var(--accent-hover)] uppercase tracking-wide mb-1">Concern</h4>
+        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3">
+          <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">{narrative.concern || '—'}</p>
         </div>
       </div>
 
       {/* Cause */}
       <div className="mb-4">
-        <h4 className="text-sm font-medium text-[#a855f7] uppercase tracking-wide mb-1">Cause</h4>
-        <div className="bg-[#0f0520] border border-[#6b21a8] rounded-lg p-3">
-          <p className="text-white text-sm whitespace-pre-wrap leading-relaxed">{narrative.cause || '—'}</p>
+        <h4 className="text-sm font-medium text-[var(--accent-hover)] uppercase tracking-wide mb-1">Cause</h4>
+        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3">
+          <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">{narrative.cause || '—'}</p>
         </div>
       </div>
 
       {/* Correction */}
       <div className="mb-4">
-        <h4 className="text-sm font-medium text-[#a855f7] uppercase tracking-wide mb-1">Correction</h4>
-        <div className="bg-[#0f0520] border border-[#6b21a8] rounded-lg p-3">
-          <p className="text-white text-sm whitespace-pre-wrap leading-relaxed">{narrative.correction || '—'}</p>
+        <h4 className="text-sm font-medium text-[var(--accent-hover)] uppercase tracking-wide mb-1">Correction</h4>
+        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3">
+          <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">{narrative.correction || '—'}</p>
         </div>
       </div>
 

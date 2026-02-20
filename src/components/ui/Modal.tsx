@@ -54,8 +54,8 @@ export default function Modal({
           {/* Modal */}
           <motion.div
             className={`fixed z-50 top-1/2 left-1/2 w-[90vw] ${width} max-h-[85vh] overflow-y-auto
-              bg-[rgba(15,10,30,0.85)] border-2 border-black rounded-[23px]
-              backdrop-blur-xl shadow-[0_0_60px_rgba(73,18,155,0.5)]`}
+              bg-[var(--bg-modal)] border-2 border-[var(--modal-border)] rounded-[23px]
+              backdrop-blur-xl shadow-[var(--shadow-glow-lg)]`}
             style={{ x: '-50%', y: '-50%' }}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -66,11 +66,11 @@ export default function Modal({
               {/* Header */}
               <div className="flex items-center justify-between mb-5">
                 {title && (
-                  <h2 className="text-xl font-semibold text-white">{title}</h2>
+                  <h2 className="text-xl font-semibold text-[var(--text-primary)]">{title}</h2>
                 )}
                 <button
                   onClick={onClose}
-                  className="ml-auto text-[#9ca3af] hover:text-white transition-colors cursor-pointer p-1"
+                  className="ml-auto text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer p-1"
                   aria-label="Close modal"
                 >
                   <X size={20} />

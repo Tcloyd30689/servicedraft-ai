@@ -43,10 +43,10 @@ export default function FAQContent() {
     <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-2">
       {faqs.map((faq, i) => (
         <div key={i}>
-          <h3 className="text-[#a855f7] text-sm font-semibold mb-1">
+          <h3 className="text-[var(--accent-hover)] text-sm font-semibold mb-1">
             {faq.question}
           </h3>
-          <p className="text-[#c4b5fd] text-sm leading-relaxed">
+          <p className="text-[var(--text-secondary)] text-sm leading-relaxed">
             {faq.answer}
           </p>
         </div>

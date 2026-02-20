@@ -106,13 +106,13 @@ export default function EditProfileModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Profile">
       {/* Tab Switcher */}
-      <div className="flex gap-1 mb-6 bg-[#0f0520] rounded-lg p-1 border border-[#6b21a8]">
+      <div className="flex gap-1 mb-6 bg-[var(--bg-input)] rounded-lg p-1 border border-[var(--accent-border)]">
         <button
           onClick={() => setTab('profile')}
           className={`flex-1 py-2 text-sm font-medium rounded-md transition-all cursor-pointer ${
             tab === 'profile'
-              ? 'bg-[#a855f7] text-white'
-              : 'text-[#9ca3af] hover:text-white'
+              ? 'bg-[var(--accent-hover)] text-white'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
           }`}
         >
           Profile Info
@@ -121,8 +121,8 @@ export default function EditProfileModal({
           onClick={() => setTab('password')}
           className={`flex-1 py-2 text-sm font-medium rounded-md transition-all cursor-pointer ${
             tab === 'password'
-              ? 'bg-[#a855f7] text-white'
-              : 'text-[#9ca3af] hover:text-white'
+              ? 'bg-[var(--accent-hover)] text-white'
+              : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
           }`}
         >
           Change Password

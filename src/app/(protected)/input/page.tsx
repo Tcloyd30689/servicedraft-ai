@@ -143,7 +143,7 @@ export default function InputPage() {
               {/* Conditional fields (6+) */}
               {fields.filter((f) => f.hasDropdown).length > 0 && (
                 <>
-                  <div className="border-t border-[rgba(168,85,247,0.15)] my-6" />
+                  <div className="border-t border-[var(--accent-15)] my-6" />
                   <h3 className="text-sm font-medium text-[#9ca3af] mb-4 uppercase tracking-wide">
                     Additional Information
                   </h3>

@@ -45,18 +45,18 @@ function SegmentedControl<T extends string>({
 }) {
   return (
     <div className="mb-4">
-      <label className="block text-[#c4b5fd] text-sm font-medium mb-2">
+      <label className="block text-[var(--text-secondary)] text-sm font-medium mb-2">
         {label}
       </label>
-      <div className="flex bg-[#0f0520] rounded-lg border border-[#6b21a8] overflow-hidden">
+      <div className="flex bg-[var(--bg-input)] rounded-lg border border-[var(--accent-border)] overflow-hidden">
         {options.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
             className={`flex-1 py-2 px-2 text-xs font-medium transition-all duration-200 cursor-pointer ${
               value === opt.value
-                ? 'bg-[#a855f7] text-white shadow-[0_0_10px_rgba(168,85,247,0.3)]'
-                : 'text-[#9ca3af] hover:text-white hover:bg-[rgba(168,85,247,0.1)]'
+                ? 'bg-[var(--accent-hover)] text-white shadow-[0_0_10px_var(--accent-30)]'
+                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-10)]'
             }`}
           >
             {opt.label}

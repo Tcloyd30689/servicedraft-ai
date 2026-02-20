@@ -37,21 +37,21 @@ export default function NarrativeDisplay({
   if (displayFormat === 'block') {
     return (
       <div className="space-y-4">
-        <h3 className="text-sm font-medium text-[#c4b5fd] uppercase tracking-wide">
+        <h3 className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide">
           Block Narrative
         </h3>
-        <div className="bg-[#0f0520] border border-[#6b21a8] rounded-lg p-4 min-h-[200px]">
-          <p className="text-white leading-relaxed whitespace-pre-wrap text-sm">
+        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4 min-h-[200px]">
+          <p className="text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
             {animate ? blockText.displayText : narrative.block_narrative}
           </p>
           {blockText.isAnimating && (
-            <span className="inline-block w-0.5 h-4 bg-[#a855f7] animate-pulse ml-0.5 align-middle" />
+            <span className="inline-block w-0.5 h-4 bg-[var(--accent-hover)] animate-pulse ml-0.5 align-middle" />
           )}
         </div>
         {blockText.isAnimating && (
           <button
             onClick={blockText.skip}
-            className="text-xs text-[#9ca3af] hover:text-white transition-colors cursor-pointer"
+            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
           >
             Skip animation
           </button>
@@ -64,45 +64,45 @@ export default function NarrativeDisplay({
     <div className="space-y-5">
       {/* Concern */}
       <div>
-        <h3 className="text-sm font-medium text-[#a855f7] uppercase tracking-wide mb-2">
+        <h3 className="text-sm font-medium text-[var(--accent-hover)] uppercase tracking-wide mb-2">
           Concern
         </h3>
-        <div className="bg-[#0f0520] border border-[#6b21a8] rounded-lg p-4">
-          <p className="text-white leading-relaxed whitespace-pre-wrap text-sm">
+        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4">
+          <p className="text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
             {animate ? concernText.displayText : narrative.concern}
           </p>
           {concernText.isAnimating && (
-            <span className="inline-block w-0.5 h-4 bg-[#a855f7] animate-pulse ml-0.5 align-middle" />
+            <span className="inline-block w-0.5 h-4 bg-[var(--accent-hover)] animate-pulse ml-0.5 align-middle" />
           )}
         </div>
       </div>
 
       {/* Cause */}
       <div>
-        <h3 className="text-sm font-medium text-[#a855f7] uppercase tracking-wide mb-2">
+        <h3 className="text-sm font-medium text-[var(--accent-hover)] uppercase tracking-wide mb-2">
           Cause
         </h3>
-        <div className="bg-[#0f0520] border border-[#6b21a8] rounded-lg p-4">
-          <p className="text-white leading-relaxed whitespace-pre-wrap text-sm">
+        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4">
+          <p className="text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
             {animate ? causeText.displayText : narrative.cause}
           </p>
           {causeText.isAnimating && (
-            <span className="inline-block w-0.5 h-4 bg-[#a855f7] animate-pulse ml-0.5 align-middle" />
+            <span className="inline-block w-0.5 h-4 bg-[var(--accent-hover)] animate-pulse ml-0.5 align-middle" />
           )}
         </div>
       </div>
 
       {/* Correction */}
       <div>
-        <h3 className="text-sm font-medium text-[#a855f7] uppercase tracking-wide mb-2">
+        <h3 className="text-sm font-medium text-[var(--accent-hover)] uppercase tracking-wide mb-2">
           Correction
         </h3>
-        <div className="bg-[#0f0520] border border-[#6b21a8] rounded-lg p-4">
-          <p className="text-white leading-relaxed whitespace-pre-wrap text-sm">
+        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4">
+          <p className="text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
             {animate ? correctionText.displayText : narrative.correction}
           </p>
           {correctionText.isAnimating && (
-            <span className="inline-block w-0.5 h-4 bg-[#a855f7] animate-pulse ml-0.5 align-middle" />
+            <span className="inline-block w-0.5 h-4 bg-[var(--accent-hover)] animate-pulse ml-0.5 align-middle" />
           )}
         </div>
       </div>
@@ -114,7 +114,7 @@ export default function NarrativeDisplay({
             causeText.skip();
             correctionText.skip();
           }}
-          className="text-xs text-[#9ca3af] hover:text-white transition-colors cursor-pointer"
+          className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
         >
           Skip animation
         </button>

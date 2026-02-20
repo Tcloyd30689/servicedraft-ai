@@ -15,21 +15,21 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onD
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary: [
-    'bg-[#a855f7] text-white',
-    'hover:bg-[#9333ea]',
-    'active:bg-[#7c3aed]',
+    'bg-[var(--accent-hover)] text-white',
+    'hover:bg-[var(--accent-primary)]',
+    'active:bg-[var(--accent-border)]',
     'disabled:bg-[#4b5563] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none',
   ].join(' '),
   secondary: [
-    'bg-transparent text-[#a855f7] border border-[#a855f7]',
-    'hover:bg-[rgba(168,85,247,0.1)]',
-    'active:bg-[rgba(168,85,247,0.2)]',
+    'bg-transparent text-[var(--accent-hover)] border border-[var(--accent-hover)]',
+    'hover:bg-[var(--accent-10)]',
+    'active:bg-[var(--accent-20)]',
     'disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none',
   ].join(' '),
   ghost: [
-    'bg-transparent text-[#c4b5fd]',
-    'hover:text-white hover:bg-[rgba(168,85,247,0.1)]',
-    'active:bg-[rgba(168,85,247,0.15)]',
+    'bg-transparent text-[var(--accent-text)]',
+    'hover:text-[var(--text-primary)] hover:bg-[var(--accent-10)]',
+    'active:bg-[var(--accent-15)]',
     'disabled:opacity-50 disabled:cursor-not-allowed',
   ].join(' '),
 };
@@ -59,7 +59,7 @@ export default function Button({
         sizeClasses[size],
         className,
       )}
-      whileHover={disabled ? undefined : { scale: 1.05, boxShadow: '0 0 20px rgba(168, 85, 247, 0.3)' }}
+      whileHover={disabled ? undefined : { scale: 1.05, boxShadow: 'var(--shadow-glow-sm)' }}
       whileTap={disabled ? undefined : { scale: 0.95 }}
       transition={springTransition}
       disabled={disabled}

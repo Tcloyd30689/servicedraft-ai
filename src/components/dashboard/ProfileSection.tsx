@@ -33,26 +33,26 @@ export default function ProfileSection({ profile, onUpdate }: ProfileSectionProp
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-semibold text-white truncate">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)] truncate">
             {fullName || profile.username || profile.email}
           </h2>
 
           <div className="mt-2 space-y-1 text-sm">
-            <p className="text-[#9ca3af]">
-              <span className="text-[#c4b5fd]">Email:</span> {profile.email}
+            <p className="text-[var(--text-muted)]">
+              <span className="text-[var(--text-secondary)]">Email:</span> {profile.email}
             </p>
-            <p className="text-[#9ca3af]">
-              <span className="text-[#c4b5fd]">ID:</span>{' '}
+            <p className="text-[var(--text-muted)]">
+              <span className="text-[var(--text-secondary)]">ID:</span>{' '}
               <span className="font-mono text-xs">{profile.id.slice(0, 8)}...</span>
             </p>
             {profile.location && (
-              <p className="text-[#9ca3af]">
-                <span className="text-[#c4b5fd]">Location:</span> {profile.location}
+              <p className="text-[var(--text-muted)]">
+                <span className="text-[var(--text-secondary)]">Location:</span> {profile.location}
               </p>
             )}
             {profile.position && (
-              <p className="text-[#9ca3af]">
-                <span className="text-[#c4b5fd]">Position:</span> {profile.position}
+              <p className="text-[var(--text-muted)]">
+                <span className="text-[var(--text-secondary)]">Position:</span> {profile.position}
               </p>
             )}
           </div>

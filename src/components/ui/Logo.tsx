@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/components/ThemeProvider';
 
 type LogoSize = 'small' | 'medium' | 'large';
 
@@ -19,18 +20,19 @@ const sizeConfig: Record<LogoSize, { width: number; height: number }> = {
 
 export default function Logo({ size = 'medium', glow = false, className }: LogoProps) {
   const { width, height } = sizeConfig[size];
+  const { accent } = useTheme();
 
   return (
     <div
       className={cn(
         'relative inline-block',
-        glow && 'hover:drop-shadow-[0_0_30px_rgba(168,85,247,0.5)]',
+        glow && 'hover:drop-shadow-[0_0_30px_var(--accent-50)]',
         'transition-all duration-300',
         className,
       )}
     >
       <Image
-        src="/logo.png"
+        src={accent.logoFile}
         alt="ServiceDraft.AI"
         width={width}
         height={height}
