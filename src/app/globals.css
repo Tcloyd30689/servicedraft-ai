@@ -1,45 +1,16 @@
 @import "tailwindcss";
 
+/* Exclude .md documentation files from Tailwind content scanning */
+@source not "../../*.md";
+@source not "../../**/*.md";
+
 @theme inline {
   /* Fonts */
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
   --font-mono: var(--font-geist-mono);
 
-  /* ServiceDraft Purple Accent Family (kept for Tailwind class fallbacks) */
-  --color-sd-purple-50: #faf5ff;
-  --color-sd-purple-100: #f3e8ff;
-  --color-sd-purple-200: #e9d5ff;
-  --color-sd-purple-300: #d8b4fe;
-  --color-sd-purple-400: #c084fc;
-  --color-sd-purple-500: #a855f7;
-  --color-sd-purple-600: #9333ea;
-  --color-sd-purple-700: #7c3aed;
-  --color-sd-purple-800: #6b21a8;
-  --color-sd-purple-900: #49129b;
-
-  /* Background & Surface Colors */
-  --color-sd-dark-base: #000000;
-  --color-sd-dark-surface: #0f0520;
-  --color-sd-dark-elevated: #1a0a2e;
-  --color-sd-dark-gradient1: #260d3f;
-  --color-sd-dark-gradient2: #490557;
-
-  /* Text Colors */
-  --color-sd-text-primary: #ffffff;
-  --color-sd-text-secondary: #c4b5fd;
-  --color-sd-text-muted: #9ca3af;
-
-  /* Wave Animation Color */
-  --color-sd-wave: #c3abe2;
-
   /* Card Border Radius */
   --radius-card: 23px;
-
-  /* Box Shadows (static defaults — overridden by theme) */
-  --shadow-glow-sm: 0 0 15px rgba(147, 51, 234, 0.3);
-  --shadow-glow-md: 0 0 40px rgba(147, 51, 234, 0.4);
-  --shadow-glow-lg: 0 0 60px rgba(147, 51, 234, 0.5);
-  --shadow-glow-purple: 0 0 20px rgba(147, 51, 234, 0.4);
 
   /* Animations */
   --animate-glow-pulse: glow-pulse 2s ease-in-out infinite;

@@ -337,7 +337,7 @@ export default function NarrativePage() {
                   <Settings size={16} className="text-[var(--accent-hover)]" />
                   AI OUTPUT CUSTOMIZATION
                 </span>
-                <span className="text-[#9ca3af] text-xs">
+                <span className="text-[var(--text-muted)] text-xs">
                   {showCustomization ? 'HIDE' : 'SHOW'}
                 </span>
               </button>

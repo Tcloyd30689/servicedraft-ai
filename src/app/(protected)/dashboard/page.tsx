@@ -30,7 +30,7 @@ export default function DashboardPage() {
   if (!profile) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-6">
-        <div className="text-center py-12 text-[#9ca3af]">
+        <div className="text-center py-12 text-[var(--text-muted)]">
           <p>Unable to load profile data. Please try refreshing the page.</p>
         </div>
       </div>

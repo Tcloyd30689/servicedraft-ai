@@ -144,7 +144,7 @@ export default function InputPage() {
               {fields.filter((f) => f.hasDropdown).length > 0 && (
                 <>
                   <div className="border-t border-[var(--accent-15)] my-6" />
-                  <h3 className="text-sm font-medium text-[#9ca3af] mb-4 uppercase tracking-wide">
+                  <h3 className="text-sm font-medium text-[var(--text-muted)] mb-4 uppercase tracking-wide">
                     Additional Information
                   </h3>
 
@@ -180,7 +180,7 @@ export default function InputPage() {
 
         {/* Empty state */}
         {!state.storyType && (
-          <div className="text-center py-12 text-[#9ca3af]">
+          <div className="text-center py-12 text-[var(--text-muted)]">
             <p>Select a story type above to begin.</p>
           </div>
         )}
