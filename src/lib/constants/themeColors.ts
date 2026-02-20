@@ -235,6 +235,11 @@ export function buildCssVars(accent: AccentColor): Record<string, string> {
     '--bg-modal': isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 10, 30, 0.85)',
     '--bg-nav': isLight ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
 
+    // Body gradient (fully resolved — CSS var() composition in :root is unreliable with inline overrides)
+    '--body-bg': isLight
+      ? `linear-gradient(135deg, ${accent.gradient1} 0%, #ffffff 50%, ${accent.gradient2} 100%)`
+      : `linear-gradient(135deg, ${accent.gradient1} 0%, #000000 50%, ${accent.gradient2} 100%)`,
+
     // Text
     '--text-primary': isLight ? '#0f172a' : '#ffffff',
     '--text-muted': isLight ? '#64748b' : '#9ca3af',

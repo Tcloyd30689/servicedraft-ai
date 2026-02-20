@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-19
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 26 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 28 post-build fixes applied)
 
 ---
 
@@ -980,6 +980,26 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Completed:** 2026-02-19
 - **Notes:** This is the foundation for all future UI work. Every component now uses CSS variables instead of hardcoded colors. Changing the accent color updates the entire app in real-time. `buildCssVars()` generates all property values from a single accent color config object. New components should always use `var(--accent-*)` references, never hardcoded hex values.
 
+### PB.27 — CSS Variable Cascading Fix (Derived Variables)
+- [x] `globals.css`: Changed `--body-bg` from hardcoded hex gradient to `linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-primary) 50%, var(--bg-gradient-2) 100%)` — now cascades when source vars change
+- [x] `globals.css`: Changed `--bg-card` from `rgba(147,51,234,0.05)` to `var(--accent-5)` — cascades from accent opacity vars
+- [x] `globals.css`: Changed `--text-secondary` from `#c4b5fd` to `var(--accent-text)` — cascades from accent text var
+- [x] `globals.css`: Changed `--scrollbar-track` to `var(--bg-input)`, `--scrollbar-thumb` to `var(--accent-border)`, `--scrollbar-thumb-hover` to `var(--accent-hover)`
+- [x] `themeColors.ts`: Removed `--body-bg`, `--bg-card`, `--text-secondary`, `--scrollbar-track`, `--scrollbar-thumb`, `--scrollbar-thumb-hover` from `buildCssVars()` — these now derive via CSS `var()` references instead of being overwritten with inline strings
+- [x] `ThemeProvider.tsx`: Light mode override uses `var(--accent-8)` for `--bg-card` and `var(--bg-elevated)` for `--scrollbar-track`; removed redundant `--body-bg` inline override
+- [x] `Select.tsx`: Replaced hardcoded `#c4b5fd` SVG data URI dropdown arrow with `ChevronDown` icon using `var(--text-secondary)`
+- **Completed:** 2026-02-19
+- **Notes:** Root cause: derived CSS variables (body-bg, bg-card, scrollbar-*, text-secondary) had hardcoded default values in `:root` AND were being overwritten by `buildCssVars()` with hardcoded inline strings. Changing `--accent-*` in DevTools didn't cascade because the derived vars were independent. Fix: make derived vars reference source vars via `var()`, remove them from `buildCssVars()` so inline styles don't override the cascading references.
+
+### PB.28 — Fix Input Backgrounds, Page Gradient, and Wave Animation
+- [x] `globals.css`: Added `color-scheme: dark` to `:root` — tells browsers to render form controls with dark-scheme chrome (prevents bright white input backgrounds)
+- [x] `globals.css`: Added CSS overrides for `input`, `textarea`, `select` to use `var(--bg-input)` background and `var(--text-primary)` color; placeholder colors use `var(--text-muted)`
+- [x] `themeColors.ts`: Re-added `--body-bg` to `buildCssVars()` as a fully resolved gradient string (not var() references) — CSS var() composition in `:root` is unreliable when source vars are set as inline styles by JS
+- [x] `ThemeProvider.tsx`: Added `color-scheme` property setting (dark/light based on effective mode); re-added `--body-bg` to light mode override with light gradient
+- [x] `WaveBackground.tsx`: Changed to read `--wave-color` from `document.documentElement.style` (inline) first, then `getComputedStyle` fallback — more reliable since ThemeProvider sets it via inline style
+- **Completed:** 2026-02-19
+- **Notes:** Three issues from PB.27: (1) Input fields had white backgrounds because Tailwind v4 preflight sets `background-color: transparent` and without `color-scheme: dark` browsers render form controls with light chrome. (2) Page gradient stayed purple because PB.27 removed `--body-bg` from `buildCssVars()` to rely on CSS var() composition, but this doesn't cascade reliably with inline style overrides. (3) Wave animation read `--wave-color` via `getComputedStyle` which may lag behind inline style changes.
+
 ---
 
 ## SUMMARY COUNTS
@@ -997,8 +1017,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 26 | 26 |
-| **TOTAL** | **104** | **99** |
+| Post-Build Fixes | 28 | 28 |
+| **TOTAL** | **106** | **101** |
 
 ---
 

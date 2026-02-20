@@ -43,8 +43,12 @@ export default function WaveBackground() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Read the wave color from CSS custom property
-      const style = getComputedStyle(document.documentElement);
-      const waveRgb = style.getPropertyValue('--wave-color').trim() || '195, 171, 226';
+      // Prefer inline style (set by ThemeProvider) over getComputedStyle for reliability
+      const root = document.documentElement;
+      const waveRgb =
+        root.style.getPropertyValue('--wave-color').trim() ||
+        getComputedStyle(root).getPropertyValue('--wave-color').trim() ||
+        '195, 171, 226';
 
       const centerY = canvas.height / 2;
 

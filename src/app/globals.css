@@ -33,6 +33,8 @@
  * ============================================================
  */
 :root {
+  color-scheme: dark;
+
   /* ---- Accent colors ---- */
   --accent-primary: #9333ea;
   --accent-hover: #a855f7;
@@ -119,4 +121,16 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
+}
+
+/* Force dark backgrounds on form controls (overrides browser light-scheme defaults) */
+input,
+textarea,
+select {
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
 }

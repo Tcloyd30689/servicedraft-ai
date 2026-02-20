@@ -39,6 +39,9 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
     root.style.setProperty(key, value);
   }
 
+  // Set color-scheme for proper browser form control rendering
+  root.style.setProperty('color-scheme', effectiveMode === 'light' ? 'light' : 'dark');
+
   // Override bg/text if user explicitly toggled mode (non-Black accent in light mode)
   if (effectiveMode === 'light' && !accent.isLightMode) {
     root.style.setProperty('--bg-primary', '#ffffff');
@@ -54,6 +57,7 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
     root.style.setProperty('--card-border', accent.border);
     root.style.setProperty('--modal-border', accent.border);
     root.style.setProperty('--scrollbar-track', 'var(--bg-elevated)');
+    root.style.setProperty('--body-bg', 'linear-gradient(135deg, #f0f2f5 0%, #ffffff 50%, #e8eaee 100%)');
   }
 }
 
