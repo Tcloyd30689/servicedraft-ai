@@ -787,6 +787,11 @@ public/logo-{color}.PNG             → 9 accent-colored logo files
 | `--wave-color` | Wave RGB for canvas | `195, 171, 226` |
 | `--card-border` | Card border color | `#000000` |
 | `--modal-border` | Modal border color | `#000000` |
+| `--scrollbar-track` | Scrollbar track bg | `var(--bg-input)` |
+| `--scrollbar-thumb` | Scrollbar thumb bg | `var(--accent-border)` |
+| `--scrollbar-thumb-hover` | Scrollbar thumb hover | `var(--accent-hover)` |
+| `--bg-gradient-1` | Body gradient start | `#260d3f` |
+| `--bg-gradient-2` | Body gradient end | `#490557` |
 
 ### Using Framer Motion boxShadow with CSS Variables
 
@@ -833,11 +838,94 @@ function MyComponent() {
 
 Each accent color has a matching logo file in `public/`. The `Logo` component (`src/components/ui/Logo.tsx`) reads `accent.logoFile` from the theme context and renders the matching PNG. The original `logo.png` is kept as a fallback.
 
+### ThemeProvider Internals (`src/components/ThemeProvider.tsx`)
+
+The `ThemeProvider` is a React context provider that manages the accent color and color mode. It wraps the entire app in `src/app/layout.tsx`.
+
+**How it works:**
+1. On mount, reads `sd-accent-color` and `sd-color-mode` from `localStorage`
+2. Calls `buildCssVars(accent)` from `themeColors.ts` to generate all CSS variable values
+3. Loops through the returned `Record<string, string>` and sets each as an inline style on `document.documentElement` via `root.style.setProperty(key, value)`
+4. Sets `color-scheme` property to `'dark'` or `'light'` (controls browser form control rendering)
+5. If light mode is active (non-Black accent + user toggled), applies additional overrides for backgrounds, text, and borders
+
+**Key function — `applyTheme(accent, mode)`:**
+- Called on mount and whenever `accent` or `colorMode` state changes
+- Computes `effectiveMode` — Black accent forces `'light'`, otherwise uses the stored mode
+- Sets all 40+ CSS variables as inline styles on `:root`
+- Light mode override block sets: `--bg-primary` to white, `--text-primary` to dark, `--bg-input`/`--bg-elevated` to light grays, `--body-bg` to light gradient, `--card-border`/`--modal-border` to accent border
+
+**Key function — `buildCssVars(accent)` (`src/lib/constants/themeColors.ts`):**
+- Takes an `AccentColor` object and returns a `Record<string, string>` of all CSS variable key-value pairs
+- Generates: accent hex/hover/bright/border/deep, opacity variants (3%-50%), shadow presets, backgrounds, body gradient, text colors, wave color, card/modal borders
+- `--body-bg` is fully resolved as a `linear-gradient(...)` string with actual hex values (NOT `var()` references) because CSS `var()` composition in `:root` is unreliable when source variables are set as inline styles by JavaScript
+- `--wave-color` is emitted as bare RGB components (e.g., `195, 171, 226`) for use in canvas `rgba()` strings
+
+**Exports:**
+- `useTheme()` — hook returning `{ accent, setAccentColor, colorMode, toggleColorMode, accentColors }`
+- `ThemeProvider` — default export, wraps children in context provider
+
+### Wave Animation and CSS Variables (`src/components/ui/WaveBackground.tsx`)
+
+The sine wave background reads the accent color from CSS variables on every animation frame:
+
+```tsx
+// Inside the requestAnimationFrame draw loop:
+const root = document.documentElement;
+const waveRgb =
+  root.style.getPropertyValue('--wave-color').trim() ||           // 1. Inline style (set by ThemeProvider)
+  getComputedStyle(root).getPropertyValue('--wave-color').trim() || // 2. Computed style fallback
+  '195, 171, 226';                                                  // 3. Hardcoded fallback (Violet)
+
+// Used as: ctx.strokeStyle = `rgba(${waveRgb}, ${wave.opacity})`
+```
+
+**Why inline style first:** ThemeProvider sets `--wave-color` via `document.documentElement.style.setProperty()`. Reading from `root.style.getPropertyValue()` (inline) is more reliable and immediate than `getComputedStyle()`, which may lag behind during rapid theme changes.
+
+**Why bare RGB format:** The `--wave-color` variable stores bare RGB components (e.g., `195, 171, 226`) rather than a complete `rgb()` or hex value. This allows the canvas drawing code to interpolate opacity per-wave using `rgba(${waveRgb}, ${wave.opacity})`.
+
+### Form Control Styling (`color-scheme` + CSS Overrides)
+
+Browsers render form controls (inputs, textareas, selects) based on the `color-scheme` CSS property. Without it, form controls default to light-scheme chrome (white backgrounds) even if CSS `background-color` is set.
+
+**Solution (two layers):**
+
+1. **`color-scheme` property** — Set in `:root` in `globals.css` as `color-scheme: dark` (default). ThemeProvider dynamically updates it to `'light'` when the effective mode is light. This tells the browser to render form control chrome (caret, autofill, scrollbars inside inputs) in dark or light mode.
+
+2. **Explicit CSS overrides** — In `globals.css`, form elements are explicitly styled:
+   ```css
+   input, textarea, select {
+     background-color: var(--bg-input);
+     color: var(--text-primary);
+   }
+   input::placeholder, textarea::placeholder {
+     color: var(--text-muted);
+   }
+   ```
+   This ensures form controls always use theme variables regardless of Tailwind's preflight reset (which sets `background-color: transparent`).
+
+### `--body-bg` Resolution Strategy
+
+The page background gradient (`--body-bg`) is set as a **fully resolved string** in `buildCssVars()`, NOT as a CSS `var()` composition:
+
+```typescript
+// CORRECT — fully resolved gradient in buildCssVars():
+'--body-bg': `linear-gradient(135deg, ${accent.gradient1} 0%, #000000 50%, ${accent.gradient2} 100%)`
+
+// WRONG — var() composition in :root (unreliable with inline overrides):
+'--body-bg': 'linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-primary) 50%, var(--bg-gradient-2) 100%)'
+```
+
+**Why:** When ThemeProvider sets `--bg-gradient-1` as an inline style on `:root`, a `--body-bg` defined in the stylesheet's `:root` block that references `var(--bg-gradient-1)` may not pick up the inline override in all browsers. By pre-resolving the gradient with actual hex values in `buildCssVars()`, the gradient is always correct.
+
+The `:root` block in `globals.css` still declares `--body-bg` with `var()` references as the initial default (before ThemeProvider hydrates), but at runtime `buildCssVars()` overwrites it with the resolved string.
+
 ### Light/Dark Mode
 
 - **Dark mode** is the default for all accent colors except Black
 - **Black accent** automatically activates light mode (white backgrounds, dark text)
 - `ThemeProvider` handles mode switching by overriding `--bg-primary`, `--text-primary`, `--text-muted`, `--bg-modal`, `--bg-nav` when in light mode
+- `color-scheme` CSS property is dynamically set to `'light'` or `'dark'` to control browser form control rendering
 - Preferences persist in localStorage under `sd-color-mode`
 
 ### Adding a New Accent Color

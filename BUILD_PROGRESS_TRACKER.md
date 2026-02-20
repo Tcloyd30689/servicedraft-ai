@@ -27,6 +27,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
 **Overall Progress:** 73 / 78 tasks complete (+ 28 post-build fixes applied)
+**Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 
 ---
 
@@ -999,6 +1000,11 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] `WaveBackground.tsx`: Changed to read `--wave-color` from `document.documentElement.style` (inline) first, then `getComputedStyle` fallback — more reliable since ThemeProvider sets it via inline style
 - **Completed:** 2026-02-19
 - **Notes:** Three issues from PB.27: (1) Input fields had white backgrounds because Tailwind v4 preflight sets `background-color: transparent` and without `color-scheme: dark` browsers render form controls with light chrome. (2) Page gradient stayed purple because PB.27 removed `--body-bg` from `buildCssVars()` to rely on CSS var() composition, but this doesn't cascade reliably with inline style overrides. (3) Wave animation read `--wave-color` via `getComputedStyle` which may lag behind inline style changes.
+
+### SESSION 5A — CSS Variable System + Accent Color Infrastructure — COMPLETE
+- **Scope:** PB.26, PB.27, PB.28
+- **Completed:** 2026-02-19
+- **Notes:** All hardcoded purple values replaced with CSS custom properties. ThemeProvider updates all --accent-, --bg-, --text-, --shadow-glow- variables. Input fields, page backgrounds, wave animation, modals, and scrollbars all reference theme variables. Verified via DevTools console test — full red color swap works across all pages. Minor hydration timing issue on main menu card initial render (resolves on navigation, will be fixed in Session 5C card redesign).
 
 ---
 
