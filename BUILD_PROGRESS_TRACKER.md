@@ -1122,8 +1122,19 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 39 | 39 |
-| **TOTAL** | **117** | **112** |
+| Post-Build Fixes | 40 | 40 |
+| **TOTAL** | **118** | **113** |
+
+---
+
+### PB.40 — Hero Logo Not Updating: Stale Turbopack Cache (Root Cause of 4 Failed Fixes)
+- [x] **Root cause identified:** The `.next/dev/static/chunks/` directory contained TWO compiled versions of HeroArea.tsx — a stale chunk (`src_b3635525._.js`, 9:47 AM) with the ORIGINAL code (`HERO_HEIGHT = 200`, Next.js `<Image>`, `maxHeight: '140px'`) and a current chunk (`src_eba96a0c._.js`, 11:50 AM) with all 4 fix attempts applied
+- [x] The browser was loading the stale compiled chunk, so none of the 4 source-level fixes (PB.36–PB.39) were ever visible in the browser
+- [x] Contributing factor: HeroArea uses `useRef` + `requestAnimationFrame` canvas animation loops, which can prevent Turbopack HMR from successfully hot-replacing the module
+- [x] **Fix:** Deleted entire `.next` directory to purge all stale compiled chunks, forcing a full recompilation on next dev server start
+- [x] Current source confirmed correct: plain `<img>` tag with `height: 90px`, `width: auto`, `objectFit: contain` in a 100px hero container
+- [x] Added temporary 2px solid red border on logo image for visual verification (user will remove after confirming)
+- **Completed:** 2026-02-23
 
 ---
 

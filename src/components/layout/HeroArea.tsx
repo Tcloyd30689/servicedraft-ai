@@ -152,7 +152,7 @@ export default function HeroArea() {
           src={accent.logoFile}
           alt="ServiceDraft.AI"
           className="drop-shadow-[0_0_20px_var(--accent-30)]"
-          style={{ height: '90px', width: 'auto', objectFit: 'contain' }}
+          style={{ height: '90px', width: 'auto', objectFit: 'contain', border: '2px solid red' /* PHASE 4 — verification border, remove after confirming */ }}
         />
       </div>
     </div>
