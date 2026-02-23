@@ -154,8 +154,8 @@ export default function HeroArea() {
           width={2400}
           height={400}
           priority
-          className="object-contain drop-shadow-[0_0_20px_var(--accent-30)]"
-          style={{ maxHeight: '80px', maxWidth: '95%' }}
+          className="drop-shadow-[0_0_20px_var(--accent-30)]"
+          style={{ height: '90%', width: 'auto', objectFit: 'contain' }}
         />
       </div>
     </div>
