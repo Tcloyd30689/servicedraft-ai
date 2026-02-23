@@ -15,7 +15,7 @@ interface LogoProps {
 const sizeConfig: Record<LogoSize, { width: number; height: number }> = {
   small: { width: 240, height: 60 },
   medium: { width: 400, height: 100 },
-  large: { width: 800, height: 200 },
+  large: { width: 1200, height: 300 },
 };
 
 export default function Logo({ size = 'medium', glow = false, className }: LogoProps) {

@@ -1,8 +1,8 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import CursorGlow from '@/components/ui/CursorGlow';
 
 type CardSize = 'compact' | 'standard' | 'spacious';
 
@@ -10,7 +10,8 @@ interface LiquidCardProps {
   children: ReactNode;
   size?: CardSize;
   className?: string;
-  hover?: boolean;
+  /** Enable cursor underglow effect on hover (default true) */
+  glow?: boolean;
 }
 
 const sizeClasses: Record<CardSize, string> = {
@@ -19,29 +20,25 @@ const sizeClasses: Record<CardSize, string> = {
   spacious: 'p-8 md:p-10',
 };
 
-const springTransition = { type: 'spring' as const, stiffness: 400, damping: 25 };
-
 export default function LiquidCard({
   children,
   size = 'standard',
   className,
-  hover = true,
+  glow = true,
 }: LiquidCardProps) {
   return (
-    <motion.div
-      className={cn(
-        'relative bg-[var(--bg-card)]',
-        'border-2 border-[var(--card-border)] rounded-[23px]',
-        'backdrop-blur-sm',
-        'shadow-[var(--shadow-glow-md)]',
-        sizeClasses[size],
-        className,
-      )}
-      whileHover={hover ? { scale: 1.02, boxShadow: 'var(--shadow-glow-accent)' } : undefined}
-      whileTap={hover ? { scale: 0.98 } : undefined}
-      transition={springTransition}
-    >
-      {children}
-    </motion.div>
+    <CursorGlow enabled={glow} className={cn(
+      'relative bg-[var(--bg-card)]',
+      'border-2 border-[var(--card-border)] rounded-[23px]',
+      'backdrop-blur-sm',
+      'shadow-[var(--shadow-glow-md)]',
+      'transition-shadow duration-300',
+      'hover:shadow-[var(--shadow-glow-accent)]',
+      className,
+    )}>
+      <div className={sizeClasses[size]}>
+        {children}
+      </div>
+    </CursorGlow>
   );
 }

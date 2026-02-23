@@ -40,7 +40,7 @@ export default function StoryTypeSelector({ selected, onSelect }: StoryTypeSelec
               ? 'border-[var(--accent-hover)] bg-[var(--accent-10)] shadow-[var(--shadow-glow-sm)]'
               : 'border-[var(--accent-border)] bg-[var(--accent-3)]',
           )}
-          whileHover={{ scale: 1.03, boxShadow: 'var(--shadow-glow-sm)' }}
+          whileHover={{ boxShadow: 'var(--shadow-glow-sm)' }}
           whileTap={{ scale: 0.97 }}
           transition={springTransition}
         >

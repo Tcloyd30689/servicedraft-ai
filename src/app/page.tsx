@@ -11,25 +11,32 @@ export default function LandingPage() {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden">
       <WaveBackground />
 
-      <motion.div
-        className="relative z-30 flex flex-col items-center gap-10"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
-      >
+      <div className="relative z-30 flex flex-col items-center gap-8 px-4">
+        {/* Logo — dominant visual, enters first */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
         >
-          <Logo size="large" glow />
+          <Logo size="large" glow className="max-w-[90vw]" />
         </motion.div>
 
+        {/* Subtitle / tagline — enters second */}
+        <motion.p
+          className="text-[var(--text-muted)] text-xs sm:text-sm tracking-[0.35em] font-medium text-center uppercase"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.6, ease: 'easeOut' }}
+        >
+          AI-Powered Repair Narrative Generator
+        </motion.p>
+
+        {/* Buttons — enter last */}
         <motion.div
-          className="flex flex-col items-center gap-4 w-full max-w-xs"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
+          className="flex flex-col items-center gap-4 w-full max-w-xs mt-4"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 1.1, ease: 'easeOut' }}
         >
           <Link href="/login" className="w-full">
             <Button size="fullWidth">LOGIN</Button>
@@ -40,7 +47,7 @@ export default function LandingPage() {
             </Button>
           </Link>
         </motion.div>
-      </motion.div>
+      </div>
     </div>
   );
 }

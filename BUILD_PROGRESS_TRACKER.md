@@ -26,10 +26,11 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-23
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 39 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 44 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
+**Session 7A:** COMPLETE — Page redesigns, cursor underglow, card hover changes, narrative reset (PB.42–PB.46)
 
 ---
 
@@ -1122,8 +1123,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 41 | 41 |
-| **TOTAL** | **119** | **114** |
+| Post-Build Fixes | 46 | 46 |
+| **TOTAL** | **124** | **119** |
 
 ---
 
@@ -1141,6 +1142,54 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Logo overlay uses `pointer-events-none` so nav links remain fully clickable underneath
 - [x] Hero background (wave canvas + gradient) remains in its own container with `overflow-hidden` — unaffected by logo changes
 - **Completed:** 2026-02-23
+
+### PB.42 — Remove Card Hover Enlargement Effect
+- [x] Removed `whileHover={{ scale: 1.02 }}` and `whileTap={{ scale: 0.98 }}` from `LiquidCard.tsx` — cards no longer physically enlarge on hover
+- [x] Removed `scale: 1.03` from `StoryTypeSelector.tsx` whileHover — kept boxShadow glow and whileTap scale
+- [x] Converted LiquidCard from `motion.div` to a static `div` wrapped in `CursorGlow` — no more Framer Motion scale on cards
+- [x] Kept whileHover scale on: `Button.tsx` (1.05), main menu FAQ/Support links (1.08), and other small interactive controls
+- **Completed:** 2026-02-23
+- **Notes:** Large card scale on hover made the layout feel chaotic. Scale effects now reserved exclusively for buttons and small clickable elements.
+
+### PB.43 — Cursor Underglow Effect (CursorGlow Component)
+- [x] Created `src/components/ui/CursorGlow.tsx` — reusable wrapper component for cursor-following underglow on any element
+- [x] Tracks mouse position relative to the container via `onMouseMove`, applies `radial-gradient(circle ${radius}px at ${x}px ${y}px, var(--accent-primary), transparent)` as an overlay
+- [x] Configurable props: `radius` (default 200px), `opacity` (default 0.15), `enabled` (default true)
+- [x] Glow fades in/out smoothly on mouse enter/leave via CSS `transition: opacity 0.3s ease`
+- [x] Overlay uses `pointer-events: none` and `z-index: 1` — content sits at `z-index: 2` above the glow
+- [x] Inherits `border-radius` from parent via `borderRadius: inherit` so glow respects rounded corners
+- [x] Integrated into `LiquidCard.tsx` — all LiquidCards now have cursor underglow by default (controlled by `glow` prop)
+- **Completed:** 2026-02-23
+- **Notes:** Replaces the old card hover enlargement. The glow color automatically follows the user's accent color via `var(--accent-primary)`.
+
+### PB.44 — Landing Page Redesign (Cinematic Entrance + Tagline)
+- [x] Enlarged logo from 800×200 to 1200×300 (`Logo.tsx` large size variant) — dominant visual element
+- [x] Added staggered cinematic entrance: logo scales in first (0s, scale 0.8→1), subtitle fades in second (0.6s delay), buttons slide in last (1.1s delay)
+- [x] Added subtitle tagline "AI-POWERED REPAIR NARRATIVE GENERATOR" below logo — spaced-out tracking (0.35em), muted text, uppercase
+- [x] Landing page is a full-page wave background with centered logo and buttons — no nav bar or hero area (pre-login screen)
+- [x] Removed unnecessary `motion.div` wrapper that was wrapping everything — cleaner animation hierarchy
+- **Completed:** 2026-02-23
+
+### PB.45 — Main Menu Page Redesign
+- [x] Removed Logo image from inside the main menu card
+- [x] Replaced with "Main Menu" heading (`<h1>`) styled with `text-[var(--accent-bright)]`, bold, tracking-wide, 2xl/3xl responsive sizing
+- [x] Increased card width from `max-w-md` to `max-w-2xl` — buttons constrained to `max-w-md` within the card for balance
+- [x] Card uses cursor underglow effect (via LiquidCard's built-in CursorGlow wrapper)
+- [x] Removed `Logo` and `Logo import` from main menu page — no longer needed
+- **Completed:** 2026-02-23
+
+### PB.46 — "NEW STORY" Reset Button on Narrative Page
+- [x] Added "NEW STORY" ghost button to the bottom action bar on the narrative page (uses `RotateCcw` icon from lucide-react)
+- [x] Clicking opens a confirmation modal: "Are you sure? All unsaved data will be lost."
+- [x] Confirmation dialog has CANCEL (secondary) and START OVER (primary) buttons
+- [x] START OVER calls `resetAll()` from narrative store (clears all state) and navigates to `/main-menu`
+- [x] Styled as `variant="ghost"` so it doesn't compete visually with primary actions (SAVE, SHARE/EXPORT)
+- **Completed:** 2026-02-23
+
+### SESSION 7A — Page Redesigns, Cursor Underglow, Card Hover Changes — COMPLETE
+- **Scope:** PB.42, PB.43, PB.44, PB.45, PB.46
+- **Completed:** 2026-02-23
+- **Notes:** Major visual changes: (1) Cards no longer enlarge on hover — replaced with cursor-following underglow glow effect. (2) Landing page has cinematic staggered entrance with larger logo and tagline. (3) Main menu has "Main Menu" heading instead of logo, wider card. (4) Narrative page has "NEW STORY" reset button with confirmation dialog.
 
 ---
 

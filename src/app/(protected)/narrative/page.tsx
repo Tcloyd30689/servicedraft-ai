@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle } from 'lucide-react';
+import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw } from 'lucide-react';
 import { dispatchActivity } from '@/hooks/useActivityPulse';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +17,7 @@ import CustomizationPanel from '@/components/narrative/CustomizationPanel';
 import ProofreadResults from '@/components/narrative/ProofreadResults';
 import EditStoryModal from '@/components/narrative/EditStoryModal';
 import ShareExportModal from '@/components/narrative/ShareExportModal';
+import Modal from '@/components/ui/Modal';
 import type { NarrativeData } from '@/stores/narrativeStore';
 
 interface ProofreadData {
@@ -34,6 +35,7 @@ export default function NarrativePage() {
     setNarrative,
     setDisplayFormat,
     resetCustomization,
+    resetAll,
   } = useNarrativeStore();
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -50,6 +52,7 @@ export default function NarrativePage() {
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const lastGenerationId = useRef(-1);
 
@@ -294,6 +297,12 @@ export default function NarrativePage() {
     setAnimateNarrative(false);
   };
 
+  // Start over — reset all state and return to main menu
+  const handleStartOver = () => {
+    resetAll();
+    router.push('/main-menu');
+  };
+
   // Show loading while generating initially
   if (isGenerating && !state.narrative) {
     return (
@@ -489,6 +498,17 @@ export default function NarrativePage() {
                 <Share2 size={15} />
                 SHARE / EXPORT
               </Button>
+
+              <Button
+                variant="ghost"
+                size="medium"
+                onClick={() => setShowResetConfirm(true)}
+                disabled={isAnyLoading}
+                className="flex items-center gap-2"
+              >
+                <RotateCcw size={15} />
+                NEW STORY
+              </Button>
             </div>
           </div>
         </div>
@@ -515,6 +535,34 @@ export default function NarrativePage() {
           roNumber: state.roNumber || '',
         }}
       />
+
+      {/* Start Over Confirmation */}
+      <Modal
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        title="Start Over?"
+        width="max-w-[420px]"
+      >
+        <p className="text-[var(--text-secondary)] mb-6">
+          Are you sure? All unsaved data will be lost.
+        </p>
+        <div className="flex gap-3 justify-end">
+          <Button
+            variant="secondary"
+            size="medium"
+            onClick={() => setShowResetConfirm(false)}
+          >
+            CANCEL
+          </Button>
+          <Button
+            variant="primary"
+            size="medium"
+            onClick={handleStartOver}
+          >
+            START OVER
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

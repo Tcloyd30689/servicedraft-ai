@@ -975,15 +975,50 @@ const springTransition = { type: 'spring', stiffness: 400, damping: 25 };
 
 | Element | whileHover scale | whileTap scale | boxShadow on hover |
 |---------|-----------------|----------------|-------------------|
-| LiquidCard | 1.02 | 0.98 | `var(--shadow-glow-accent)` |
+| LiquidCard | **NONE** (cursor underglow instead) | NONE | CSS hover `shadow-glow-accent` |
 | Button | 1.05 | 0.95 | `var(--shadow-glow-sm)` |
-| StoryTypeSelector cards | 1.03 | 0.97 | `var(--shadow-glow-sm)` |
+| StoryTypeSelector cards | **NONE** | 0.97 | `var(--shadow-glow-sm)` |
 | Small links (FAQ, etc.) | 1.08 | 0.95 | none |
 
 **Rules:**
+- **Cards and containers do NOT scale on hover** — they use the CursorGlow underglow effect instead (see below)
+- **Only buttons and small interactive controls use scale hover** — keeps the layout stable
 - Disabled buttons: pass `undefined` for whileHover/whileTap (no animation when disabled)
-- LiquidCard: controlled by `hover` prop (default true), set `hover={false}` to disable
+- LiquidCard: controlled by `glow` prop (default true), set `glow={false}` to disable cursor underglow
 - Button uses `motion.button` — interface extends `Omit<ButtonHTMLAttributes, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart'>` to avoid type conflicts with Framer Motion
+
+### Cursor Underglow Effect (CursorGlow Component) (Added 2026-02-23)
+
+Cards use a cursor-following underglow instead of scale hover. When the mouse enters a card, a soft radial glow appears under the cursor and follows mouse movement.
+
+**Component:** `src/components/ui/CursorGlow.tsx`
+
+```tsx
+import CursorGlow from '@/components/ui/CursorGlow';
+
+// Wrap any element — the glow appears under the cursor on hover
+<CursorGlow radius={200} opacity={0.15} enabled={true}>
+  <div>Card content here</div>
+</CursorGlow>
+```
+
+**Props:**
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `radius` | number | 200 | Radius of the glow circle in px |
+| `opacity` | number | 0.15 | Max opacity of the glow overlay |
+| `enabled` | boolean | true | Enable/disable the effect |
+| `className` | string | — | CSS class for the outer container |
+
+**How it works:**
+1. `onMouseMove` tracks cursor position relative to the container
+2. A positioned overlay `<div>` renders a `radial-gradient(circle ${radius}px at ${x}px ${y}px, var(--accent-primary), transparent)`
+3. The overlay fades in/out via CSS `transition: opacity 0.3s ease`
+4. `pointer-events: none` on the overlay, content sits at `z-index: 2` above
+5. `borderRadius: inherit` ensures glow respects rounded card corners
+
+**Integration with LiquidCard:**
+LiquidCard wraps its content in CursorGlow automatically. The `glow` prop (default true) controls whether the effect is enabled. This replaced the old Framer Motion `whileHover={{ scale: 1.02 }}` behavior.
 
 ### Page Transition Pattern (Added 2026-02-19)
 
@@ -1196,7 +1231,37 @@ dispatchActivity(0.8);
 
 ### Full-Page Wave Background
 
-The original full-page `WaveBackground` component (`src/components/ui/WaveBackground.tsx`) has been **removed from the protected layout**. The hero area's reactive animation is now the sole animated background element. `WaveBackground` is still used on the landing page (`src/app/page.tsx`) and auth pages.
+The original full-page `WaveBackground` component (`src/components/ui/WaveBackground.tsx`) is rendered in the protected layout at z-10 behind all content. It's also used on the landing page (`src/app/page.tsx`) and auth pages.
+
+---
+
+## APPENDIX: LANDING PAGE & MAIN MENU (Added 2026-02-23)
+
+### Landing Page (`src/app/page.tsx`)
+
+The landing page is a premium product launch screen — no nav bar or hero area (user isn't logged in yet). Full-page wave background with centered content.
+
+**Layout:**
+1. **Logo** — `Logo` component at `large` size (1200×300), dominant visual element with `max-w-[90vw]`
+2. **Subtitle** — "AI-POWERED REPAIR NARRATIVE GENERATOR" in small spaced-out tracking (0.35em), muted color
+3. **Buttons** — LOGIN (primary) and REQUEST ACCESS (secondary), constrained to `max-w-xs`
+
+**Cinematic entrance animation (staggered):**
+- Logo: `scale 0.8→1` over 1s with custom easing `[0.16, 1, 0.3, 1]`
+- Subtitle: `opacity 0→1, y 10→0` at 0.6s delay
+- Buttons: `opacity 0→1, y 15→0` at 1.1s delay
+
+### Main Menu (`src/app/(protected)/main-menu/page.tsx`)
+
+**Changes from original:**
+- **Removed**: Logo image from inside the card
+- **Added**: "Main Menu" heading (`<h1>`) styled with `text-[var(--accent-bright)]`, bold, tracking-wide
+- **Width**: Card increased from `max-w-md` to `max-w-2xl`; buttons constrained to `max-w-md` within
+- **Cursor underglow**: Applied automatically via LiquidCard's built-in CursorGlow wrapper
+
+### Narrative Page Reset Button
+
+A "NEW STORY" ghost button in the bottom action bar opens a confirmation modal ("Are you sure? All unsaved data will be lost."). On confirm: calls `resetAll()` from narrative store and navigates to `/main-menu`.
 
 ---
 

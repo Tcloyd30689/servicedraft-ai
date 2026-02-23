@@ -7,7 +7,6 @@ import { Sparkles, LayoutDashboard, LogOut, HelpCircle, MessageSquare } from 'lu
 import { useAuth } from '@/hooks/useAuth';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import LiquidCard from '@/components/ui/LiquidCard';
-import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import FAQContent from '@/components/layout/FAQContent';
@@ -97,21 +96,22 @@ export default function MainMenuPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="w-full max-w-md"
+        className="w-full max-w-2xl"
       >
         <LiquidCard size="spacious">
           <div className="flex flex-col items-center gap-8">
-            {/* Logo */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
+            {/* Heading — replaces the old logo */}
+            <motion.h1
+              className="text-2xl sm:text-3xl font-bold text-[var(--accent-bright)] tracking-wide"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
             >
-              <Logo size="medium" glow />
-            </motion.div>
+              Main Menu
+            </motion.h1>
 
             {/* Menu buttons */}
-            <div className="flex flex-col gap-3 w-full">
+            <div className="flex flex-col gap-3 w-full max-w-md">
               {menuItems.map((item, i) => (
                 <motion.div
                   key={item.label}
