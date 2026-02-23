@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-23
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 37 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 38 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1090,6 +1090,13 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Removed `object-contain` Tailwind class (replaced by inline `objectFit: contain`)
 - **Completed:** 2026-02-23
 
+### PB.38 — Hero Logo Fixed to 90px Absolute Height
+- [x] Changed logo `height` from `90%` (percentage) to `90px` (fixed) — bypasses broken CSS percentage chain
+- [x] Root cause: `height: 90%` on the `<Image>` resolved to near-zero because the flex parent didn't propagate an explicit pixel height despite `absolute inset-0`
+- [x] Fixed value of 90px guarantees the logo is 90px tall inside the 100px hero banner regardless of parent container sizing
+- [x] `width: auto; objectFit: contain` preserved — width scales from native aspect ratio
+- **Completed:** 2026-02-23
+
 ---
 
 ## SUMMARY COUNTS
@@ -1107,8 +1114,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 37 | 37 |
-| **TOTAL** | **115** | **110** |
+| Post-Build Fixes | 38 | 38 |
+| **TOTAL** | **116** | **111** |
 
 ---
 
