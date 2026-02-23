@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-23
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 38 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 39 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1097,6 +1097,14 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] `width: auto; objectFit: contain` preserved — width scales from native aspect ratio
 - **Completed:** 2026-02-23
 
+### PB.39 — Hero Logo: Replace Next.js Image with Standard img Tag
+- [x] Root cause: Next.js `<Image>` component generates its own inline styles from `width`/`height` props, overriding custom `style={{ height: '90px' }}`
+- [x] Replaced `<Image>` (from `next/image`) with standard `<img>` tag — respects inline styles without framework interference
+- [x] Removed `import Image from 'next/image'` (no longer used in HeroArea)
+- [x] Added `eslint-disable-next-line @next/next/no-img-element` to suppress lint warning
+- [x] Logo now renders at exactly 90px tall with `width: auto; objectFit: contain` — confirmed via build
+- **Completed:** 2026-02-23
+
 ---
 
 ## SUMMARY COUNTS
@@ -1114,8 +1122,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 38 | 38 |
-| **TOTAL** | **116** | **111** |
+| Post-Build Fixes | 39 | 39 |
+| **TOTAL** | **117** | **112** |
 
 ---
 

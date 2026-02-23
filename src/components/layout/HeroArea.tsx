@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import Image from 'next/image';
 import { useTheme } from '@/components/ThemeProvider';
 import { useActivityPulse } from '@/hooks/useActivityPulse';
 
@@ -148,12 +147,10 @@ export default function HeroArea() {
 
       {/* Large centered logo — primary brand presence */}
       <div className="absolute inset-0 flex items-center justify-center z-10 px-4">
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={accent.logoFile}
           alt="ServiceDraft.AI"
-          width={2400}
-          height={400}
-          priority
           className="drop-shadow-[0_0_20px_var(--accent-30)]"
           style={{ height: '90px', width: 'auto', objectFit: 'contain' }}
         />
