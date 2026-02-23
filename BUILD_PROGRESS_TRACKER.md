@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-23
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 35 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 36 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1074,6 +1074,15 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] NavBar now imports `useAuth` for profile data and `PositionIcon` for the role icon
 - **Completed:** 2026-02-23
 
+### PB.36 — Hero Banner Height Halved + Logo Doubled
+- [x] `HERO_HEIGHT` reduced from 200px → 100px — frees up 100px of viewport for page content
+- [x] NavBar `top` updated from 200px → 100px; layout `paddingTop` updated from 256px → 156px
+- [x] Hero wave amplitudes scaled down proportionally (14–30 → 8–16) for the shorter banner
+- [x] Logo `width` doubled from 1200→2400, `height` from 200→400 — dominant brand element within the banner
+- [x] Logo `maxHeight` adjusted from 140px→80px to fit within the 100px hero (10px padding each side)
+- [x] Logo `maxWidth` widened from 90%→95% for more horizontal presence
+- **Completed:** 2026-02-23
+
 ---
 
 ## SUMMARY COUNTS
@@ -1091,8 +1100,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 35 | 35 |
-| **TOTAL** | **113** | **108** |
+| Post-Build Fixes | 36 | 36 |
+| **TOTAL** | **114** | **109** |
 
 ---
 

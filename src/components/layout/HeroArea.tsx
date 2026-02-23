@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useTheme } from '@/components/ThemeProvider';
 import { useActivityPulse } from '@/hooks/useActivityPulse';
 
-const HERO_HEIGHT = 200; // px
+const HERO_HEIGHT = 100; // px
 
 interface HeroWave {
   baseAmplitude: number;
@@ -16,11 +16,11 @@ interface HeroWave {
 }
 
 const heroWaves: HeroWave[] = [
-  { baseAmplitude: 25, frequency: 0.02,  speed: 0.025, offset: 0, baseOpacity: 0.25 },
-  { baseAmplitude: 18, frequency: 0.015, speed: 0.018, offset: Math.PI / 3, baseOpacity: 0.3 },
-  { baseAmplitude: 30, frequency: 0.025, speed: 0.03,  offset: Math.PI / 2, baseOpacity: 0.2 },
-  { baseAmplitude: 22, frequency: 0.018, speed: 0.012, offset: Math.PI, baseOpacity: 0.22 },
-  { baseAmplitude: 14, frequency: 0.03,  speed: 0.022, offset: Math.PI * 1.5, baseOpacity: 0.18 },
+  { baseAmplitude: 14, frequency: 0.02,  speed: 0.025, offset: 0, baseOpacity: 0.25 },
+  { baseAmplitude: 10, frequency: 0.015, speed: 0.018, offset: Math.PI / 3, baseOpacity: 0.3 },
+  { baseAmplitude: 16, frequency: 0.025, speed: 0.03,  offset: Math.PI / 2, baseOpacity: 0.2 },
+  { baseAmplitude: 12, frequency: 0.018, speed: 0.012, offset: Math.PI, baseOpacity: 0.22 },
+  { baseAmplitude: 8,  frequency: 0.03,  speed: 0.022, offset: Math.PI * 1.5, baseOpacity: 0.18 },
 ];
 
 export default function HeroArea() {
@@ -151,11 +151,11 @@ export default function HeroArea() {
         <Image
           src={accent.logoFile}
           alt="ServiceDraft.AI"
-          width={1200}
-          height={200}
+          width={2400}
+          height={400}
           priority
           className="object-contain drop-shadow-[0_0_20px_var(--accent-30)]"
-          style={{ maxHeight: '140px', maxWidth: '90%' }}
+          style={{ maxHeight: '80px', maxWidth: '95%' }}
         />
       </div>
     </div>

@@ -18,7 +18,7 @@ export default function NavBar() {
   const { profile } = useAuth();
 
   return (
-    <nav className="fixed left-0 right-0 h-14 flex items-center justify-between px-6 bg-[var(--bg-nav)] backdrop-blur-[8px] border-b border-[var(--accent-20)] z-[100]" style={{ top: '200px' }}>
+    <nav className="fixed left-0 right-0 h-14 flex items-center justify-between px-6 bg-[var(--bg-nav)] backdrop-blur-[8px] border-b border-[var(--accent-20)] z-[100]" style={{ top: '100px' }}>
       {/* Left: SD icon + "Main Menu" label */}
       <Link
         href="/main-menu"
