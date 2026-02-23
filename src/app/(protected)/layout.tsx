@@ -1,7 +1,7 @@
 'use client';
 
+import HeroArea from '@/components/layout/HeroArea';
 import NavBar from '@/components/layout/NavBar';
-import WaveBackground from '@/components/ui/WaveBackground';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 
 export default function ProtectedLayout({
@@ -11,9 +11,14 @@ export default function ProtectedLayout({
 }) {
   return (
     <>
-      <WaveBackground />
+      {/* Hero title area — full width, reactive sine wave + large logo */}
+      <HeroArea />
+
+      {/* Navigation bar — sits directly below hero */}
       <NavBar />
-      <main className="relative z-30 pt-16 min-h-screen">
+
+      {/* Page content */}
+      <main className="relative z-30 min-h-[calc(100vh-146px)]">
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
     </>

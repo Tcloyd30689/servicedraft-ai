@@ -999,7 +999,7 @@ Every protected page wraps its main content in a `motion.div` with a fade-in + s
 </motion.div>
 ```
 
-The animated wave background runs continuously on all protected pages via `WaveBackground` in `src/app/(protected)/layout.tsx`.
+The reactive sine wave animation runs in the `HeroArea` component at the top of every protected page (see "Page Layout Structure" appendix below).
 
 ---
 
@@ -1098,6 +1098,105 @@ Example of a completed task:
 - **Completed:** February 15, 2026
 - **Notes:** Used Next.js 14.2.3, TypeScript 5.x
 ```
+
+---
+
+## APPENDIX: PAGE LAYOUT STRUCTURE (Added 2026-02-23)
+
+### Overview
+
+All protected pages follow a top-to-bottom layout:
+
+```
+┌─────────────────────────────────────────────────┐
+│  HERO AREA (90px) — reactive sine waves + logo  │
+├─────────────────────────────────────────────────┤
+│  NAV BAR (56px) — sticky, icon logo, links      │
+├─────────────────────────────────────────────────┤
+│                                                 │
+│           PAGE CONTENT (scrollable)             │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+### Architecture
+
+```
+src/app/(protected)/layout.tsx       → HeroArea + NavBar + main content
+src/components/layout/HeroArea.tsx   → Reactive sine wave hero banner
+src/components/layout/NavBar.tsx     → Sticky nav with icon logo + theme toggle
+src/hooks/useActivityPulse.ts        → Shared activity amplitude system
+```
+
+### HeroArea Component (`src/components/layout/HeroArea.tsx`)
+
+Full-width banner at the top of every protected page. Contains:
+- **Canvas-based sine wave animation** — 5 wave layers with varying amplitude, frequency, speed
+- **Large centered wordmark logo** — uses `accent.logoFile` from ThemeProvider (matches user's accent color)
+- **Reactive amplitude** — wave height, opacity, and stroke width respond to `useActivityPulse` amplitude
+
+**Wave reactivity mapping:**
+- Base state: gentle low-amplitude waves (amplitude multiplier 1.0x)
+- On activity: amplitude multiplier scales up to 3.5x, opacity boosts by +0.35, stroke width increases
+- Activity decays back to base over ~2-3 seconds
+
+**Canvas rendering:**
+- Uses `devicePixelRatio` scaling for sharp rendering on HiDPI displays
+- Reads `--wave-color` CSS variable on every frame for real-time accent color changes
+- Edge gradient overlays blend the hero edges into the page background
+
+### NavBar Changes (`src/components/layout/NavBar.tsx`)
+
+- **Logo:** Small tight icon logo (`/ServiceDraft-ai-tight logo.PNG`, 36×36px) on the left
+- **Theme toggle:** Sun/Moon button (lucide-react icons) calls `toggleColorMode()` from `useTheme()`
+- **Position:** `sticky top-0` (not fixed) — sits in document flow below HeroArea
+- **Height:** 56px (`h-14`)
+- **Background:** `var(--bg-nav)` with backdrop blur
+
+### Reactive Animation System (`src/hooks/useActivityPulse.ts`)
+
+Shared module-level state pattern (same as `narrativeStore.ts` and `useAuth.ts`):
+
+```typescript
+import { useActivityPulse, dispatchActivity } from '@/hooks/useActivityPulse';
+
+// In a component with requestAnimationFrame:
+const { amplitudeRef } = useActivityPulse();
+// Read amplitudeRef.current (0–1) in your animation loop
+
+// To trigger a spike from any component:
+dispatchActivity(0.8); // intensity 0–1
+```
+
+**Event listening (automatic):**
+| Event | Source | Spike Intensity |
+|-------|--------|----------------|
+| `input` | Any form field (typing) | 0.35 |
+| `click` | Button or link | 0.65 |
+| `click` | Generic element | 0.15 |
+| `sd-activity` | Custom event | Configurable |
+
+**Pre-wired dispatches in narrative page:**
+| Action | Intensity |
+|--------|-----------|
+| Generate narrative | 0.8 |
+| Regenerate | 0.8 |
+| Customize | 0.7 |
+| Proofread | 0.6 |
+| Apply edits | 0.7 |
+| Save | 0.5 |
+
+**Dispatching custom activity from new features:**
+```typescript
+import { dispatchActivity } from '@/hooks/useActivityPulse';
+
+// When starting an AI generation or background process:
+dispatchActivity(0.8);
+```
+
+### Full-Page Wave Background
+
+The original full-page `WaveBackground` component (`src/components/ui/WaveBackground.tsx`) has been **removed from the protected layout**. The hero area's reactive animation is now the sole animated background element. `WaveBackground` is still used on the landing page (`src/app/page.tsx`) and auth pages.
 
 ---
 

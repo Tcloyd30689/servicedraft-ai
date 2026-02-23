@@ -23,11 +23,12 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-02-19
+**Last Updated:** 2026-02-23
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 28 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 31 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
+**Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 
 ---
 
@@ -1006,6 +1007,42 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Completed:** 2026-02-19
 - **Notes:** All hardcoded purple values replaced with CSS custom properties. ThemeProvider updates all --accent-, --bg-, --text-, --shadow-glow- variables. Input fields, page backgrounds, wave animation, modals, and scrollbars all reference theme variables. Verified via DevTools console test — full red color swap works across all pages. Minor hydration timing issue on main menu card initial render (resolves on navigation, will be fixed in Session 5C card redesign).
 
+### PB.29 — Reactive Hero Animation Area (New Page Layout Component)
+- [x] Created `src/components/layout/HeroArea.tsx` — full-width hero banner at the top of every protected page
+- [x] 90px height, centered large wordmark logo (`logo-[color].PNG` matching user's accent selection)
+- [x] 5-layer sine wave animation background contained within the hero area
+- [x] Waves use accent color CSS variables (`--wave-color`) and respond to user activity via `useActivityPulse` hook
+- [x] Activity amplitude (0–1) controls wave height (1x–3.5x multiplier), opacity boost, and stroke width
+- [x] Subtle edge gradient overlays for polished blending with page background
+- [x] Logo has accent-colored drop shadow for depth
+- **Completed:** 2026-02-23
+
+### PB.30 — useActivityPulse Hook (Reactive Animation System)
+- [x] Created `src/hooks/useActivityPulse.ts` — shared module-level amplitude state with listener pattern
+- [x] Listens for `input` events (typing → 0.35 amplitude spike), `click` events (buttons → 0.65 spike, generic → 0.15 spike)
+- [x] Custom `sd-activity` events for AI generation, saves, exports — `dispatchActivity(intensity)` helper function
+- [x] Amplitude decays from peak back to 0 over ~2-3 seconds using `requestAnimationFrame` + configurable decay rate
+- [x] Lerp-based rise for smooth spike transitions, independent decay for natural falloff
+- [x] Added `dispatchActivity()` calls in narrative page: generate (0.8), regenerate (0.8), customize (0.7), proofread (0.6), apply edits (0.7), save (0.5)
+- **Completed:** 2026-02-23
+
+### PB.31 — Nav Bar Overhaul (Icon Logo, Theme Toggle, Repositioned)
+- [x] Removed full-size wordmark Logo component from NavBar
+- [x] Replaced with small tight icon logo (`ServiceDraft-ai-tight logo.PNG`, 36×36px) on the left
+- [x] Added light/dark mode toggle button (Sun/Moon icons from lucide-react) in the right section
+- [x] Toggle calls `toggleColorMode()` from `useTheme()` context
+- [x] Nav bar changed from `fixed top-0` to `sticky top-0` — now sits in document flow below HeroArea
+- [x] Height reduced from `h-16` (64px) to `h-14` (56px) for tighter layout
+- [x] Mobile menu dropdown updated to use `top-14` and `bg-[var(--bg-nav)]` for consistency
+- [x] Removed full-page `WaveBackground` from protected layout — hero area is now the sole animated element
+- [x] Protected layout restructured: `HeroArea` → `NavBar` → `main` content (no more `pt-16` padding)
+- **Completed:** 2026-02-23
+
+### SESSION 6A — Reactive Hero Animation Area + Nav Bar Overhaul — COMPLETE
+- **Scope:** PB.29, PB.30, PB.31
+- **Completed:** 2026-02-23
+- **Notes:** Biggest visual change in the app. New page layout: HeroArea (90px reactive sine wave + large logo) → NavBar (sticky, tight icon logo, theme toggle) → page content. Full-page WaveBackground removed — hero area is the sole animated element. Activity pulse system automatically responds to typing, clicks, and AI processing. All accent color theming preserved.
+
 ---
 
 ## SUMMARY COUNTS
@@ -1023,8 +1060,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 28 | 28 |
-| **TOTAL** | **106** | **101** |
+| Post-Build Fixes | 31 | 31 |
+| **TOTAL** | **109** | **104** |
 
 ---
 

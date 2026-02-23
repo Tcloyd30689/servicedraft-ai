@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle } from 'lucide-react';
+import { dispatchActivity } from '@/hooks/useActivityPulse';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
@@ -58,6 +59,7 @@ export default function NarrativePage() {
 
     setIsGenerating(true);
     setProofreadData(null);
+    dispatchActivity(0.8);
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -100,6 +102,7 @@ export default function NarrativePage() {
   const handleRegenerate = async () => {
     setIsRegenerating(true);
     setProofreadData(null);
+    dispatchActivity(0.8);
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -144,6 +147,7 @@ export default function NarrativePage() {
     }
 
     setIsCustomizing(true);
+    dispatchActivity(0.7);
     try {
       const res = await fetch('/api/customize', {
         method: 'POST',
@@ -179,6 +183,7 @@ export default function NarrativePage() {
     if (!state.narrative) return;
 
     setIsProofreading(true);
+    dispatchActivity(0.6);
     try {
       const res = await fetch('/api/proofread', {
         method: 'POST',
@@ -211,6 +216,7 @@ export default function NarrativePage() {
     if (!state.narrative || !proofreadData?.suggested_edits?.length) return;
 
     setIsApplyingEdits(true);
+    dispatchActivity(0.7);
     try {
       const res = await fetch('/api/apply-edits', {
         method: 'POST',
@@ -245,6 +251,7 @@ export default function NarrativePage() {
     }
 
     setIsSaving(true);
+    dispatchActivity(0.5);
     try {
       const supabase = createClient();
       const { error } = await supabase.from('narratives').insert({

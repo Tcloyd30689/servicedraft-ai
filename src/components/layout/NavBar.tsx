@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
-import Logo from '@/components/ui/Logo';
+import { Menu, X, Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/components/ThemeProvider';
 import UserPopup from '@/components/layout/UserPopup';
 import { cn } from '@/lib/utils';
 
@@ -16,12 +17,20 @@ const navLinks = [
 export default function NavBar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { colorMode, toggleColorMode } = useTheme();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-16 flex items-center justify-between px-6 bg-[var(--bg-nav)] backdrop-blur-[8px] border-b border-[var(--accent-20)] z-[100]">
-      {/* Left: Logo */}
-      <Link href="/main-menu" className="flex items-center">
-        <Logo size="small" />
+    <nav className="sticky top-0 w-full h-14 flex items-center justify-between px-6 bg-[var(--bg-nav)] backdrop-blur-[8px] border-b border-[var(--accent-20)] z-[100]">
+      {/* Left: Tight icon logo */}
+      <Link href="/main-menu" className="flex items-center flex-shrink-0">
+        <Image
+          src="/ServiceDraft-ai-tight logo.PNG"
+          alt="ServiceDraft.AI"
+          width={36}
+          height={36}
+          priority
+          className="object-contain"
+        />
       </Link>
 
       {/* Center: Nav links (desktop) */}
@@ -42,8 +51,17 @@ export default function NavBar() {
         ))}
       </div>
 
-      {/* Right: User popup */}
+      {/* Right: Theme toggle, User popup, Mobile toggle */}
       <div className="flex items-center gap-3">
+        {/* Light/Dark mode toggle */}
+        <button
+          onClick={toggleColorMode}
+          className="p-1.5 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-10)] transition-all duration-200 cursor-pointer"
+          aria-label={colorMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {colorMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+
         <UserPopup />
 
         {/* Mobile menu toggle */}
@@ -58,7 +76,7 @@ export default function NavBar() {
 
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
-        <div className="absolute top-16 left-0 right-0 bg-black/95 backdrop-blur-[8px] border-b border-[var(--accent-20)] md:hidden">
+        <div className="absolute top-14 left-0 right-0 bg-[var(--bg-nav)] backdrop-blur-[8px] border-b border-[var(--accent-20)] md:hidden">
           <div className="flex flex-col p-4 gap-2">
             {navLinks.map((link) => (
               <Link
