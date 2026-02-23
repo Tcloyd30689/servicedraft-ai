@@ -5,6 +5,8 @@ import { useTheme } from '@/components/ThemeProvider';
 import { useActivityPulse } from '@/hooks/useActivityPulse';
 
 const HERO_HEIGHT = 100; // px
+const NAV_HEIGHT = 56;   // px (h-14 in NavBar)
+const LOGO_HEIGHT = Math.round((HERO_HEIGHT + NAV_HEIGHT) * 2.622); // 262% of combined hero+nav
 
 interface HeroWave {
   baseAmplitude: number;
@@ -126,35 +128,41 @@ export default function HeroArea() {
   }, [amplitudeRef]);
 
   return (
-    <div
-      className="fixed top-0 left-0 right-0 overflow-hidden bg-[var(--bg-primary)] z-[90]"
-      style={{ height: `${HERO_HEIGHT}px` }}
-    >
-      {/* Animated wave canvas — fills entire hero */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 w-full h-full"
-        aria-hidden="true"
-      />
-
-      {/* Subtle gradient overlay at edges */}
+    <>
+      {/* Hero background — wave canvas + gradient */}
       <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `linear-gradient(90deg, var(--bg-primary) 0%, transparent 8%, transparent 92%, var(--bg-primary) 100%)`,
-        }}
-      />
+        className="fixed top-0 left-0 right-0 overflow-hidden bg-[var(--bg-primary)] z-[90]"
+        style={{ height: `${HERO_HEIGHT}px` }}
+      >
+        {/* Animated wave canvas — fills entire hero */}
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full"
+          aria-hidden="true"
+        />
 
-      {/* Large centered logo — primary brand presence */}
-      <div className="absolute inset-0 flex items-center justify-center z-10 px-4">
+        {/* Subtle gradient overlay at edges */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `linear-gradient(90deg, var(--bg-primary) 0%, transparent 8%, transparent 92%, var(--bg-primary) 100%)`,
+          }}
+        />
+      </div>
+
+      {/* Oversized logo — spans hero + nav, floats above both */}
+      <div
+        className="fixed top-0 left-0 right-0 flex items-center justify-center z-[110] pointer-events-none px-4"
+        style={{ height: `${HERO_HEIGHT + NAV_HEIGHT}px` }}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={accent.logoFile}
           alt="ServiceDraft.AI"
           className="drop-shadow-[0_0_20px_var(--accent-30)]"
-          style={{ height: '90px', width: 'auto', objectFit: 'contain', border: '2px solid red' /* PHASE 4 — verification border, remove after confirming */ }}
+          style={{ height: `${LOGO_HEIGHT}px`, width: 'auto', objectFit: 'contain' }}
         />
       </div>
-    </div>
+    </>
   );
 }
