@@ -26,9 +26,10 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-23
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 31 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 35 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
+**Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
 
 ---
 
@@ -1043,6 +1044,36 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Completed:** 2026-02-23
 - **Notes:** Biggest visual change in the app. New page layout: HeroArea (90px reactive sine wave + large logo) → NavBar (sticky, tight icon logo, theme toggle) → page content. Full-page WaveBackground removed — hero area is the sole animated element. Activity pulse system automatically responds to typing, clicks, and AI processing. All accent color theming preserved.
 
+### PB.32 — Hero Logo Enlarged ~20x + Hero Height Doubled
+- [x] Increased `HERO_HEIGHT` from 90px to 200px — hero area now dominates the top of the viewport as intended
+- [x] Logo `width` increased from 420→1200, `height` from 70→200, `maxHeight` from 55px→140px, `maxWidth` 90%
+- [x] Hero wave base amplitudes scaled up proportionally (12–15→22–30) to fill the taller area
+- [x] Drop shadow intensity increased for larger logo presence
+- **Completed:** 2026-02-23
+
+### PB.33 — Hero Area + Nav Bar Fixed on Scroll
+- [x] HeroArea changed from `relative` to `fixed top-0 left-0 right-0 z-[90]` — always visible at top of viewport
+- [x] NavBar changed from `sticky top-0` to `fixed left-0 right-0` with `top: 200px` — sits directly below hero
+- [x] Protected layout `<main>` given `paddingTop: 256px` (200px hero + 56px nav) so content starts below both fixed elements
+- [x] `min-h-[calc(100vh-256px)]` for proper content area sizing
+- **Completed:** 2026-02-23
+
+### PB.34 — Full-Page WaveBackground Restored to Protected Layout
+- [x] Re-added `<WaveBackground />` to `src/app/(protected)/layout.tsx` — renders at z-10 behind all content
+- [x] Component was intact in `src/components/ui/WaveBackground.tsx` (never deleted), just not rendered since Session 6A
+- [x] Full-page background sine wave animation now runs continuously on all protected pages again
+- [x] Separate from the hero area's reactive sine wave — this is the subtle always-running page backdrop
+- **Completed:** 2026-02-23
+
+### PB.35 — Nav Links Consolidated into Icon+Label Pairs
+- [x] Removed redundant standalone "Main Menu" and "Dashboard" text links from nav bar center
+- [x] LEFT: SD tight icon logo (32×32) + "Main Menu" label — paired as single `<Link>` to `/main-menu`
+- [x] RIGHT: PositionIcon (user's role icon, 28×28) + "Dashboard" label — paired as single `<Link>` to `/dashboard`
+- [x] Both pairs highlight with `bg-[var(--accent-20)]` when on the matching route
+- [x] Labels hidden on small screens (`hidden sm:inline`), mobile hamburger menu preserved as fallback
+- [x] NavBar now imports `useAuth` for profile data and `PositionIcon` for the role icon
+- **Completed:** 2026-02-23
+
 ---
 
 ## SUMMARY COUNTS
@@ -1060,8 +1091,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 31 | 31 |
-| **TOTAL** | **109** | **104** |
+| Post-Build Fixes | 35 | 35 |
+| **TOTAL** | **113** | **108** |
 
 ---
 

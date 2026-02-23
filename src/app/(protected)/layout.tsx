@@ -2,6 +2,7 @@
 
 import HeroArea from '@/components/layout/HeroArea';
 import NavBar from '@/components/layout/NavBar';
+import WaveBackground from '@/components/ui/WaveBackground';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 
 export default function ProtectedLayout({
@@ -11,14 +12,17 @@ export default function ProtectedLayout({
 }) {
   return (
     <>
-      {/* Hero title area — full width, reactive sine wave + large logo */}
+      {/* Full-page sine wave background — z-10, behind all content */}
+      <WaveBackground />
+
+      {/* Hero title area — fixed top, reactive sine wave + large logo */}
       <HeroArea />
 
-      {/* Navigation bar — sits directly below hero */}
+      {/* Navigation bar — fixed below hero */}
       <NavBar />
 
-      {/* Page content */}
-      <main className="relative z-30 min-h-[calc(100vh-146px)]">
+      {/* Page content — pushed below fixed hero (200px) + fixed nav (56px) */}
+      <main className="relative z-30 min-h-[calc(100vh-256px)]" style={{ paddingTop: '256px' }}>
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
     </>

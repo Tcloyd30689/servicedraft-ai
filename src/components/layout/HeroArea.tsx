@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useTheme } from '@/components/ThemeProvider';
 import { useActivityPulse } from '@/hooks/useActivityPulse';
 
-const HERO_HEIGHT = 90; // px
+const HERO_HEIGHT = 200; // px
 
 interface HeroWave {
   baseAmplitude: number;
@@ -16,11 +16,11 @@ interface HeroWave {
 }
 
 const heroWaves: HeroWave[] = [
-  { baseAmplitude: 12, frequency: 0.025, speed: 0.03, offset: 0, baseOpacity: 0.25 },
-  { baseAmplitude: 8,  frequency: 0.018, speed: 0.02, offset: Math.PI / 3, baseOpacity: 0.3 },
-  { baseAmplitude: 15, frequency: 0.03,  speed: 0.035, offset: Math.PI / 2, baseOpacity: 0.2 },
-  { baseAmplitude: 10, frequency: 0.022, speed: 0.015, offset: Math.PI, baseOpacity: 0.22 },
-  { baseAmplitude: 6,  frequency: 0.035, speed: 0.025, offset: Math.PI * 1.5, baseOpacity: 0.18 },
+  { baseAmplitude: 25, frequency: 0.02,  speed: 0.025, offset: 0, baseOpacity: 0.25 },
+  { baseAmplitude: 18, frequency: 0.015, speed: 0.018, offset: Math.PI / 3, baseOpacity: 0.3 },
+  { baseAmplitude: 30, frequency: 0.025, speed: 0.03,  offset: Math.PI / 2, baseOpacity: 0.2 },
+  { baseAmplitude: 22, frequency: 0.018, speed: 0.012, offset: Math.PI, baseOpacity: 0.22 },
+  { baseAmplitude: 14, frequency: 0.03,  speed: 0.022, offset: Math.PI * 1.5, baseOpacity: 0.18 },
 ];
 
 export default function HeroArea() {
@@ -128,7 +128,7 @@ export default function HeroArea() {
 
   return (
     <div
-      className="relative w-full flex-shrink-0 overflow-hidden bg-[var(--bg-primary)]"
+      className="fixed top-0 left-0 right-0 overflow-hidden bg-[var(--bg-primary)] z-[90]"
       style={{ height: `${HERO_HEIGHT}px` }}
     >
       {/* Animated wave canvas — fills entire hero */}
@@ -146,16 +146,16 @@ export default function HeroArea() {
         }}
       />
 
-      {/* Large centered logo */}
-      <div className="absolute inset-0 flex items-center justify-center z-10">
+      {/* Large centered logo — primary brand presence */}
+      <div className="absolute inset-0 flex items-center justify-center z-10 px-4">
         <Image
           src={accent.logoFile}
           alt="ServiceDraft.AI"
-          width={420}
-          height={70}
+          width={1200}
+          height={200}
           priority
-          className="object-contain drop-shadow-[0_0_12px_var(--accent-30)]"
-          style={{ maxHeight: '55px' }}
+          className="object-contain drop-shadow-[0_0_20px_var(--accent-30)]"
+          style={{ maxHeight: '140px', maxWidth: '90%' }}
         />
       </div>
     </div>
