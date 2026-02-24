@@ -81,7 +81,7 @@ export default function InputPage() {
       >
         {/* Story Type Selection */}
         <LiquidCard size="standard" className="mb-6">
-          <h2 className="text-xl font-semibold text-white mb-4">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
             Select Story Type
           </h2>
           <StoryTypeSelector
@@ -98,7 +98,7 @@ export default function InputPage() {
             transition={{ duration: 0.4 }}
           >
             <LiquidCard size="standard" className="mb-6">
-              <h2 className="text-xl font-semibold text-white mb-6">
+              <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-6">
                 Repair Order Information
               </h2>
 

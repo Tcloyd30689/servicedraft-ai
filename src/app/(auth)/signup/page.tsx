@@ -281,7 +281,7 @@ function SignupContent() {
             ))}
           </div>
 
-          <h1 className="text-2xl font-semibold text-white text-center mb-6">
+          <h1 className="text-2xl font-semibold text-[var(--text-primary)] text-center mb-6">
             {emailSent ? 'Check Your Email' : stepTitles[step]}
           </h1>
 

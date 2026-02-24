@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-24
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 73 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 74 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1456,6 +1456,18 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Fixed `Logo.tsx` (used on landing, login, signup pages): same `mounted` + `DEFAULT_ACCENT.logoFile` pattern
 - [x] No visible flicker — the logo swap happens in the same paint cycle as the ThemeProvider's CSS variable application (both run in useEffect after mount)
 - [x] Does not change how accent color theming works overall — only defers the logo image source to after hydration
+- **Completed:** 2026-02-24
+
+### PB.74 — Light Mode Card Container Text Readability
+- [x] Fixed light mode card container text — all title, subtitle, and label text at top of cards now renders black in light mode for readability across all accent color themes.
+- [x] Changed 5 hardcoded `text-white` instances to `text-[var(--text-primary)]` in card headers:
+  - `login/page.tsx` — "Sign In" card title
+  - `signup/page.tsx` — Step title card header
+  - `input/page.tsx` — "Select Story Type" card title
+  - `input/page.tsx` — "Repair Order Information" card title
+  - `narrative/page.tsx` — "AI OUTPUT CUSTOMIZATION" card label
+- [x] The CSS variable `--text-primary` already switches between `#ffffff` (dark mode) and `#0f172a` (light mode) via the ThemeProvider, so these card headers now automatically adapt to the active color mode
+- [x] Did NOT change button text, badge text, or tab button text (EditProfileModal, ProofreadResults, CustomizationPanel) — those are on accent-colored backgrounds and remain `text-white` correctly
 - **Completed:** 2026-02-24
 
 ---

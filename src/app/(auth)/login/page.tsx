@@ -141,7 +141,7 @@ export default function LoginPage() {
         </div>
 
         <LiquidCard size="spacious">
-          <h1 className="text-2xl font-semibold text-white text-center mb-6">
+          <h1 className="text-2xl font-semibold text-[var(--text-primary)] text-center mb-6">
             Sign In
           </h1>
 

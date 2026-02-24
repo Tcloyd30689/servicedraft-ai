@@ -421,7 +421,7 @@ export default function NarrativePage() {
             <LiquidCard size="compact">
               <button
                 onClick={() => setShowCustomization(!showCustomization)}
-                className="w-full flex items-center justify-between text-white font-semibold text-sm cursor-pointer"
+                className="w-full flex items-center justify-between text-[var(--text-primary)] font-semibold text-sm cursor-pointer"
               >
                 <span className="flex items-center gap-2">
                   <Settings size={16} className="text-[var(--accent-hover)]" />
