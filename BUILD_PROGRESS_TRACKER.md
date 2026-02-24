@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-24
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 69 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 72 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -36,6 +36,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Session 8B:** COMPLETE — Light mode styling fixes + White accent dark-mode lock (PB.52–PB.56)
 **Session 9A:** COMPLETE — Particle Network animation + background animation toggle (PB.57–PB.60)
 **Session 10A:** COMPLETE — Dashboard modal portal fix, wave amplitude/centering, nav consolidation, logo sizing, default dark mode, 8hr auto-logout (PB.61–PB.68)
+**Session 11A:** COMPLETE — Fixed Main Menu page scroll and centered container, fixed white accent theme Generate Story button text to black, fixed black accent theme visibility with comprehensive dark styling and white text on Generate Story button (PB.70–PB.72)
 
 ---
 
@@ -1128,8 +1129,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 60 | 60 |
-| **TOTAL** | **138** | **133** |
+| Post-Build Fixes | 63 | 63 |
+| **TOTAL** | **141** | **136** |
 
 ---
 
@@ -1419,6 +1420,35 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** PB.61, PB.62, PB.63, PB.64, PB.65, PB.66, PB.67, PB.68, PB.69
 - **Completed:** 2026-02-24
 - **Notes:** Fixed dashboard modal overflow (portaled to body), increased wave amplitude 10% and centered to logo, combined nav bar Dashboard button with user icon into single T.Cloyd dropdown, matched login logo size to landing page, centered wave animations to logo on landing/login pages, set purple dark mode as default for logged-out state via auth-aware ThemeProvider, added 8-hour auto-logout session expiry.
+
+### PB.70 — Main Menu Page No-Scroll + Viewport Centering
+- [x] Changed main menu page wrapper from `min-h-screen` to `min-h-[calc(100vh-156px)]` — accounts for fixed hero (100px) + nav (56px) overhead
+- [x] Removed `py-8` vertical padding that pushed content below the fold
+- [x] Reduced inner card gap from `gap-8` to `gap-6` for a tighter, centered layout
+- [x] Loading state also updated to use the same viewport-aware height
+- [x] Content card is now dead-center in the available viewport with no scroll bar
+- **Completed:** 2026-02-24
+
+### PB.71 — White Accent Theme: Generate Story Button Text Readability
+- [x] Added `perceivedBrightness()` helper to `src/lib/constants/themeColors.ts` — computes perceived brightness (0-255) from hex color using weighted RGB formula (0.299R + 0.587G + 0.114B)
+- [x] Added luminance-based `--btn-text-on-accent` override in `applyTheme()` — checks brightness of `accent.hover` (the primary button background color)
+- [x] If hover brightness > 180: button text is `#000000` (black); otherwise `#ffffff` (white)
+- [x] White accent hover is `#f1f5f9` (brightness ~244) → black text ✓ All other accents have darker hover colors → white text preserved ✓
+- [x] For dark mode with very light accents (White): `--accent-vivid` falls back to `accent.border` for better secondary button contrast
+- **Completed:** 2026-02-24
+
+### PB.72 — Black Accent Theme: Comprehensive Visibility Fix
+- [x] Same `perceivedBrightness()` luminance check ensures Black accent primary buttons get white text — `accent.hover` is `#334155` (brightness ~63) → white text ✓
+- [x] Light mode `--accent-vivid` override: when `accent.border` brightness > 180 (Black's border is `#cbd5e1` at ~211), falls back to `accent.hex` (`#1e293b`) — dark text/borders readable on light backgrounds
+- [x] Light mode `--card-border` and `--modal-border` override: when border is too light, uses `accent.hover` (`#334155`) — visible dark gray border on white card backgrounds
+- [x] All accent-colored elements (buttons, text, icons, borders) now use appropriate contrast values for the Black theme
+- [x] Works generically via luminance thresholds — no hardcoded per-accent exceptions needed
+- **Completed:** 2026-02-24
+
+### SESSION 11A — Main Menu Centering + White/Black Accent Theme Fixes — COMPLETE
+- **Scope:** PB.70, PB.71, PB.72
+- **Completed:** 2026-02-24
+- **Notes:** Fixed Main Menu page scroll and centered container in viewport (156px header offset). Added luminance-based button text color system — `perceivedBrightness()` helper auto-determines black vs white text for primary buttons based on accent hover color brightness. White accent: Generate Story button now has black text on light button. Black accent: all elements visible with proper contrast — primary buttons get white text on dark bg, secondary buttons/borders use darker accent colors, card/modal borders darkened. All fixes are generic luminance checks, not per-accent hardcodes.
 
 ---
 

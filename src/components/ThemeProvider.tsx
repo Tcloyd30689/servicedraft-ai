@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
-import { ACCENT_COLORS, DEFAULT_ACCENT, getAccentByKey, buildCssVars, type AccentColor } from '@/lib/constants/themeColors';
+import { ACCENT_COLORS, DEFAULT_ACCENT, getAccentByKey, buildCssVars, perceivedBrightness, type AccentColor } from '@/lib/constants/themeColors';
 import type { UserPreferences } from '@/types/database';
 
 const STORAGE_KEY = 'sd-accent-color';
@@ -86,6 +86,27 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
     root.style.setProperty('--accent-text-emphasis-weight', 'inherit');
     root.style.setProperty('--btn-text-on-accent', '#ffffff');
     root.style.setProperty('--accent-vivid', accent.hover);
+  }
+
+  // --- Luminance-based overrides for extreme accent colors (White, Black, etc.) ---
+
+  // Button text: ensure contrast on accent-hover backgrounds (used by primary buttons)
+  const hoverBrightness = perceivedBrightness(accent.hover);
+  root.style.setProperty('--btn-text-on-accent', hoverBrightness > 180 ? '#000000' : '#ffffff');
+
+  // Light mode: if accent.border is too light on white bg, darken secondary/ghost text & borders
+  if (effectiveMode === 'light') {
+    const borderBrightness = perceivedBrightness(accent.border);
+    if (borderBrightness > 180) {
+      root.style.setProperty('--accent-vivid', accent.hex);
+      root.style.setProperty('--card-border', accent.hover);
+      root.style.setProperty('--modal-border', accent.hover);
+    }
+  }
+
+  // Dark mode: if accent.hover is very light (e.g. White accent), darken secondary/ghost text
+  if (effectiveMode === 'dark' && hoverBrightness > 200) {
+    root.style.setProperty('--accent-vivid', accent.border);
   }
 }
 

@@ -202,6 +202,14 @@ export function getAccentByKey(key: string): AccentColor {
   return ACCENT_COLORS.find((c) => c.key === key) || DEFAULT_ACCENT;
 }
 
+/** Compute perceived brightness (0-255) of a hex color like "#abcdef" */
+export function perceivedBrightness(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
 /**
  * Build all CSS custom property values for a given accent color.
  * Returns a Record of `--var-name` → `value` pairs.

@@ -41,7 +41,7 @@ export default function MainMenuPage() {
   if (loading || !profile || !profile.subscription_status ||
       profile.subscription_status === 'trial' || !profile.username) {
     return (
-      <div className="flex items-center justify-center min-h-screen px-4 py-8">
+      <div className="flex items-center justify-center min-h-[calc(100vh-156px)] px-4">
         <LiquidCard size="spacious">
           <div className="py-12">
             <LoadingSpinner message="Loading..." />
@@ -91,7 +91,7 @@ export default function MainMenuPage() {
   ];
 
   return (
-    <div className="flex items-center justify-center min-h-screen px-4 py-8">
+    <div className="flex items-center justify-center min-h-[calc(100vh-156px)] px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -99,7 +99,7 @@ export default function MainMenuPage() {
         className="w-full max-w-2xl"
       >
         <LiquidCard size="spacious">
-          <div className="flex flex-col items-center gap-8">
+          <div className="flex flex-col items-center gap-6">
             {/* Heading — replaces the old logo */}
             <motion.h1
               className="text-2xl sm:text-3xl tracking-wide"
