@@ -23,10 +23,10 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-02-23
+**Last Updated:** 2026-02-24
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 56 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 60 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -34,6 +34,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Session 7B:** COMPLETE — Navigation guard for unsaved narratives + auto-save on export (PB.47–PB.48)
 **Session 8A:** COMPLETE — User Preferences Panel + Accent Color Picker + Supabase Persistence (PB.49–PB.51)
 **Session 8B:** COMPLETE — Light mode styling fixes + White accent dark-mode lock (PB.52–PB.56)
+**Session 9A:** COMPLETE — Particle Network animation + background animation toggle (PB.57–PB.60)
 
 ---
 
@@ -1126,8 +1127,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 56 | 56 |
-| **TOTAL** | **134** | **129** |
+| Post-Build Fixes | 60 | 60 |
+| **TOTAL** | **138** | **133** |
 
 ---
 
@@ -1312,6 +1313,44 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** PB.52, PB.53, PB.54, PB.55, PB.56
 - **Completed:** 2026-02-23
 - **Notes:** Five light mode improvements. (1) Accent-colored emphasis text switches to bold black in light mode via `--accent-text-emphasis`. (2) Card backgrounds use solid accent-tinted color instead of transparent overlay. (3) Primary button text switches to black in light mode via `--btn-text-on-accent`. (4) Outline/ghost buttons use darker accent color (`accent.border`) in light mode via `--accent-vivid`. (5) White accent forces dark mode, matching the Black→light pattern.
+
+### PB.57 — ParticleNetwork Component (Replaces WaveBackground on Protected Pages)
+- [x] Created `src/components/ui/ParticleNetwork.tsx` — full-page canvas animation with floating particles and connecting lines
+- [x] 30 particles with random velocity, wrapped edges, and dynamic connection lines (max distance 200px)
+- [x] Reads `--wave-color` CSS variable (RGB triplet) same as WaveBackground — accent color changes propagate automatically
+- [x] Re-reads accent color every 2s via `setInterval` to pick up mid-session theme changes
+- [x] Canvas at `z-10`, `pointer-events: none`, `fixed inset-0` — identical layering to old WaveBackground
+- **Completed:** 2026-02-24
+
+### PB.58 — ThemeProvider backgroundAnimation State + Supabase Persistence
+- [x] Added `backgroundAnimation: boolean` and `setBackgroundAnimation` to `ThemeContextValue` interface
+- [x] State initialized from `localStorage('sd-bg-animation')`, defaults to `true` if absent
+- [x] `setBackgroundAnimation()` persists to localStorage AND merges into Supabase `preferences.appearance.backgroundAnimation`
+- [x] `loadFromSupabase()` reads `backgroundAnimation` from Supabase on mount, defaults to `true` if undefined
+- [x] `saveToSupabase()` updated to spread existing appearance fields when merging — preserves accentColor, mode, AND backgroundAnimation
+- [x] Added `backgroundAnimation?: boolean` to `UserPreferences.appearance` in `src/types/database.ts`
+- **Completed:** 2026-02-24
+
+### PB.59 — Protected Layout: Swap WaveBackground → ParticleNetwork
+- [x] Replaced `import WaveBackground` with `import ParticleNetwork` in `src/app/(protected)/layout.tsx`
+- [x] Added `import { useTheme }` and `const { backgroundAnimation } = useTheme()`
+- [x] Replaced `<WaveBackground />` with `{backgroundAnimation && <ParticleNetwork />}` — component fully unmounts when toggle is off
+- [x] WaveBackground.tsx preserved for landing page (`src/app/page.tsx`) and auth pages (`login/page.tsx`, `signup/page.tsx`)
+- **Completed:** 2026-02-24
+
+### PB.60 — Background Animation Toggle in PreferencesPanel
+- [x] Added "Background Animation" section to Appearance tab in `src/components/dashboard/PreferencesPanel.tsx`
+- [x] Section heading matches existing style (`text-sm font-semibold`, `var(--text-secondary)`)
+- [x] Toggle row: Sparkles icon + "Particle Network" label on left, pill toggle switch (48×24px) on right
+- [x] Toggle ON: track is `var(--accent-primary)`, circle slides right; OFF: track is `var(--bg-elevated)`, circle slides left
+- [x] CSS `transition-all duration-200` for smooth slide animation
+- [x] Clicking anywhere on the row calls `setBackgroundAnimation(!backgroundAnimation)`
+- **Completed:** 2026-02-24
+
+### SESSION 9A — Particle Network Animation + Background Animation Toggle — COMPLETE
+- **Scope:** PB.57, PB.58, PB.59, PB.60
+- **Completed:** 2026-02-24
+- **Notes:** Replaced the full-page sine wave background on protected pages with a particle network animation (floating dots with connecting lines). Added on/off toggle to the Preferences Panel Appearance tab. Toggle persists to localStorage (instant) and Supabase (cross-device). WaveBackground.tsx retained for landing page and auth pages. ParticleNetwork reads the same `--wave-color` CSS variable for accent-reactive coloring.
 
 ---
 

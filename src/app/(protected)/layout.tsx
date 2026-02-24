@@ -2,18 +2,21 @@
 
 import HeroArea from '@/components/layout/HeroArea';
 import NavBar from '@/components/layout/NavBar';
-import WaveBackground from '@/components/ui/WaveBackground';
+import ParticleNetwork from '@/components/ui/ParticleNetwork';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import { useTheme } from '@/components/ThemeProvider';
 
 export default function ProtectedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { backgroundAnimation } = useTheme();
+
   return (
     <>
-      {/* Full-page sine wave background — z-10, behind all content */}
-      <WaveBackground />
+      {/* Full-page particle network background — z-10, behind all content */}
+      {backgroundAnimation && <ParticleNetwork />}
 
       {/* Hero title area — fixed top, reactive sine wave + large logo */}
       <HeroArea />

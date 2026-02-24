@@ -2,6 +2,7 @@ export interface UserPreferences {
   appearance?: {
     accentColor: string;   // Key from themeColors.ts (e.g., 'violet', 'blue')
     mode: 'dark' | 'light';
+    backgroundAnimation?: boolean; // Particle network on/off — undefined treated as true
   };
   templates?: {
     defaultFormat?: 'block' | 'ccc';

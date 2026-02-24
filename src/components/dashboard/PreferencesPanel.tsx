@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, X, Palette, FileText, Moon, Sun } from 'lucide-react';
+import { Settings, X, Palette, FileText, Moon, Sun, Sparkles } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
 import AccentColorPicker from '@/components/ui/AccentColorPicker';
 
@@ -15,7 +15,7 @@ type Tab = 'appearance' | 'templates';
 
 export default function PreferencesPanel({ isOpen, onClose }: PreferencesPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>('appearance');
-  const { colorMode, toggleColorMode, accent } = useTheme();
+  const { colorMode, toggleColorMode, accent, backgroundAnimation, setBackgroundAnimation } = useTheme();
 
   const effectiveMode = accent.isLightMode ? 'light' : accent.isDarkMode ? 'dark' : colorMode;
   const modeLocked = accent.isLightMode || accent.isDarkMode;
@@ -179,6 +179,58 @@ export default function PreferencesPanel({ isOpen, onClose }: PreferencesPanelPr
                         Light
                       </button>
                     </div>
+                  </div>
+
+                  {/* Background Animation Section */}
+                  <div>
+                    <h3
+                      className="text-sm font-semibold mb-3"
+                      style={{ color: 'var(--text-secondary)' }}
+                    >
+                      Background Animation
+                    </h3>
+                    <button
+                      onClick={() => setBackgroundAnimation(!backgroundAnimation)}
+                      className="w-full flex items-center justify-between py-3 px-4 rounded-lg transition-colors"
+                      style={{
+                        backgroundColor: 'var(--bg-input)',
+                        border: '1px solid var(--accent-20)',
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Sparkles size={18} style={{ color: 'var(--accent-text-emphasis)' }} />
+                        <span
+                          className="text-sm font-medium"
+                          style={{ color: 'var(--text-primary)' }}
+                        >
+                          Particle Network
+                        </span>
+                      </div>
+                      {/* Toggle switch */}
+                      <div
+                        className="relative flex-shrink-0 transition-colors duration-200"
+                        style={{
+                          width: 48,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: backgroundAnimation
+                            ? 'var(--accent-primary)'
+                            : 'var(--bg-elevated)',
+                        }}
+                      >
+                        <div
+                          className="absolute top-1 transition-all duration-200"
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: '50%',
+                            backgroundColor: '#ffffff',
+                            left: backgroundAnimation ? 28 : 4,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                          }}
+                        />
+                      </div>
+                    </button>
                   </div>
 
                   {/* Hint */}

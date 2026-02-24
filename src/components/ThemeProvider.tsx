@@ -6,6 +6,7 @@ import type { UserPreferences } from '@/types/database';
 
 const STORAGE_KEY = 'sd-accent-color';
 const MODE_STORAGE_KEY = 'sd-color-mode';
+const BG_ANIM_STORAGE_KEY = 'sd-bg-animation';
 
 type ColorMode = 'dark' | 'light';
 
@@ -15,6 +16,8 @@ interface ThemeContextValue {
   colorMode: ColorMode;
   toggleColorMode: () => void;
   accentColors: AccentColor[];
+  backgroundAnimation: boolean;
+  setBackgroundAnimation: (enabled: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
@@ -23,6 +26,8 @@ const ThemeContext = createContext<ThemeContextValue>({
   colorMode: 'dark',
   toggleColorMode: () => {},
   accentColors: ACCENT_COLORS,
+  backgroundAnimation: true,
+  setBackgroundAnimation: () => {},
 });
 
 export function useTheme() {
@@ -97,11 +102,19 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     return saved === 'light' ? 'light' : 'dark';
   });
 
+  const [backgroundAnimation, setBackgroundAnimationState] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = localStorage.getItem(BG_ANIM_STORAGE_KEY);
+    return saved !== null ? saved === 'true' : true;
+  });
+
   // Track current values in refs for async Supabase helpers
   const accentRef = useRef(accent);
   const modeRef = useRef(colorMode);
+  const bgAnimRef = useRef(backgroundAnimation);
   useEffect(() => { accentRef.current = accent; }, [accent]);
   useEffect(() => { modeRef.current = colorMode; }, [colorMode]);
+  useEffect(() => { bgAnimRef.current = backgroundAnimation; }, [backgroundAnimation]);
 
   // --- Supabase persistence helpers ---
 
@@ -122,7 +135,12 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
       const existingPrefs: UserPreferences = (row?.preferences as UserPreferences) || {};
       const merged: UserPreferences = {
         ...existingPrefs,
-        appearance: { accentColor: accentKey, mode },
+        appearance: {
+          ...existingPrefs.appearance,
+          accentColor: accentKey,
+          mode,
+          backgroundAnimation: bgAnimRef.current,
+        },
       };
 
       await supabase
@@ -169,6 +187,12 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
           setColorMode(mode);
           localStorage.setItem(MODE_STORAGE_KEY, mode);
         }
+
+        // backgroundAnimation: undefined treated as true (existing users)
+        const bgAnim = prefs.appearance.backgroundAnimation;
+        const bgAnimValue = bgAnim !== undefined ? bgAnim : true;
+        setBackgroundAnimationState(bgAnimValue);
+        localStorage.setItem(BG_ANIM_STORAGE_KEY, String(bgAnimValue));
       } catch {
         // Not logged in or network issue — localStorage values already loaded
       }
@@ -215,6 +239,14 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     });
   }, [saveToSupabase]);
 
+  const setBackgroundAnimation = useCallback((enabled: boolean) => {
+    setBackgroundAnimationState(enabled);
+    localStorage.setItem(BG_ANIM_STORAGE_KEY, String(enabled));
+    // Persist to Supabase — bgAnimRef is updated via useEffect, but we need the new value now
+    bgAnimRef.current = enabled;
+    saveToSupabase(accentRef.current.key, modeRef.current);
+  }, [saveToSupabase]);
+
   return (
     <ThemeContext.Provider
       value={{
@@ -223,6 +255,8 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
         colorMode: accent.isLightMode ? 'light' : accent.isDarkMode ? 'dark' : colorMode,
         toggleColorMode,
         accentColors: ACCENT_COLORS,
+        backgroundAnimation,
+        setBackgroundAnimation,
       }}
     >
       {children}

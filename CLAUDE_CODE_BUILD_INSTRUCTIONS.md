@@ -264,17 +264,14 @@ Key requirements:
 - Canvas positioned at z-index: 10 (behind content)
 - Must be performant — no frame drops
 
-Pattern:
+Pattern (protected pages use ParticleNetwork; landing/auth pages still use WaveBackground):
 ```tsx
 "use client";
 import { useEffect, useRef } from 'react';
 
-export default function WaveBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  // Use requestAnimationFrame to draw sine waves
-  // y = centerY + amplitude * Math.sin(x * frequency + time * speed + offset)
-  // Multiple wave layers with varying parameters
-}
+// ParticleNetwork — floating particles with connecting lines (protected layout)
+// WaveBackground — sine wave animation (landing page, auth pages)
+// Both read --wave-color CSS variable for accent-reactive coloring
 ```
 
 ### Task 1.2: Liquid Card
@@ -862,12 +859,12 @@ The `ThemeProvider` is a React context provider that manages the accent color an
 - `--wave-color` is emitted as bare RGB components (e.g., `195, 171, 226`) for use in canvas `rgba()` strings
 
 **Exports:**
-- `useTheme()` — hook returning `{ accent, setAccentColor, colorMode, toggleColorMode, accentColors }`
+- `useTheme()` — hook returning `{ accent, setAccentColor, colorMode, toggleColorMode, accentColors, backgroundAnimation, setBackgroundAnimation }`
 - `ThemeProvider` — default export, wraps children in context provider
 
-### Wave Animation and CSS Variables (`src/components/ui/WaveBackground.tsx`)
+### Background Animation and CSS Variables (`src/components/ui/ParticleNetwork.tsx` + `WaveBackground.tsx`)
 
-The sine wave background reads the accent color from CSS variables on every animation frame:
+Both background animation components read the accent color from CSS variables. ParticleNetwork (used on protected pages) polls every 2s; WaveBackground (used on landing/auth pages) reads every frame:
 
 ```tsx
 // Inside the requestAnimationFrame draw loop:
@@ -1229,9 +1226,9 @@ import { dispatchActivity } from '@/hooks/useActivityPulse';
 dispatchActivity(0.8);
 ```
 
-### Full-Page Wave Background
+### Full-Page Background Animation
 
-The original full-page `WaveBackground` component (`src/components/ui/WaveBackground.tsx`) is rendered in the protected layout at z-10 behind all content. It's also used on the landing page (`src/app/page.tsx`) and auth pages.
+The protected layout renders `ParticleNetwork` (`src/components/ui/ParticleNetwork.tsx`) at z-10 behind all content, controlled by the `backgroundAnimation` toggle in ThemeProvider (on by default). When toggled off, the component fully unmounts. The original `WaveBackground` component is still used on the landing page (`src/app/page.tsx`) and auth pages.
 
 ---
 
