@@ -1,3 +1,18 @@
+export interface UserPreferences {
+  appearance?: {
+    accentColor: string;   // Key from themeColors.ts (e.g., 'violet', 'blue')
+    mode: 'dark' | 'light';
+  };
+  templates?: {
+    defaultFormat?: 'block' | 'ccc';
+    defaultCustomization?: {
+      tone?: string;
+      warrantyCompliance?: boolean;
+      detailLevel?: string;
+    };
+  };
+}
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -9,6 +24,7 @@ export interface UserProfile {
   profile_picture_url: string | null;
   subscription_status: 'active' | 'trial' | 'expired' | 'bypass';
   stripe_customer_id: string | null;
+  preferences?: UserPreferences;
   created_at: string;
   updated_at: string;
 }

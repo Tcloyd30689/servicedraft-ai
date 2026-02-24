@@ -1343,4 +1343,90 @@ Whenever the user performs any export action (Copy to Clipboard, Print, Download
 
 ---
 
+## APPENDIX: PREFERENCES SYSTEM (Added 2026-02-23)
+
+### Overview
+
+User preferences are stored as a JSONB column (`preferences`) on the `users` table in Supabase. The system uses a **localStorage-first, Supabase-async-override** pattern:
+
+1. **On page load:** ThemeProvider reads `sd-accent-color` and `sd-color-mode` from localStorage (instant, no network)
+2. **After hydration:** ThemeProvider asynchronously queries `users.preferences` from Supabase
+3. **If Supabase has preferences:** They override the localStorage values and sync localStorage for consistency
+4. **If not logged in or network fails:** localStorage values remain (graceful degradation)
+
+### JSONB Column Structure
+
+```sql
+-- Add this column to the existing users table:
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{}'::jsonb;
+```
+
+The `preferences` column uses this TypeScript interface (`src/types/database.ts`):
+
+```typescript
+interface UserPreferences {
+  appearance?: {
+    accentColor: string;   // Key from themeColors.ts (e.g., 'violet', 'blue')
+    mode: 'dark' | 'light';
+  };
+  templates?: {
+    defaultFormat?: 'block' | 'ccc';
+    defaultCustomization?: {
+      tone?: string;
+      warrantyCompliance?: boolean;
+      detailLevel?: string;
+    };
+  };
+}
+```
+
+### Merge Pattern for Adding New Preference Categories
+
+When saving preferences, the ThemeProvider reads the existing `preferences` object from Supabase FIRST, then merges the new values using the spread operator:
+
+```typescript
+const existingPrefs = row?.preferences || {};
+const merged = {
+  ...existingPrefs,           // Preserves templates, future keys
+  appearance: { accentColor, mode },  // Overwrites only appearance
+};
+await supabase.from('users').update({ preferences: merged }).eq('id', user.id);
+```
+
+**To add a new preference category** (e.g., `templates`):
+1. Read the existing `preferences` JSONB
+2. Spread the existing object
+3. Set your new key (e.g., `templates: { defaultFormat: 'block' }`)
+4. Write the merged object back
+
+This pattern ensures independent features never overwrite each other's preferences.
+
+### Architecture
+
+```
+src/types/database.ts                    → UserPreferences interface
+src/components/ThemeProvider.tsx          → loadFromSupabase() + saveToSupabase()
+src/components/ui/AccentColorPicker.tsx   → 9-swatch color picker (uses useTheme)
+src/components/dashboard/PreferencesPanel.tsx → Modal with Appearance + Templates tabs
+src/app/(protected)/dashboard/page.tsx   → Preferences button + panel integration
+```
+
+### Key Files
+
+| File | Role |
+|------|------|
+| `src/components/ui/AccentColorPicker.tsx` | Row of 9 color swatches, calls `setAccentColor()` |
+| `src/components/dashboard/PreferencesPanel.tsx` | Two-tab modal: Appearance (functional) + Templates (placeholder) |
+| `src/components/ThemeProvider.tsx` | Extended with `loadFromSupabase()` and `saveToSupabase()` |
+| `src/types/database.ts` | `UserPreferences` interface + updated `UserProfile` |
+
+### Supabase Sync Details
+
+- **Dynamic import:** Supabase client is imported via `await import('@/lib/supabase/client')` to avoid bundling it in the ThemeProvider's initial chunk
+- **Auth check:** `supabase.auth.getUser()` — if no user (not logged in), both load and save silently return
+- **Error handling:** All Supabase calls wrapped in try/catch. Errors are logged to console but never break the app
+- **localStorage alignment:** After loading from Supabase, localStorage keys are updated to match, so subsequent page loads (before Supabase loads) show the correct theme
+
+---
+
 *— End of Claude Code Build Instructions —*

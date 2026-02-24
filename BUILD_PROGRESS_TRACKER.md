@@ -26,12 +26,13 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-23
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 48 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 51 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
 **Session 7A:** COMPLETE — Page redesigns, cursor underglow, card hover changes, narrative reset (PB.42–PB.46)
 **Session 7B:** COMPLETE — Navigation guard for unsaved narratives + auto-save on export (PB.47–PB.48)
+**Session 8A:** COMPLETE — User Preferences Panel + Accent Color Picker + Supabase Persistence (PB.49–PB.51)
 
 ---
 
@@ -1124,8 +1125,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 48 | 48 |
-| **TOTAL** | **126** | **121** |
+| Post-Build Fixes | 51 | 51 |
+| **TOTAL** | **129** | **124** |
 
 ---
 
@@ -1218,6 +1219,49 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** PB.47, PB.48
 - **Completed:** 2026-02-23
 - **Notes:** Two critical protections for unsaved narratives. (1) Navigation guard uses `beforeunload` for browser close/back and document click capture for in-app links — both disabled once `isSaved` is true. (2) Auto-save on export ensures narratives appear in dashboard history after any export action, with duplicate prevention via `savedNarrativeId`.
+
+### PB.49 — AccentColorPicker Component
+- [x] Created `src/components/ui/AccentColorPicker.tsx` — row of 9 clickable color swatches
+- [x] Uses existing `ACCENT_COLORS` array from `themeColors.ts` and `useTheme()` hook from `ThemeProvider.tsx`
+- [x] Each swatch: 36×36px circle filled with accent hex color
+- [x] Selected swatch: 3px solid `var(--text-primary)` border + `0 0 12px {color.hex}` box shadow
+- [x] Unselected swatches: 2px solid transparent border
+- [x] Framer Motion `whileHover={{ scale: 1.15 }}` and `whileTap={{ scale: 0.95 }}` on each swatch
+- [x] Displays current accent color name below the row; "Black" swatch shows "Auto-activates light mode" note
+- [x] onClick calls `setAccentColor(key)` from useTheme()
+- **Completed:** 2026-02-23
+
+### PB.50 — PreferencesPanel Modal + Dashboard Integration
+- [x] Created `src/components/dashboard/PreferencesPanel.tsx` — modal with two tabs (Appearance and Templates)
+- [x] Props: `isOpen: boolean` and `onClose: () => void`
+- [x] Backdrop: fixed overlay, `rgba(0,0,0,0.6)`, `backdrop-filter: blur(4px)`, z-index 200
+- [x] Panel: centered, `var(--bg-elevated)` background, `var(--radius-2xl)` border radius, `var(--shadow-glow-md)` shadow, max-width 520px, max-height 80vh with overflow scroll
+- [x] Header: Settings icon (lucide) colored `var(--accent-primary)` + "Preferences" h2 + X close button
+- [x] Tab switcher: segmented control — Appearance (Palette icon) and Templates (FileText icon); active tab uses `var(--accent-primary)` bg with white text
+- [x] Framer Motion AnimatePresence for enter/exit animations
+- [x] Appearance tab: `<AccentColorPicker />` component + Display Mode section (Dark/Light buttons calling `toggleColorMode()`) + hint text
+- [x] Dark/Light buttons: selected mode has `2px solid var(--accent-primary)` border + `var(--accent-8)` bg; unselected has `var(--accent-20)` border + `var(--bg-input)` bg
+- [x] Black accent disables Dark button (forced light mode)
+- [x] Templates tab: placeholder with FileText icon, heading, and "coming soon" description
+- [x] Added `showPreferences` state + Preferences button (Settings icon, `var(--bg-input)` bg) to dashboard page header
+- [x] `<PreferencesPanel>` rendered at bottom of dashboard component JSX
+- **Completed:** 2026-02-23
+
+### PB.51 — Supabase Preferences Persistence + UserPreferences Type
+- [x] Added `UserPreferences` interface to `src/types/database.ts` with `appearance` and `templates` sub-types
+- [x] Added `preferences?: UserPreferences` to existing `UserProfile` interface
+- [x] Extended `ThemeProvider.tsx` with `loadFromSupabase()` — runs on mount after localStorage load, queries `users.preferences` column, overrides local values if Supabase has saved preferences
+- [x] Extended `ThemeProvider.tsx` with `saveToSupabase()` — runs alongside localStorage saves on accent/mode change, reads existing preferences first and merges with spread operator to preserve future keys (templates, etc.)
+- [x] Both functions dynamically import Supabase client, silently return if no user logged in
+- [x] All Supabase calls wrapped in try/catch — errors logged but never break the app (localStorage is the fallback)
+- [x] Supabase sync keeps localStorage aligned so offline/logged-out sessions still work
+- **Completed:** 2026-02-23
+- **Notes:** Requires a `preferences JSONB` column on the `users` table in Supabase. Run: `ALTER TABLE public.users ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{}'::jsonb;`
+
+### SESSION 8A — User Preferences Panel + Accent Color Picker + Supabase Persistence — COMPLETE
+- **Scope:** PB.49, PB.50, PB.51
+- **Completed:** 2026-02-23
+- **Notes:** Full preferences system. AccentColorPicker renders 9 swatches using existing theme infrastructure. PreferencesPanel modal on dashboard with Appearance tab (color picker + dark/light toggle) and Templates placeholder tab. ThemeProvider extended with Supabase sync — loads from DB on mount (overriding localStorage), saves to DB on every accent/mode change (merging with existing preferences). UserPreferences type added to database.ts. Requires `preferences JSONB` column on users table.
 
 ---
 

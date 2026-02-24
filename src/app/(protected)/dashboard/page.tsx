@@ -3,17 +3,20 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ProfileSection from '@/components/dashboard/ProfileSection';
 import EditProfileModal from '@/components/dashboard/EditProfileModal';
 import NarrativeHistory from '@/components/dashboard/NarrativeHistory';
+import PreferencesPanel from '@/components/dashboard/PreferencesPanel';
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, profile, loading, refreshProfile } = useAuth();
   const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
 
   if (loading) {
     return (
@@ -48,13 +51,27 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-white">User Dashboard</h1>
-          <Button
-            variant="secondary"
-            size="medium"
-            onClick={() => router.push('/main-menu')}
-          >
-            MAIN MENU
-          </Button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowPreferences(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors"
+              style={{
+                backgroundColor: 'var(--bg-input)',
+                border: '1px solid var(--accent-20)',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <Settings size={16} />
+              Preferences
+            </button>
+            <Button
+              variant="secondary"
+              size="medium"
+              onClick={() => router.push('/main-menu')}
+            >
+              MAIN MENU
+            </Button>
+          </div>
         </div>
 
         {/* Profile Section */}
@@ -77,6 +94,12 @@ export default function DashboardPage() {
         currentLocation={profile.location || ''}
         currentPosition={profile.position || ''}
         onSaved={refreshProfile}
+      />
+
+      {/* Preferences Panel */}
+      <PreferencesPanel
+        isOpen={showPreferences}
+        onClose={() => setShowPreferences(false)}
       />
     </div>
   );
