@@ -1484,6 +1484,7 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Subtitle+buttons container has `relative z-10` to render above the logo layer and remain clickable
 - [x] Removed `gap-8` from parent flex column (spacing now handled by the negative margin and `mt-6` on the buttons)
 - [x] All content (logo, subtitle, LOGIN, REQUEST ACCESS) fits within the viewport at 1080p without scrolling
+- [x] **Revised:** Doubled negative margin from `-mt-28` (112px) to `-mt-56` (224px) — initial shift was insufficient, subtitle and buttons were still too far down
 - **Completed:** 2026-02-24
 
 ---

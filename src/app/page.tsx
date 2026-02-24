@@ -23,7 +23,7 @@ export default function LandingPage() {
         </motion.div>
 
         {/* Subtitle + buttons — pulled up into logo blank space */}
-        <div className="relative z-10 flex flex-col items-center -mt-28">
+        <div className="relative z-10 flex flex-col items-center -mt-56">
           {/* Subtitle / tagline — enters second */}
           <motion.p
             className="text-[var(--text-muted)] text-xs sm:text-sm tracking-[0.35em] font-medium text-center uppercase"
