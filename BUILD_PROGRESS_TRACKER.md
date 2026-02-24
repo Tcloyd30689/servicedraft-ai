@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-24
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 72 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 73 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1129,8 +1129,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 63 | 63 |
-| **TOTAL** | **141** | **136** |
+| Post-Build Fixes | 64 | 64 |
+| **TOTAL** | **142** | **137** |
 
 ---
 
@@ -1449,6 +1449,14 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** PB.70, PB.71, PB.72
 - **Completed:** 2026-02-24
 - **Notes:** Fixed Main Menu page scroll and centered container in viewport (156px header offset). Added luminance-based button text color system — `perceivedBrightness()` helper auto-determines black vs white text for primary buttons based on accent hover color brightness. White accent: Generate Story button now has black text on light button. Black accent: all elements visible with proper contrast — primary buttons get white text on dark bg, secondary buttons/borders use darker accent colors, card/modal borders darkened. All fixes are generic luminance checks, not per-accent hardcodes.
+
+### PB.73 — React Hydration Mismatch Fix for Accent-Themed Logo
+- [x] Root cause: `ThemeProvider` reads accent color from localStorage in `useState` initializer — server renders with default violet accent, client hydration reads saved accent (e.g. blue) → logo `src` differs between server and client HTML → React hydration mismatch warning
+- [x] Fixed `HeroArea.tsx`: added `mounted` state (false until useEffect), logo `src` uses `DEFAULT_ACCENT.logoFile` until mounted, then swaps to `accent.logoFile`
+- [x] Fixed `Logo.tsx` (used on landing, login, signup pages): same `mounted` + `DEFAULT_ACCENT.logoFile` pattern
+- [x] No visible flicker — the logo swap happens in the same paint cycle as the ThemeProvider's CSS variable application (both run in useEffect after mount)
+- [x] Does not change how accent color theming works overall — only defers the logo image source to after hydration
+- **Completed:** 2026-02-24
 
 ---
 

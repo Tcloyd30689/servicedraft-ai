@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/components/ThemeProvider';
+import { DEFAULT_ACCENT } from '@/lib/constants/themeColors';
 
 type LogoSize = 'small' | 'medium' | 'large';
 
@@ -21,6 +23,8 @@ const sizeConfig: Record<LogoSize, { width: number; height: number }> = {
 export default function Logo({ size = 'medium', glow = false, className }: LogoProps) {
   const { width, height } = sizeConfig[size];
   const { accent } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   return (
     <div
@@ -32,7 +36,7 @@ export default function Logo({ size = 'medium', glow = false, className }: LogoP
       )}
     >
       <Image
-        src={accent.logoFile}
+        src={mounted ? accent.logoFile : DEFAULT_ACCENT.logoFile}
         alt="ServiceDraft.AI"
         width={width}
         height={height}

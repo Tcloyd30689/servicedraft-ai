@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/components/ThemeProvider';
 import { useActivityPulse } from '@/hooks/useActivityPulse';
+import { DEFAULT_ACCENT } from '@/lib/constants/themeColors';
 
 const HERO_HEIGHT = 100; // px
 const NAV_HEIGHT = 56;   // px (h-14 in NavBar)
@@ -30,6 +31,8 @@ export default function HeroArea() {
   const timeRef = useRef(0);
   const { accent } = useTheme();
   const { amplitudeRef } = useActivityPulse();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -160,7 +163,7 @@ export default function HeroArea() {
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={accent.logoFile}
+          src={mounted ? accent.logoFile : DEFAULT_ACCENT.logoFile}
           alt="ServiceDraft.AI"
           className="drop-shadow-[0_0_20px_var(--accent-30)]"
           style={{ height: `${LOGO_HEIGHT}px`, width: 'auto', objectFit: 'contain' }}
