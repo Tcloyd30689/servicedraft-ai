@@ -26,13 +26,14 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-23
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 51 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 56 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
 **Session 7A:** COMPLETE — Page redesigns, cursor underglow, card hover changes, narrative reset (PB.42–PB.46)
 **Session 7B:** COMPLETE — Navigation guard for unsaved narratives + auto-save on export (PB.47–PB.48)
 **Session 8A:** COMPLETE — User Preferences Panel + Accent Color Picker + Supabase Persistence (PB.49–PB.51)
+**Session 8B:** COMPLETE — Light mode styling fixes + White accent dark-mode lock (PB.52–PB.56)
 
 ---
 
@@ -1125,8 +1126,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 51 | 51 |
-| **TOTAL** | **129** | **124** |
+| Post-Build Fixes | 56 | 56 |
+| **TOTAL** | **134** | **129** |
 
 ---
 
@@ -1262,6 +1263,55 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** PB.49, PB.50, PB.51
 - **Completed:** 2026-02-23
 - **Notes:** Full preferences system. AccentColorPicker renders 9 swatches using existing theme infrastructure. PreferencesPanel modal on dashboard with Appearance tab (color picker + dark/light toggle) and Templates placeholder tab. ThemeProvider extended with Supabase sync — loads from DB on mount (overriding localStorage), saves to DB on every accent/mode change (merging with existing preferences). UserPreferences type added to database.ts. Requires `preferences JSONB` column on users table.
+
+### PB.52 — Light Mode Accent Text Emphasis (Bold Black Substitution)
+- [x] Added `--accent-text-emphasis` CSS variable: resolves to `accent.hex` in dark mode, `#0f172a` in light mode
+- [x] Added `--accent-text-emphasis-weight` CSS variable: `inherit` in dark mode, `700` in light mode
+- [x] Both variables set in `applyTheme()` based on `effectiveMode`, with `:root` defaults in `globals.css`
+- [x] `data-mode` attribute now set on `<html>` element for CSS selector targeting
+- [x] Updated emphasis text in 6 components: main-menu heading, FAQ question headings, NarrativeDisplay C/C/C headings, NarrativeDetailModal C/C/C headings, ConditionalField AI badge, PreferencesPanel Settings icon
+- [x] Dashboard "User Dashboard" heading changed from hardcoded `text-white` to `text-[var(--text-primary)]`
+- **Completed:** 2026-02-23
+- **Notes:** Only applies to text used for visual hierarchy/emphasis — not interactive elements like buttons or links where accent color is the identity.
+
+### PB.53 — Light Mode Card Container Tinting
+- [x] In `applyTheme()` light mode block: `--bg-card` now computed as a solid blended color (6% accent into white) instead of transparent `var(--accent-8)`
+- [x] Formula: `rgb(255*0.94 + r*0.06, 255*0.94 + g*0.06, 255*0.94 + b*0.06)` — produces a clearly tinted, non-white card background for every accent color
+- [x] Added `--border-default` CSS variable: `transparent` in dark mode, `rgba(0,0,0,0.1)` in light mode
+- [x] Card bg now applies consistently to ALL light modes (Black native + user-toggled)
+- **Completed:** 2026-02-23
+- **Notes:** Previous approach used `var(--accent-8)` which was 8% opacity on white — too subtle. Solid blended color is always visually distinct from the page background.
+
+### PB.54 — Light Mode Button Text Color Fix
+- [x] Added `--btn-text-on-accent` CSS variable: `#ffffff` in dark mode, `#0f172a` in light mode
+- [x] Updated `Button.tsx` primary variant: `text-white` → `text-[var(--btn-text-on-accent)]`
+- [x] PreferencesPanel active tab text: hardcoded `#ffffff` → `var(--btn-text-on-accent)`
+- **Completed:** 2026-02-23
+- **Notes:** Only affects filled/primary buttons where the background IS the accent color. Ghost and secondary buttons are handled by PB.55.
+
+### PB.55 — Light Mode Outline Button Vividity Fix
+- [x] Added `--accent-vivid` CSS variable: `accent.hover` in dark mode (bright, stands out on dark bg), `accent.border` in light mode (dark, stands out on light bg)
+- [x] Updated `Button.tsx` secondary variant: `text-[var(--accent-hover)]` → `text-[var(--accent-vivid)]`, border likewise
+- [x] Updated `Button.tsx` ghost variant: `text-[var(--accent-text)]` → `text-[var(--accent-vivid)]`
+- [x] Updated dashboard Preferences button: `--text-secondary` → `--accent-vivid` for text and border, added `font-weight: 600`
+- **Completed:** 2026-02-23
+- **Notes:** For light accent colors (yellow, green) on white backgrounds, `accent.border` provides much better contrast than `accent.hover` or `accent.primary`.
+
+### PB.56 — White Accent Forces Dark Mode
+- [x] Added `isDarkMode: boolean` to `AccentColor` interface in `themeColors.ts` (mirrors `isLightMode` for Black)
+- [x] Set `isDarkMode: true` on White accent, `isDarkMode: false` on all other 8 accents
+- [x] Updated `applyTheme()` effectiveMode: `accent.isLightMode ? 'light' : accent.isDarkMode ? 'dark' : mode`
+- [x] Updated `setAccentColor()` in ThemeProvider: selecting White auto-switches to dark mode (mirrors Black→light logic)
+- [x] Updated ThemeProvider context value: handles `isDarkMode` in colorMode computation
+- [x] Updated PreferencesPanel: Light button disabled when White accent active (opacity 0.5, not-allowed cursor)
+- [x] Updated AccentColorPicker: White accent shows "Auto-activates dark mode" note below the row
+- **Completed:** 2026-02-23
+- **Notes:** Mirrors the existing Black→light mode pattern. White on a light background is invisible, so dark mode is forced.
+
+### SESSION 8B — Light Mode Styling Fixes + White Accent Dark-Mode Lock — COMPLETE
+- **Scope:** PB.52, PB.53, PB.54, PB.55, PB.56
+- **Completed:** 2026-02-23
+- **Notes:** Five light mode improvements. (1) Accent-colored emphasis text switches to bold black in light mode via `--accent-text-emphasis`. (2) Card backgrounds use solid accent-tinted color instead of transparent overlay. (3) Primary button text switches to black in light mode via `--btn-text-on-accent`. (4) Outline/ghost buttons use darker accent color (`accent.border`) in light mode via `--accent-vivid`. (5) White accent forces dark mode, matching the Black→light pattern.
 
 ---
 

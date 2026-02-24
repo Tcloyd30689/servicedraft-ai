@@ -50,15 +50,16 @@ export default function DashboardPage() {
       >
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white">User Dashboard</h1>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">User Dashboard</h1>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowPreferences(true)}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors"
               style={{
                 backgroundColor: 'var(--bg-input)',
-                border: '1px solid var(--accent-20)',
-                color: 'var(--text-secondary)',
+                border: '1px solid var(--accent-vivid)',
+                color: 'var(--accent-vivid)',
+                fontWeight: 600,
               }}
             >
               <Settings size={16} />

@@ -33,15 +33,16 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
   const vars = buildCssVars(accent);
   const root = document.documentElement;
 
-  // If it's the Black accent, force light mode
-  const effectiveMode = accent.isLightMode ? 'light' : mode;
+  // Determine effective mode: Black forces light, White forces dark, otherwise user choice
+  const effectiveMode = accent.isLightMode ? 'light' : accent.isDarkMode ? 'dark' : mode;
 
   for (const [key, value] of Object.entries(vars)) {
     root.style.setProperty(key, value);
   }
 
-  // Set color-scheme for proper browser form control rendering
+  // Set color-scheme and data-mode for CSS selectors
   root.style.setProperty('color-scheme', effectiveMode === 'light' ? 'light' : 'dark');
+  root.setAttribute('data-mode', effectiveMode);
 
   // Override bg/text if user explicitly toggled mode (non-Black accent in light mode)
   if (effectiveMode === 'light' && !accent.isLightMode) {
@@ -52,13 +53,34 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
     root.style.setProperty('--bg-elevated', '#e2e8f0');
     root.style.setProperty('--bg-modal', 'rgba(255, 255, 255, 0.95)');
     root.style.setProperty('--bg-nav', 'rgba(255, 255, 255, 0.9)');
-    root.style.setProperty('--bg-card', 'var(--accent-8)');
     root.style.setProperty('--text-primary', '#0f172a');
     root.style.setProperty('--text-muted', '#64748b');
     root.style.setProperty('--card-border', accent.border);
     root.style.setProperty('--modal-border', accent.border);
     root.style.setProperty('--scrollbar-track', 'var(--bg-elevated)');
     root.style.setProperty('--body-bg', 'linear-gradient(135deg, #f0f2f5 0%, #ffffff 50%, #e8eaee 100%)');
+  }
+
+  // Mode-adaptive variables — apply to ALL light modes (Black native + user-toggled)
+  const [r, g, b] = accent.rgb;
+  if (effectiveMode === 'light') {
+    // Solid accent-tinted card bg (6% accent blended into white)
+    const cr = Math.round(255 * 0.94 + r * 0.06);
+    const cg = Math.round(255 * 0.94 + g * 0.06);
+    const cb = Math.round(255 * 0.94 + b * 0.06);
+    root.style.setProperty('--bg-card', `rgb(${cr}, ${cg}, ${cb})`);
+    root.style.setProperty('--border-default', 'rgba(0, 0, 0, 0.1)');
+    root.style.setProperty('--accent-text-emphasis', '#0f172a');
+    root.style.setProperty('--accent-text-emphasis-weight', '700');
+    root.style.setProperty('--btn-text-on-accent', '#0f172a');
+    root.style.setProperty('--accent-vivid', accent.border);
+  } else {
+    root.style.setProperty('--bg-card', `rgba(${r}, ${g}, ${b}, 0.05)`);
+    root.style.setProperty('--border-default', 'transparent');
+    root.style.setProperty('--accent-text-emphasis', accent.hex);
+    root.style.setProperty('--accent-text-emphasis-weight', 'inherit');
+    root.style.setProperty('--btn-text-on-accent', '#ffffff');
+    root.style.setProperty('--accent-vivid', accent.hover);
   }
 }
 
@@ -168,6 +190,12 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
       setColorMode('light');
       localStorage.setItem(MODE_STORAGE_KEY, 'light');
     }
+    // If selecting White, auto-switch to dark mode
+    if (newAccent.isDarkMode) {
+      resolvedMode = 'dark';
+      setColorMode('dark');
+      localStorage.setItem(MODE_STORAGE_KEY, 'dark');
+    }
     // If switching away from Black while in light mode forced by Black, revert to dark
     if (!newAccent.isLightMode && accentRef.current.isLightMode) {
       resolvedMode = 'dark';
@@ -192,7 +220,7 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
       value={{
         accent,
         setAccentColor,
-        colorMode: accent.isLightMode ? 'light' : colorMode,
+        colorMode: accent.isLightMode ? 'light' : accent.isDarkMode ? 'dark' : colorMode,
         toggleColorMode,
         accentColors: ACCENT_COLORS,
       }}

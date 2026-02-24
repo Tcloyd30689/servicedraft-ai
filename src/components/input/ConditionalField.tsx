@@ -48,7 +48,7 @@ export default function ConditionalField({
         <label className="text-[var(--text-secondary)] text-sm font-medium flex items-center gap-1.5">
           {field.label}
           {isGenerate && (
-            <span className="inline-flex items-center gap-1 text-[10px] bg-[var(--accent-20)] text-[var(--accent-bright)] px-1.5 py-0.5 rounded">
+            <span className="inline-flex items-center gap-1 text-[10px] bg-[var(--accent-20)] text-[var(--accent-text-emphasis)] px-1.5 py-0.5 rounded">
               <Sparkles size={10} />
               AI
             </span>

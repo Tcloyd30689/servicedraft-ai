@@ -145,7 +145,7 @@ export default function NarrativeDetailModal({
 
       {/* Concern */}
       <div className="mb-4">
-        <h4 className="text-sm font-medium text-[var(--accent-hover)] uppercase tracking-wide mb-1">Concern</h4>
+        <h4 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-1">Concern</h4>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3">
           <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">{narrative.concern || '—'}</p>
         </div>
@@ -153,7 +153,7 @@ export default function NarrativeDetailModal({
 
       {/* Cause */}
       <div className="mb-4">
-        <h4 className="text-sm font-medium text-[var(--accent-hover)] uppercase tracking-wide mb-1">Cause</h4>
+        <h4 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-1">Cause</h4>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3">
           <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">{narrative.cause || '—'}</p>
         </div>
@@ -161,7 +161,7 @@ export default function NarrativeDetailModal({
 
       {/* Correction */}
       <div className="mb-4">
-        <h4 className="text-sm font-medium text-[var(--accent-hover)] uppercase tracking-wide mb-1">Correction</h4>
+        <h4 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-1">Correction</h4>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3">
           <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">{narrative.correction || '—'}</p>
         </div>

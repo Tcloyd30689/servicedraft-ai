@@ -64,7 +64,7 @@ export default function NarrativeDisplay({
     <div className="space-y-5">
       {/* Concern */}
       <div>
-        <h3 className="text-sm font-medium text-[var(--accent-hover)] uppercase tracking-wide mb-2">
+        <h3 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-2">
           Concern
         </h3>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4">
@@ -79,7 +79,7 @@ export default function NarrativeDisplay({
 
       {/* Cause */}
       <div>
-        <h3 className="text-sm font-medium text-[var(--accent-hover)] uppercase tracking-wide mb-2">
+        <h3 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-2">
           Cause
         </h3>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4">
@@ -94,7 +94,7 @@ export default function NarrativeDisplay({
 
       {/* Correction */}
       <div>
-        <h3 className="text-sm font-medium text-[var(--accent-hover)] uppercase tracking-wide mb-2">
+        <h3 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-2">
           Correction
         </h3>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4">

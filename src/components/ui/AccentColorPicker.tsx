@@ -51,6 +51,14 @@ export default function AccentColorPicker() {
             Auto-activates light mode
           </span>
         )}
+        {accent.isDarkMode && (
+          <span
+            className="block text-xs mt-1 italic"
+            style={{ color: 'var(--text-muted)' }}
+          >
+            Auto-activates dark mode
+          </span>
+        )}
       </p>
     </div>
   );

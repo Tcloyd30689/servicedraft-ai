@@ -84,6 +84,13 @@
   /* ---- Wave (RGB components for canvas use) ---- */
   --wave-color: 195, 171, 226;
 
+  /* ---- Light/Dark mode adaptive variables ---- */
+  --accent-text-emphasis: var(--accent-primary);
+  --accent-text-emphasis-weight: inherit;
+  --btn-text-on-accent: #ffffff;
+  --accent-vivid: var(--accent-hover);
+  --border-default: transparent;
+
   /* ---- Scrollbar ---- */
   --scrollbar-track: var(--bg-input);
   --scrollbar-thumb: var(--accent-border);

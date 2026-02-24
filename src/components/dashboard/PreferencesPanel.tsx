@@ -17,7 +17,8 @@ export default function PreferencesPanel({ isOpen, onClose }: PreferencesPanelPr
   const [activeTab, setActiveTab] = useState<Tab>('appearance');
   const { colorMode, toggleColorMode, accent } = useTheme();
 
-  const effectiveMode = accent.isLightMode ? 'light' : colorMode;
+  const effectiveMode = accent.isLightMode ? 'light' : accent.isDarkMode ? 'dark' : colorMode;
+  const modeLocked = accent.isLightMode || accent.isDarkMode;
 
   return (
     <AnimatePresence>
@@ -67,7 +68,7 @@ export default function PreferencesPanel({ isOpen, onClose }: PreferencesPanelPr
               style={{ borderBottom: '1px solid var(--accent-10)' }}
             >
               <div className="flex items-center gap-3">
-                <Settings size={22} style={{ color: 'var(--accent-primary)' }} />
+                <Settings size={22} style={{ color: 'var(--accent-text-emphasis)' }} />
                 <h2
                   className="text-lg font-bold"
                   style={{ color: 'var(--text-primary)' }}
@@ -92,7 +93,7 @@ export default function PreferencesPanel({ isOpen, onClose }: PreferencesPanelPr
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors"
                 style={{
                   backgroundColor: activeTab === 'appearance' ? 'var(--accent-primary)' : 'transparent',
-                  color: activeTab === 'appearance' ? '#ffffff' : 'var(--text-secondary)',
+                  color: activeTab === 'appearance' ? 'var(--btn-text-on-accent)' : 'var(--text-secondary)',
                 }}
               >
                 <Palette size={16} />
@@ -103,7 +104,7 @@ export default function PreferencesPanel({ isOpen, onClose }: PreferencesPanelPr
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors"
                 style={{
                   backgroundColor: activeTab === 'templates' ? 'var(--accent-primary)' : 'transparent',
-                  color: activeTab === 'templates' ? '#ffffff' : 'var(--text-secondary)',
+                  color: activeTab === 'templates' ? 'var(--btn-text-on-accent)' : 'var(--text-secondary)',
                 }}
               >
                 <FileText size={16} />
@@ -137,7 +138,7 @@ export default function PreferencesPanel({ isOpen, onClose }: PreferencesPanelPr
                     <div className="flex gap-3">
                       <button
                         onClick={() => {
-                          if (effectiveMode !== 'dark') toggleColorMode();
+                          if (!modeLocked && effectiveMode !== 'dark') toggleColorMode();
                         }}
                         className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium transition-all"
                         style={{
@@ -158,7 +159,7 @@ export default function PreferencesPanel({ isOpen, onClose }: PreferencesPanelPr
                       </button>
                       <button
                         onClick={() => {
-                          if (effectiveMode !== 'light') toggleColorMode();
+                          if (!modeLocked && effectiveMode !== 'light') toggleColorMode();
                         }}
                         className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-medium transition-all"
                         style={{
@@ -169,7 +170,10 @@ export default function PreferencesPanel({ isOpen, onClose }: PreferencesPanelPr
                             ? 'var(--accent-8)'
                             : 'var(--bg-input)',
                           color: 'var(--text-primary)',
+                          opacity: accent.isDarkMode ? 0.5 : 1,
+                          cursor: accent.isDarkMode ? 'not-allowed' : 'pointer',
                         }}
+                        disabled={accent.isDarkMode}
                       >
                         <Sun size={18} />
                         Light

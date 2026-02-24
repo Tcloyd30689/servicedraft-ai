@@ -15,19 +15,19 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onD
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary: [
-    'bg-[var(--accent-hover)] text-white',
+    'bg-[var(--accent-hover)] text-[var(--btn-text-on-accent)]',
     'hover:bg-[var(--accent-primary)]',
     'active:bg-[var(--accent-border)]',
     'disabled:bg-[#4b5563] disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none',
   ].join(' '),
   secondary: [
-    'bg-transparent text-[var(--accent-hover)] border border-[var(--accent-hover)]',
+    'bg-transparent text-[var(--accent-vivid)] border border-[var(--accent-vivid)]',
     'hover:bg-[var(--accent-10)]',
     'active:bg-[var(--accent-20)]',
     'disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none',
   ].join(' '),
   ghost: [
-    'bg-transparent text-[var(--accent-text)]',
+    'bg-transparent text-[var(--accent-vivid)]',
     'hover:text-[var(--text-primary)] hover:bg-[var(--accent-10)]',
     'active:bg-[var(--accent-15)]',
     'disabled:opacity-50 disabled:cursor-not-allowed',

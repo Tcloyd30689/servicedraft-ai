@@ -10,7 +10,10 @@ export interface AccentColor {
   textSecondary: string;
   waveRgb: [number, number, number];
   logoFile: string;
+  /** When true, this accent forces light mode (e.g., Black) */
   isLightMode: boolean;
+  /** When true, this accent forces dark mode (e.g., White) */
+  isDarkMode: boolean;
   /** Dark-tinted gradient colors for body background */
   gradient1: string;
   gradient2: string;
@@ -33,6 +36,7 @@ export const ACCENT_COLORS: AccentColor[] = [
     waveRgb: [195, 171, 226],
     logoFile: '/logo-violet.PNG',
     isLightMode: false,
+    isDarkMode: false,
     gradient1: '#260d3f',
     gradient2: '#490557',
     bgInput: '#0f0520',
@@ -51,6 +55,7 @@ export const ACCENT_COLORS: AccentColor[] = [
     waveRgb: [226, 171, 171],
     logoFile: '/logo-red.PNG',
     isLightMode: false,
+    isDarkMode: false,
     gradient1: '#3f0d0d',
     gradient2: '#570505',
     bgInput: '#200505',
@@ -69,6 +74,7 @@ export const ACCENT_COLORS: AccentColor[] = [
     waveRgb: [226, 195, 171],
     logoFile: '/logo-orange.PNG',
     isLightMode: false,
+    isDarkMode: false,
     gradient1: '#3f200d',
     gradient2: '#572205',
     bgInput: '#200f05',
@@ -87,6 +93,7 @@ export const ACCENT_COLORS: AccentColor[] = [
     waveRgb: [226, 219, 171],
     logoFile: '/logo-yellow.PNG',
     isLightMode: false,
+    isDarkMode: false,
     gradient1: '#3f350d',
     gradient2: '#574205',
     bgInput: '#201a05',
@@ -105,6 +112,7 @@ export const ACCENT_COLORS: AccentColor[] = [
     waveRgb: [186, 226, 171],
     logoFile: '/logo-green.PNG',
     isLightMode: false,
+    isDarkMode: false,
     gradient1: '#0d3f10',
     gradient2: '#055718',
     bgInput: '#052010',
@@ -123,6 +131,7 @@ export const ACCENT_COLORS: AccentColor[] = [
     waveRgb: [171, 195, 226],
     logoFile: '/logo-blue.PNG',
     isLightMode: false,
+    isDarkMode: false,
     gradient1: '#0d1a3f',
     gradient2: '#050e57',
     bgInput: '#050f20',
@@ -141,6 +150,7 @@ export const ACCENT_COLORS: AccentColor[] = [
     waveRgb: [226, 171, 226],
     logoFile: '/logo-pink.PNG',
     isLightMode: false,
+    isDarkMode: false,
     gradient1: '#3f0d3f',
     gradient2: '#570557',
     bgInput: '#200520',
@@ -159,6 +169,7 @@ export const ACCENT_COLORS: AccentColor[] = [
     waveRgb: [210, 215, 226],
     logoFile: '/logo-white.PNG',
     isLightMode: false,
+    isDarkMode: true,
     gradient1: '#1a1d21',
     gradient2: '#1f2226',
     bgInput: '#0f1114',
@@ -177,6 +188,7 @@ export const ACCENT_COLORS: AccentColor[] = [
     waveRgb: [171, 175, 185],
     logoFile: '/logo-black.PNG',
     isLightMode: true,
+    isDarkMode: false,
     gradient1: '#f0f2f5',
     gradient2: '#e2e6eb',
     bgInput: '#f1f5f9',

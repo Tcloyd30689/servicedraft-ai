@@ -102,7 +102,8 @@ export default function MainMenuPage() {
           <div className="flex flex-col items-center gap-8">
             {/* Heading — replaces the old logo */}
             <motion.h1
-              className="text-2xl sm:text-3xl font-bold text-[var(--accent-bright)] tracking-wide"
+              className="text-2xl sm:text-3xl tracking-wide"
+              style={{ color: 'var(--accent-text-emphasis)', fontWeight: 'var(--accent-text-emphasis-weight)' as unknown as number }}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
