@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-24
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 74 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 75 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1468,6 +1468,13 @@ This file is a living document that Claude Code reads at the start of every sess
   - `narrative/page.tsx` — "AI OUTPUT CUSTOMIZATION" card label
 - [x] The CSS variable `--text-primary` already switches between `#ffffff` (dark mode) and `#0f172a` (light mode) via the ThemeProvider, so these card headers now automatically adapt to the active color mode
 - [x] Did NOT change button text, badge text, or tab button text (EditProfileModal, ProofreadResults, CustomizationPanel) — those are on accent-colored backgrounds and remain `text-white` correctly
+- **Completed:** 2026-02-24
+
+### PB.75 — React Hydration Mismatch Fix for NavBar Color Mode Toggle
+- [x] Root cause: `ThemeProvider` reads `colorMode` from localStorage in `useState` initializer — server renders with default `'dark'` mode (Sun icon, "Switch to light mode" aria-label), client hydration reads saved mode (e.g. `'light'`) → icon and aria-label differ between server and client HTML → React hydration mismatch warning
+- [x] Fixed `NavBar.tsx`: added `isMounted` state (false until useEffect), toggle button uses `displayMode = isMounted ? colorMode : 'dark'` — always renders server-default dark mode state (Sun icon) during SSR and initial hydration
+- [x] After mount, `isMounted` flips to true and the real `colorMode` from ThemeProvider context drives the icon/aria-label — correct icon appears immediately with no visible flash
+- [x] Same pattern as PB.73 (logo hydration fix) — defers client-only state to after hydration
 - **Completed:** 2026-02-24
 
 ---
