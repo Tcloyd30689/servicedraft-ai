@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-24
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 68 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 69 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1392,12 +1392,10 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Signup page: `centerYPercent={0.35}` — same as login page
 - **Completed:** 2026-02-24
 
-### PB.67 — Purple Dark Mode Default for Unauthenticated Pages
-- [x] Created `src/components/ui/ForcePurpleDark.tsx` — applies DEFAULT_ACCENT (Violet) CSS vars + dark mode on mount
-- [x] Added ForcePurpleDark to landing page, login page (both render paths), and signup page (all 3 render paths)
+### PB.67 — Purple Dark Mode Default for Unauthenticated Pages (Revised)
+- [x] ~~Initially created ForcePurpleDark.tsx — replaced in PB.69 with auth-aware ThemeProvider approach~~
 - [x] Added `className="dark"` to `<html>` in root layout for baseline dark mode
-- [x] Overrides any localStorage-stored light mode or non-purple accent on public pages
-- **Completed:** 2026-02-24
+- **Completed:** 2026-02-24 (Revised 2026-02-24)
 
 ### PB.68 — 8-Hour Auto-Logout Session Expiry
 - [x] Created `src/hooks/useSessionExpiry.ts` with `setLoginTimestamp()`, `clearLoginTimestamp()`, and `useSessionExpiry()` hook
@@ -1408,10 +1406,19 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Expired session shows toast "Your session has expired. Please sign in again." before redirect
 - **Completed:** 2026-02-24
 
-### SESSION 10A — Dashboard Modal, Nav Consolidation, Wave Fixes, Dark Mode Default, Auto-Logout — COMPLETE
-- **Scope:** PB.61, PB.62, PB.63, PB.64, PB.65, PB.66, PB.67, PB.68
+### PB.69 — Auth-Aware Theme Flow (Replaces ForcePurpleDark)
+- [x] **Removed ForcePurpleDark.tsx** — component fought with ThemeProvider's CSS var application order
+- [x] **ThemeProvider rewrite**: on mount checks auth state — if no user, resets to purple dark defaults; if authenticated, loads from Supabase
+- [x] **Auth state change listener** in ThemeProvider: SIGNED_OUT resets to purple dark + clears localStorage; SIGNED_IN loads user preferences from Supabase
+- [x] **useAuth signOut** now clears all theme localStorage keys (`sd-accent-color`, `sd-color-mode`, `sd-bg-animation`) in addition to session timestamp
+- [x] **Removed ForcePurpleDark imports** from landing page, login page, and signup page
+- [x] **Result**: Landing/login pages always show purple dark. After login, user's saved accent color and mode are applied automatically. No race conditions between components.
 - **Completed:** 2026-02-24
-- **Notes:** Fixed dashboard modal overflow (portaled to body), increased wave amplitude 10% and centered to logo, combined nav bar Dashboard button with user icon into single T.Cloyd dropdown, matched login logo size to landing page, centered wave animations to logo on landing/login pages, set purple dark mode as default for logged-out state and landing page, added 8-hour auto-logout session expiry.
+
+### SESSION 10A — Dashboard Modal, Nav Consolidation, Wave Fixes, Dark Mode Default, Auto-Logout — COMPLETE
+- **Scope:** PB.61, PB.62, PB.63, PB.64, PB.65, PB.66, PB.67, PB.68, PB.69
+- **Completed:** 2026-02-24
+- **Notes:** Fixed dashboard modal overflow (portaled to body), increased wave amplitude 10% and centered to logo, combined nav bar Dashboard button with user icon into single T.Cloyd dropdown, matched login logo size to landing page, centered wave animations to logo on landing/login pages, set purple dark mode as default for logged-out state via auth-aware ThemeProvider, added 8-hour auto-logout session expiry.
 
 ---
 

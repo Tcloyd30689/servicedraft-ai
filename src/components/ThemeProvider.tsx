@@ -157,49 +157,113 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     applyTheme(accent, colorMode);
   }, [accent, colorMode]);
 
-  // Load from Supabase on mount (after localStorage has already been applied)
+  /** Reset state + CSS to purple dark defaults (for logged-out pages) */
+  const resetToDefaults = useCallback(() => {
+    setAccent(DEFAULT_ACCENT);
+    setColorMode('dark');
+    setBackgroundAnimationState(true);
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(MODE_STORAGE_KEY);
+    localStorage.removeItem(BG_ANIM_STORAGE_KEY);
+  }, []);
+
+  /** Load user preferences from Supabase and apply */
+  const loadUserPreferences = useCallback(async (userId: string) => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: row } = await supabase
+        .from('users')
+        .select('preferences')
+        .eq('id', userId)
+        .single();
+
+      const prefs = row?.preferences as UserPreferences | null;
+      if (!prefs?.appearance) return;
+
+      const { accentColor, mode } = prefs.appearance;
+
+      if (accentColor) {
+        const loaded = getAccentByKey(accentColor);
+        setAccent(loaded);
+        localStorage.setItem(STORAGE_KEY, accentColor);
+      }
+
+      if (mode) {
+        setColorMode(mode);
+        localStorage.setItem(MODE_STORAGE_KEY, mode);
+      }
+
+      // backgroundAnimation: undefined treated as true (existing users)
+      const bgAnim = prefs.appearance.backgroundAnimation;
+      const bgAnimValue = bgAnim !== undefined ? bgAnim : true;
+      setBackgroundAnimationState(bgAnimValue);
+      localStorage.setItem(BG_ANIM_STORAGE_KEY, String(bgAnimValue));
+    } catch {
+      // Network error — localStorage values (if any) remain
+    }
+  }, []);
+
+  // On mount: check auth state and load preferences, or reset to defaults
   useEffect(() => {
-    async function loadFromSupabase() {
+    async function initTheme() {
       try {
         const { createClient } = await import('@/lib/supabase/client');
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
 
-        const { data: row } = await supabase
-          .from('users')
-          .select('preferences')
-          .eq('id', user.id)
-          .single();
-
-        const prefs = row?.preferences as UserPreferences | null;
-        if (!prefs?.appearance) return;
-
-        const { accentColor, mode } = prefs.appearance;
-
-        if (accentColor) {
-          const loaded = getAccentByKey(accentColor);
-          setAccent(loaded);
-          localStorage.setItem(STORAGE_KEY, accentColor);
+        if (!user) {
+          // Not authenticated — force purple dark defaults
+          resetToDefaults();
+          return;
         }
 
-        if (mode) {
-          setColorMode(mode);
-          localStorage.setItem(MODE_STORAGE_KEY, mode);
-        }
-
-        // backgroundAnimation: undefined treated as true (existing users)
-        const bgAnim = prefs.appearance.backgroundAnimation;
-        const bgAnimValue = bgAnim !== undefined ? bgAnim : true;
-        setBackgroundAnimationState(bgAnimValue);
-        localStorage.setItem(BG_ANIM_STORAGE_KEY, String(bgAnimValue));
+        // Authenticated — load preferences from Supabase
+        await loadUserPreferences(user.id);
       } catch {
-        // Not logged in or network issue — localStorage values already loaded
+        // Fallback — localStorage values or defaults already applied
       }
     }
 
-    loadFromSupabase();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    initTheme();
+  }, [resetToDefaults, loadUserPreferences]);
+
+  // Listen for auth state changes to switch themes on sign-in/sign-out
+  useEffect(() => {
+    let cancelled = false;
+
+    async function setupAuthListener() {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          if (cancelled) return;
+
+          if (event === 'SIGNED_OUT' || !session?.user) {
+            resetToDefaults();
+            return;
+          }
+
+          if (event === 'SIGNED_IN' && session.user) {
+            await loadUserPreferences(session.user.id);
+          }
+        },
+      );
+
+      return subscription;
+    }
+
+    let sub: { unsubscribe: () => void } | undefined;
+    setupAuthListener().then((s) => {
+      if (!cancelled) sub = s;
+    });
+
+    return () => {
+      cancelled = true;
+      sub?.unsubscribe();
+    };
+  }, [resetToDefaults, loadUserPreferences]);
 
   const setAccentColor = useCallback((key: string) => {
     const newAccent = getAccentByKey(key);

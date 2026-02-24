@@ -184,7 +184,11 @@ export function useAuth(): UseAuthReturn {
 
   const signOut = useCallback(async () => {
     try {
+      // Clear session and theme localStorage so landing page defaults to purple dark
       localStorage.removeItem('sd-login-timestamp');
+      localStorage.removeItem('sd-accent-color');
+      localStorage.removeItem('sd-color-mode');
+      localStorage.removeItem('sd-bg-animation');
       await supabase.auth.signOut();
       setAuthState({ user: null, profile: null });
       window.location.href = '/';
