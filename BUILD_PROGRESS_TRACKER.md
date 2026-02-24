@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-24
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 75 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 76 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1475,6 +1475,15 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Fixed `NavBar.tsx`: added `isMounted` state (false until useEffect), toggle button uses `displayMode = isMounted ? colorMode : 'dark'` — always renders server-default dark mode state (Sun icon) during SSR and initial hydration
 - [x] After mount, `isMounted` flips to true and the real `colorMode` from ThemeProvider context drives the icon/aria-label — correct icon appears immediately with no visible flash
 - [x] Same pattern as PB.73 (logo hydration fix) — defers client-only state to after hydration
+- **Completed:** 2026-02-24
+
+### PB.76 — Landing Page Layout Fix: Subtitle & Buttons Pushed Up from Logo Blank Space
+- [x] Root cause: Logo PNG (`SERVIDRAFT_AI_LOGO_1_.PNG`) has significant transparent blank space below the visible graphic — the 1200×300 image reserves full height including invisible padding, pushing subtitle text and buttons to the bottom of the viewport
+- [x] Fixed `src/app/page.tsx`: wrapped subtitle and buttons in a container with `-mt-28` (negative 112px margin-top) to pull them up into the logo's blank space
+- [x] Added `pointer-events-none` to the logo `motion.div` so the invisible blank area doesn't block button clicks
+- [x] Subtitle+buttons container has `relative z-10` to render above the logo layer and remain clickable
+- [x] Removed `gap-8` from parent flex column (spacing now handled by the negative margin and `mt-6` on the buttons)
+- [x] All content (logo, subtitle, LOGIN, REQUEST ACCESS) fits within the viewport at 1080p without scrolling
 - **Completed:** 2026-02-24
 
 ---
