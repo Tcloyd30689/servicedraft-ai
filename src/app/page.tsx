@@ -3,13 +3,15 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import WaveBackground from '@/components/ui/WaveBackground';
+import ForcePurpleDark from '@/components/ui/ForcePurpleDark';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 
 export default function LandingPage() {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden">
-      <WaveBackground />
+      <ForcePurpleDark />
+      <WaveBackground centerYPercent={0.40} />
 
       <div className="relative z-30 flex flex-col items-center gap-8 px-4">
         {/* Logo — dominant visual, enters first */}

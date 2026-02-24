@@ -5,6 +5,7 @@ import NavBar from '@/components/layout/NavBar';
 import ParticleNetwork from '@/components/ui/ParticleNetwork';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { useTheme } from '@/components/ThemeProvider';
+import { useSessionExpiry } from '@/hooks/useSessionExpiry';
 
 export default function ProtectedLayout({
   children,
@@ -12,6 +13,7 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const { backgroundAnimation } = useTheme();
+  useSessionExpiry();
 
   return (
     <>

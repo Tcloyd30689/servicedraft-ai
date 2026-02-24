@@ -17,10 +17,17 @@ const waves: Wave[] = [
   { amplitude: 20, frequency: 0.018, speed: 0.012, offset: Math.PI / 3, opacity: 0.15 },
 ];
 
-export default function WaveBackground() {
+interface WaveBackgroundProps {
+  /** Vertical center of the wave baseline as a fraction of viewport height (0–1). Default 0.5. */
+  centerYPercent?: number;
+}
+
+export default function WaveBackground({ centerYPercent = 0.5 }: WaveBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
   const timeRef = useRef(0);
+  const centerYRef = useRef(centerYPercent);
+  centerYRef.current = centerYPercent;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -50,7 +57,7 @@ export default function WaveBackground() {
         getComputedStyle(root).getPropertyValue('--wave-color').trim() ||
         '195, 171, 226';
 
-      const centerY = canvas.height / 2;
+      const centerY = canvas.height * centerYRef.current;
 
       for (const wave of waves) {
         ctx.beginPath();

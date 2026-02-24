@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-24
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 60 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 68 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -35,6 +35,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Session 8A:** COMPLETE — User Preferences Panel + Accent Color Picker + Supabase Persistence (PB.49–PB.51)
 **Session 8B:** COMPLETE — Light mode styling fixes + White accent dark-mode lock (PB.52–PB.56)
 **Session 9A:** COMPLETE — Particle Network animation + background animation toggle (PB.57–PB.60)
+**Session 10A:** COMPLETE — Dashboard modal portal fix, wave amplitude/centering, nav consolidation, logo sizing, default dark mode, 8hr auto-logout (PB.61–PB.68)
 
 ---
 
@@ -1351,6 +1352,66 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** PB.57, PB.58, PB.59, PB.60
 - **Completed:** 2026-02-24
 - **Notes:** Replaced the full-page sine wave background on protected pages with a particle network animation (floating dots with connecting lines). Added on/off toggle to the Preferences Panel Appearance tab. Toggle persists to localStorage (instant) and Supabase (cross-device). WaveBackground.tsx retained for landing page and auth pages. ParticleNetwork reads the same `--wave-color` CSS variable for accent-reactive coloring.
+
+### PB.61 — Dashboard Modal Overflow Fix (Portal to Body)
+- [x] Modal.tsx updated to use `createPortal(content, document.body)` from react-dom
+- [x] Added `mounted` state guard for SSR compatibility
+- [x] NarrativeDetailModal now renders as full-screen overlay, escaping CursorGlow's `overflow: hidden`
+- [x] Backdrop covers entire viewport with blur; modal centered on screen
+- [x] Close on backdrop click and Escape key still works
+- **Completed:** 2026-02-24
+
+### PB.62 — Hero Wave Amplitude +10% and Vertical Centering to Logo
+- [x] All 5 hero wave `baseAmplitude` values increased by 10% (14→15.4, 10→11, 16→17.6, 12→13.2, 8→8.8)
+- [x] Wave `centerY` changed from `h / 2` to `h * 0.78` to align with logo vertical center (logo centered in hero+nav = 156px, center at 78px from top, hero canvas is 100px)
+- **Completed:** 2026-02-24
+
+### PB.63 — Combined Nav Bar Dashboard + User Icon Button
+- [x] Removed separate Dashboard link (PositionIcon + "Dashboard" text) from NavBar.tsx
+- [x] Removed `useAuth` and `PositionIcon` imports from NavBar (no longer needed)
+- [x] Removed Dashboard from mobile menu dropdown (now accessible via UserPopup dropdown)
+- **Completed:** 2026-02-24
+
+### PB.64 — UserPopup: T.Cloyd Format Trigger with Dropdown
+- [x] UserPopup trigger changed from avatar-only to combined button: PositionIcon + "T.Cloyd" name + chevron
+- [x] `formatDisplayName()` helper: first initial + period + last name (falls back to username or email prefix)
+- [x] Button styled with accent border, hover background, chevron rotation on open
+- [x] Dropdown retains Dashboard link + Log Out + user info (name, location, position)
+- **Completed:** 2026-02-24
+
+### PB.65 — Login Page Logo Size Matched to Landing Page
+- [x] Login page Logo changed from `size="medium"` to `size="large"` with `className="max-w-[90vw]"`
+- [x] Applied to both loading state and main render paths
+- [x] Now matches landing page logo dimensions exactly
+- **Completed:** 2026-02-24
+
+### PB.66 — Wave Animation Centered to Logo on Landing/Login/Signup Pages
+- [x] WaveBackground.tsx: added `centerYPercent` prop (default 0.5) controlling vertical baseline
+- [x] Landing page: `centerYPercent={0.40}` — waves flow through logo vertical center
+- [x] Login page: `centerYPercent={0.35}` — adjusted for logo position above form card
+- [x] Signup page: `centerYPercent={0.35}` — same as login page
+- **Completed:** 2026-02-24
+
+### PB.67 — Purple Dark Mode Default for Unauthenticated Pages
+- [x] Created `src/components/ui/ForcePurpleDark.tsx` — applies DEFAULT_ACCENT (Violet) CSS vars + dark mode on mount
+- [x] Added ForcePurpleDark to landing page, login page (both render paths), and signup page (all 3 render paths)
+- [x] Added `className="dark"` to `<html>` in root layout for baseline dark mode
+- [x] Overrides any localStorage-stored light mode or non-purple accent on public pages
+- **Completed:** 2026-02-24
+
+### PB.68 — 8-Hour Auto-Logout Session Expiry
+- [x] Created `src/hooks/useSessionExpiry.ts` with `setLoginTimestamp()`, `clearLoginTimestamp()`, and `useSessionExpiry()` hook
+- [x] Login page: calls `setLoginTimestamp()` on successful sign-in
+- [x] Signup page: calls `setLoginTimestamp()` on profile creation completion
+- [x] Protected layout: calls `useSessionExpiry()` hook — checks every 60 seconds
+- [x] useAuth signOut: clears `sd-login-timestamp` from localStorage
+- [x] Expired session shows toast "Your session has expired. Please sign in again." before redirect
+- **Completed:** 2026-02-24
+
+### SESSION 10A — Dashboard Modal, Nav Consolidation, Wave Fixes, Dark Mode Default, Auto-Logout — COMPLETE
+- **Scope:** PB.61, PB.62, PB.63, PB.64, PB.65, PB.66, PB.67, PB.68
+- **Completed:** 2026-02-24
+- **Notes:** Fixed dashboard modal overflow (portaled to body), increased wave amplitude 10% and centered to logo, combined nav bar Dashboard button with user icon into single T.Cloyd dropdown, matched login logo size to landing page, centered wave animations to logo on landing/login pages, set purple dark mode as default for logged-out state and landing page, added 8-hour auto-logout session expiry.
 
 ---
 

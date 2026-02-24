@@ -6,12 +6,14 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
 import WaveBackground from '@/components/ui/WaveBackground';
+import ForcePurpleDark from '@/components/ui/ForcePurpleDark';
 import LiquidCard from '@/components/ui/LiquidCard';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { setLoginTimestamp } from '@/hooks/useSessionExpiry';
 import { POSITION_OPTIONS } from '@/constants/positions';
 
 type Step = 1 | 2 | 3;
@@ -221,6 +223,7 @@ function SignupContent() {
       return;
     }
 
+    setLoginTimestamp();
     toast.success('Account created successfully!');
     router.push('/main-menu');
   };
@@ -235,7 +238,8 @@ function SignupContent() {
   if (initializing) {
     return (
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-        <WaveBackground />
+        <ForcePurpleDark />
+        <WaveBackground centerYPercent={0.35} />
         <div className="relative z-30 w-full max-w-md">
           <div className="flex justify-center mb-8">
             <Logo size="medium" glow />
@@ -252,7 +256,8 @@ function SignupContent() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-      <WaveBackground />
+      <ForcePurpleDark />
+      <WaveBackground centerYPercent={0.35} />
 
       <div className="relative z-30 w-full max-w-md">
         <div className="flex justify-center mb-8">
@@ -436,7 +441,8 @@ export default function SignupPage() {
     <Suspense
       fallback={
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-          <WaveBackground />
+          <ForcePurpleDark />
+          <WaveBackground centerYPercent={0.35} />
           <div className="relative z-30 w-full max-w-md">
             <div className="flex justify-center mb-8">
               <Logo size="medium" glow />

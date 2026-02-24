@@ -1,17 +1,34 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { LogOut, LayoutDashboard } from 'lucide-react';
+import { LogOut, LayoutDashboard, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import PositionIcon from '@/components/ui/PositionIcon';
+
+/** Format user name as "T.Cloyd" (first initial + period + last name) */
+function formatDisplayName(profile: { first_name?: string | null; last_name?: string | null; username?: string | null; email?: string | null } | null): string {
+  if (profile?.first_name && profile?.last_name) {
+    return `${profile.first_name.charAt(0)}.${profile.last_name}`;
+  }
+  if (profile?.last_name) return profile.last_name;
+  if (profile?.first_name) return profile.first_name;
+  if (profile?.username) return profile.username;
+  if (profile?.email) {
+    const prefix = profile.email.split('@')[0];
+    return `${prefix.charAt(0).toUpperCase()}.${prefix.slice(1)}`;
+  }
+  return 'User';
+}
 
 export default function UserPopup() {
   const { profile, signOut } = useAuth();
   const { resetAll } = useNarrativeStore();
   const [isOpen, setIsOpen] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
+
+  const displayName = useMemo(() => formatDisplayName(profile), [profile]);
 
   // Close on click outside
   useEffect(() => {
@@ -31,13 +48,17 @@ export default function UserPopup() {
 
   return (
     <div className="relative" ref={popupRef}>
-      {/* Avatar trigger */}
+      {/* Combined user button: position icon + T.Cloyd name */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="cursor-pointer transition-all duration-200 hover:shadow-[0_0_15px_var(--accent-40)] rounded-full"
+        className="flex items-center gap-2 cursor-pointer rounded-lg px-2.5 py-1.5 transition-all duration-200 hover:bg-[var(--accent-10)] border border-[var(--accent-30)] hover:border-[var(--accent-50)]"
         aria-label="User menu"
       >
-        <PositionIcon position={profile?.position ?? null} size="small" />
+        <PositionIcon position={profile?.position ?? null} size="small" className="!w-6 !h-6 !border-0" />
+        <span className="hidden sm:inline text-sm font-medium text-[var(--accent-bright)]">
+          {displayName}
+        </span>
+        <ChevronDown size={14} className={`text-[var(--text-muted)] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Popup dropdown */}
@@ -64,7 +85,7 @@ export default function UserPopup() {
               className="flex items-center gap-2 text-[var(--text-secondary)] text-sm px-3 py-2 rounded-md hover:bg-[var(--accent-10)] hover:text-[var(--text-primary)] transition-all"
             >
               <LayoutDashboard size={16} />
-              User Dashboard
+              Dashboard
             </Link>
             <button
               onClick={async () => {

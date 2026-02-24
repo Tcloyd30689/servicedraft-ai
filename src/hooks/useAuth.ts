@@ -184,6 +184,7 @@ export function useAuth(): UseAuthReturn {
 
   const signOut = useCallback(async () => {
     try {
+      localStorage.removeItem('sd-login-timestamp');
       await supabase.auth.signOut();
       setAuthState({ user: null, profile: null });
       window.location.href = '/';

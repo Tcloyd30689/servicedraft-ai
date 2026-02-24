@@ -6,11 +6,13 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
 import WaveBackground from '@/components/ui/WaveBackground';
+import ForcePurpleDark from '@/components/ui/ForcePurpleDark';
 import LiquidCard from '@/components/ui/LiquidCard';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { setLoginTimestamp } from '@/hooks/useSessionExpiry';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -104,6 +106,7 @@ export default function LoginPage() {
       }
     }
 
+    setLoginTimestamp();
     toast.success('Signed in successfully');
     router.push('/main-menu');
   };
@@ -112,10 +115,11 @@ export default function LoginPage() {
   if (checkingAuth) {
     return (
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-        <WaveBackground />
+        <ForcePurpleDark />
+        <WaveBackground centerYPercent={0.35} />
         <div className="relative z-30 w-full max-w-md">
           <div className="flex justify-center mb-8">
-            <Logo size="medium" glow />
+            <Logo size="large" glow className="max-w-[90vw]" />
           </div>
           <LiquidCard size="spacious">
             <div className="py-12">
@@ -129,12 +133,13 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-      <WaveBackground />
+      <ForcePurpleDark />
+      <WaveBackground centerYPercent={0.35} />
 
       <div className="relative z-30 w-full max-w-md">
         <div className="flex justify-center mb-8">
           <Link href="/">
-            <Logo size="medium" glow />
+            <Logo size="large" glow className="max-w-[90vw]" />
           </Link>
         </div>
 

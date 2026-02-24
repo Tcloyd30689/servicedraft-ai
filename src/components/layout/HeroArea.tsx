@@ -17,11 +17,11 @@ interface HeroWave {
 }
 
 const heroWaves: HeroWave[] = [
-  { baseAmplitude: 14, frequency: 0.02,  speed: 0.025, offset: 0, baseOpacity: 0.25 },
-  { baseAmplitude: 10, frequency: 0.015, speed: 0.018, offset: Math.PI / 3, baseOpacity: 0.3 },
-  { baseAmplitude: 16, frequency: 0.025, speed: 0.03,  offset: Math.PI / 2, baseOpacity: 0.2 },
-  { baseAmplitude: 12, frequency: 0.018, speed: 0.012, offset: Math.PI, baseOpacity: 0.22 },
-  { baseAmplitude: 8,  frequency: 0.03,  speed: 0.022, offset: Math.PI * 1.5, baseOpacity: 0.18 },
+  { baseAmplitude: 15.4, frequency: 0.02,  speed: 0.025, offset: 0, baseOpacity: 0.25 },
+  { baseAmplitude: 11,   frequency: 0.015, speed: 0.018, offset: Math.PI / 3, baseOpacity: 0.3 },
+  { baseAmplitude: 17.6, frequency: 0.025, speed: 0.03,  offset: Math.PI / 2, baseOpacity: 0.2 },
+  { baseAmplitude: 13.2, frequency: 0.018, speed: 0.012, offset: Math.PI, baseOpacity: 0.22 },
+  { baseAmplitude: 8.8,  frequency: 0.03,  speed: 0.022, offset: Math.PI * 1.5, baseOpacity: 0.18 },
 ];
 
 export default function HeroArea() {
@@ -71,7 +71,10 @@ export default function HeroArea() {
         '#9333ea';
 
       const activity = amplitudeRef.current; // 0–1
-      const centerY = h / 2;
+      // Align wave baseline with logo vertical center: logo is centered in
+      // hero (100px) + nav (56px) = 156px, so logo center is at 78px from top.
+      // Canvas covers the 100px hero area, so 78/100 = 0.78.
+      const centerY = h * 0.78;
 
       // Amplitude multiplier: base 1.0, spikes up to 3.5x on activity
       const ampMult = 1.0 + activity * 2.5;

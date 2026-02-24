@@ -6,16 +6,13 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
-import { useAuth } from '@/hooks/useAuth';
 import UserPopup from '@/components/layout/UserPopup';
-import PositionIcon from '@/components/ui/PositionIcon';
 import { cn } from '@/lib/utils';
 
 export default function NavBar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { colorMode, toggleColorMode } = useTheme();
-  const { profile } = useAuth();
 
   return (
     <nav className="fixed left-0 right-0 h-14 flex items-center justify-between px-6 bg-[var(--bg-nav)] backdrop-blur-[8px] border-b border-[var(--accent-20)] z-[100]" style={{ top: '100px' }}>
@@ -46,28 +43,8 @@ export default function NavBar() {
         </span>
       </Link>
 
-      {/* Right: Dashboard link, Theme toggle, User popup, Mobile toggle */}
+      {/* Right: Theme toggle, Combined user button, Mobile toggle */}
       <div className="flex items-center gap-2">
-        {/* Dashboard: Position icon + label */}
-        <Link
-          href="/dashboard"
-          className={cn(
-            'flex items-center gap-2 rounded-md px-2 py-1.5 transition-all duration-200',
-            'hover:bg-[var(--accent-10)]',
-            pathname === '/dashboard' && 'bg-[var(--accent-20)]',
-          )}
-        >
-          <PositionIcon position={profile?.position ?? null} size="small" className="!w-7 !h-7 !border" />
-          <span className={cn(
-            'hidden sm:inline text-sm font-medium transition-colors duration-200',
-            pathname === '/dashboard'
-              ? 'text-[var(--text-primary)]'
-              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
-          )}>
-            Dashboard
-          </span>
-        </Link>
-
         {/* Light/Dark mode toggle */}
         <button
           onClick={toggleColorMode}
@@ -77,6 +54,7 @@ export default function NavBar() {
           {colorMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
+        {/* Combined user button (T.Cloyd format) with dropdown */}
         <UserPopup />
 
         {/* Mobile menu toggle */}
@@ -103,17 +81,6 @@ export default function NavBar() {
               )}
             >
               Main Menu
-            </Link>
-            <Link
-              href="/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className={cn(
-                'text-[var(--text-secondary)] text-sm font-medium px-4 py-3 rounded-md transition-all duration-200',
-                'hover:text-[var(--text-primary)] hover:bg-[var(--accent-10)]',
-                pathname === '/dashboard' && 'text-[var(--text-primary)] bg-[var(--accent-20)]',
-              )}
-            >
-              Dashboard
             </Link>
           </div>
         </div>
