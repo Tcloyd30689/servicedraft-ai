@@ -26,11 +26,12 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-23
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 44 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 48 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
 **Session 7A:** COMPLETE — Page redesigns, cursor underglow, card hover changes, narrative reset (PB.42–PB.46)
+**Session 7B:** COMPLETE — Navigation guard for unsaved narratives + auto-save on export (PB.47–PB.48)
 
 ---
 
@@ -1123,8 +1124,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 46 | 46 |
-| **TOTAL** | **124** | **119** |
+| Post-Build Fixes | 48 | 48 |
+| **TOTAL** | **126** | **121** |
 
 ---
 
@@ -1190,6 +1191,33 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** PB.42, PB.43, PB.44, PB.45, PB.46
 - **Completed:** 2026-02-23
 - **Notes:** Major visual changes: (1) Cards no longer enlarge on hover — replaced with cursor-following underglow glow effect. (2) Landing page has cinematic staggered entrance with larger logo and tagline. (3) Main menu has "Main Menu" heading instead of logo, wider card. (4) Narrative page has "NEW STORY" reset button with confirmation dialog.
+
+### PB.47 — Navigation Guard for Unsaved Narratives
+- [x] Added `isSaved` (boolean) and `savedNarrativeId` (string|null) to `NarrativeState` in `narrativeStore.ts`
+- [x] `isSaved` starts true (no narrative to protect), flips to false when `setNarrative()` is called (new/regenerated/customized narrative), flips to true on manual save or auto-save
+- [x] `beforeunload` event listener registered when `isSaved === false` — shows browser's native "Leave page?" dialog on tab close or browser back
+- [x] In-app navigation interceptor via document `click` capture — catches `<a>` clicks to internal routes, prevents default, shows custom modal
+- [x] Custom "Unsaved Narrative" modal: "You have an unsaved narrative. Once you leave this page, this story cannot be recovered." with STAY ON PAGE and LEAVE WITHOUT SAVING buttons
+- [x] `pendingNavigation` state stores the intended URL; LEAVE WITHOUT SAVING calls `router.push(pendingNavigation)`
+- [x] When `isSaved` is true, both guards are removed — all navigation works freely
+- [x] The existing "Start Over" confirmation dialog (PB.46) still serves as the guard for the NEW STORY button
+- **Completed:** 2026-02-23
+
+### PB.48 — Auto-Save on Export (Duplicate Prevention)
+- [x] Created `saveToDatabase()` helper in narrative page — performs Supabase insert with `.select('id').single()` to retrieve the new record ID
+- [x] Duplicate prevention: `saveToDatabase()` checks `state.savedNarrativeId` first; if already set, returns existing ID without inserting
+- [x] `markSaved(id)` store action sets both `isSaved = true` and `savedNarrativeId = id` in one update
+- [x] `handleBeforeExport()` callback passed to `ShareExportModal` via `onBeforeExport` prop — calls `saveToDatabase()` before any export
+- [x] All 4 export actions (Copy to Clipboard, Print, Download PDF, Download Word) call `onBeforeExport()` before proceeding
+- [x] Toast notification: "Narrative auto-saved to your history" shown after auto-save (uses `{ id: 'auto-save' }` to prevent duplicate toasts)
+- [x] Activity event dispatched (`dispatchActivity(0.5)`) on both manual save and auto-save — triggers hero wave spike
+- [x] Manual save also uses `saveToDatabase()` for consistent dedup behavior
+- **Completed:** 2026-02-23
+
+### SESSION 7B — Navigation Guard + Auto-Save on Export — COMPLETE
+- **Scope:** PB.47, PB.48
+- **Completed:** 2026-02-23
+- **Notes:** Two critical protections for unsaved narratives. (1) Navigation guard uses `beforeunload` for browser close/back and document click capture for in-app links — both disabled once `isSaved` is true. (2) Auto-save on export ensures narratives appear in dashboard history after any export action, with duplicate prevention via `savedNarrativeId`.
 
 ---
 

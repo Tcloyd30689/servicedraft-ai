@@ -15,6 +15,7 @@ interface ShareExportModalProps {
   narrative: NarrativeData;
   displayFormat: 'block' | 'ccc';
   vehicleInfo?: { year?: string; make?: string; model?: string; roNumber?: string };
+  onBeforeExport?: () => Promise<void>;
 }
 
 export default function ShareExportModal({
@@ -23,6 +24,7 @@ export default function ShareExportModal({
   narrative,
   displayFormat,
   vehicleInfo,
+  onBeforeExport,
 }: ShareExportModalProps) {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
@@ -63,6 +65,7 @@ export default function ShareExportModal({
 
   const handleCopy = async () => {
     try {
+      await onBeforeExport?.();
       await navigator.clipboard.writeText(getTextContent());
       toast.success('Copied to clipboard');
       onClose();
@@ -71,7 +74,8 @@ export default function ShareExportModal({
     }
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    await onBeforeExport?.();
     const header = getVehicleHeader();
     const content = displayFormat === 'block'
       ? narrative.block_narrative
@@ -130,6 +134,7 @@ export default function ShareExportModal({
   const handleDownloadPdf = async () => {
     setIsGeneratingPdf(true);
     try {
+      await onBeforeExport?.();
       await downloadExport('pdf', buildPayload());
       toast.success('PDF downloaded');
       onClose();
@@ -143,6 +148,7 @@ export default function ShareExportModal({
   const handleDownloadDocx = async () => {
     setIsGeneratingDocx(true);
     try {
+      await onBeforeExport?.();
       await downloadExport('docx', buildPayload());
       toast.success('Word document downloaded');
       onClose();

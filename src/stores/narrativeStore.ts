@@ -32,6 +32,10 @@ export interface NarrativeState {
 
   // Generation tracking — increments when new generation is requested
   generationId: number;
+
+  // Save tracking — navigation guard + auto-save dedup
+  isSaved: boolean;
+  savedNarrativeId: string | null;
 }
 
 const initialState: NarrativeState = {
@@ -47,6 +51,8 @@ const initialState: NarrativeState = {
   detailSlider: 'standard',
   customInstructions: '',
   generationId: 0,
+  isSaved: true, // true initially (no narrative to protect yet)
+  savedNarrativeId: null,
 };
 
 // Simple hook-based store (avoids external dependency)
@@ -104,7 +110,7 @@ export function useNarrativeStore() {
   }, []);
 
   const setNarrative = useCallback((data: NarrativeData | null) => {
-    globalState = { ...globalState, narrative: data };
+    globalState = { ...globalState, narrative: data, isSaved: false, savedNarrativeId: null };
     notifyListeners();
   }, []);
 
@@ -154,12 +160,19 @@ export function useNarrativeStore() {
       detailSlider: 'standard',
       customInstructions: '',
       generationId: globalState.generationId + 1,
+      isSaved: true,
+      savedNarrativeId: null,
     };
     notifyListeners();
   }, []);
 
   const resetAll = useCallback(() => {
     globalState = { ...initialState };
+    notifyListeners();
+  }, []);
+
+  const markSaved = useCallback((narrativeId: string) => {
+    globalState = { ...globalState, isSaved: true, savedNarrativeId: narrativeId };
     notifyListeners();
   }, []);
 
@@ -179,5 +192,6 @@ export function useNarrativeStore() {
     resetCustomization,
     clearForNewGeneration,
     resetAll,
+    markSaved,
   };
 }

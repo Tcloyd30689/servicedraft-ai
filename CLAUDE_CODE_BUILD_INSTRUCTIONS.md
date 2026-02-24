@@ -1265,4 +1265,82 @@ A "NEW STORY" ghost button in the bottom action bar opens a confirmation modal (
 
 ---
 
+## APPENDIX: NARRATIVE SAVE STATE & NAVIGATION GUARD (Added 2026-02-23)
+
+### isSaved State Pattern
+
+The narrative store (`src/stores/narrativeStore.ts`) tracks two save-related fields:
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `isSaved` | `boolean` | Whether the current narrative has been persisted to the database |
+| `savedNarrativeId` | `string \| null` | The Supabase UUID of the saved record (for duplicate prevention) |
+
+**State transitions:**
+- `initialState`: `isSaved: true` (no narrative exists yet, nothing to protect)
+- `setNarrative()` (new generation, regenerate, customize, apply edits): resets both to `false` / `null`
+- `markSaved(id)`: sets `isSaved: true` and `savedNarrativeId: id`
+- `clearForNewGeneration()` / `resetAll()`: resets both to `true` / `null` (clean slate)
+
+### beforeunload Event (Browser Close / Back)
+
+When `isSaved === false`, a `beforeunload` event listener is active on the narrative page. This triggers the browser's native "Leave page?" confirmation dialog when the user:
+- Closes the browser tab
+- Clicks the browser back button
+- Refreshes the page
+- Types a new URL in the address bar
+
+The listener is removed when `isSaved` becomes `true`.
+
+```tsx
+useEffect(() => {
+  if (state.isSaved) return;
+  const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+  window.addEventListener('beforeunload', handler);
+  return () => window.removeEventListener('beforeunload', handler);
+}, [state.isSaved]);
+```
+
+### In-App Navigation Interception
+
+For internal links (Next.js `<Link>` components in the nav bar, etc.), the narrative page intercepts clicks at the document level using capture-phase event listeners:
+
+1. A `click` listener on `document` (capture phase) catches clicks on `<a>` elements with `href` attributes
+2. External URLs (`http://`, `#`, `mailto:`) are ignored
+3. Internal route links are prevented and a custom modal is shown:
+   - **Title:** "Unsaved Narrative"
+   - **Message:** "You have an unsaved narrative. Once you leave this page, this story cannot be recovered."
+   - **Actions:** STAY ON PAGE (dismisses) / LEAVE WITHOUT SAVING (navigates to `pendingNavigation`)
+4. The interceptor is only active when `isSaved === false`
+
+### Auto-Save on Export
+
+Whenever the user performs any export action (Copy to Clipboard, Print, Download PDF, Download Word), the narrative is automatically saved to the database **before** the export proceeds.
+
+**Implementation:**
+1. `saveToDatabase()` — shared helper that performs the Supabase insert and returns the record ID
+2. `handleBeforeExport()` — callback passed to `ShareExportModal` via `onBeforeExport` prop
+3. `ShareExportModal` calls `await onBeforeExport?.()` at the start of every export handler
+
+**Duplicate prevention via `savedNarrativeId`:**
+- `saveToDatabase()` checks `state.savedNarrativeId` first
+- If already set (previous manual save or auto-save), returns the existing ID without inserting
+- This prevents multiple database records for the same narrative across multiple exports
+
+**Toast:** "Narrative auto-saved to your history" (uses `{ id: 'auto-save' }` to deduplicate)
+
+**Activity pulse:** Both manual save and auto-save dispatch `dispatchActivity(0.5)` for hero wave animation.
+
+### How All Three Guards Work Together
+
+| Trigger | Guard | Behavior |
+|---------|-------|----------|
+| Browser close/back/refresh | `beforeunload` | Browser native dialog |
+| Nav bar links / in-app routes | Document click capture | Custom "Unsaved Narrative" modal |
+| "NEW STORY" button | Existing PB.46 reset confirm dialog | "Are you sure? All unsaved data will be lost." |
+| Any export action | Auto-save | Silently saves first, then exports |
+| Manual "SAVE STORY" click | `handleSave()` | Explicit save, disables all guards |
+
+---
+
 *— End of Claude Code Build Instructions —*

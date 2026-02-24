@@ -36,6 +36,7 @@ export default function NarrativePage() {
     setDisplayFormat,
     resetCustomization,
     resetAll,
+    markSaved,
   } = useNarrativeStore();
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -53,6 +54,8 @@ export default function NarrativePage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   const lastGenerationId = useRef(-1);
 
@@ -100,6 +103,49 @@ export default function NarrativePage() {
       }
     }
   }, [state.compiledDataBlock, state.storyType, state.narrative, state.generationId, router, generateNarrative]);
+
+  // Navigation guard: browser close / back button
+  useEffect(() => {
+    if (state.isSaved) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [state.isSaved]);
+
+  // Navigation guard: intercept in-app link clicks
+  useEffect(() => {
+    if (state.isSaved) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement).closest('a[href]') as HTMLAnchorElement | null;
+      if (!anchor) return;
+
+      const href = anchor.getAttribute('href');
+      if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) return;
+
+      // Internal navigation — intercept and show warning
+      e.preventDefault();
+      e.stopPropagation();
+      setPendingNavigation(href);
+      setShowUnsavedModal(true);
+    };
+
+    document.addEventListener('click', handleClick, true);
+    return () => document.removeEventListener('click', handleClick, true);
+  }, [state.isSaved]);
+
+  // Handle confirmed leave (from unsaved modal)
+  const handleConfirmLeave = () => {
+    setShowUnsavedModal(false);
+    if (pendingNavigation) {
+      router.push(pendingNavigation);
+    }
+  };
 
   // Regenerate — re-runs API with original input
   const handleRegenerate = async () => {
@@ -246,7 +292,36 @@ export default function NarrativePage() {
     }
   };
 
-  // Save to Supabase
+  // Save to Supabase (returns saved narrative ID, or existing ID if already saved)
+  const saveToDatabase = useCallback(async (): Promise<string | null> => {
+    if (!state.narrative || !user) return null;
+
+    // Duplicate prevention: if already saved, return existing ID
+    if (state.savedNarrativeId) return state.savedNarrativeId;
+
+    const supabase = createClient();
+    const { data, error } = await supabase.from('narratives').insert({
+      user_id: user.id,
+      ro_number: state.roNumber || null,
+      vehicle_year: state.fieldValues['year']
+        ? parseInt(state.fieldValues['year'], 10) || null
+        : null,
+      vehicle_make: state.fieldValues['make'] || null,
+      vehicle_model: state.fieldValues['model'] || null,
+      concern: state.narrative.concern,
+      cause: state.narrative.cause,
+      correction: state.narrative.correction,
+      full_narrative: state.narrative.block_narrative,
+      story_type: state.storyType,
+    }).select('id').single();
+
+    if (error) throw error;
+    const id = data?.id ?? null;
+    if (id) markSaved(id);
+    return id;
+  }, [state.narrative, state.savedNarrativeId, state.roNumber, state.fieldValues, state.storyType, user, markSaved]);
+
+  // Manual save handler
   const handleSave = async () => {
     if (!state.narrative || !user) {
       toast.error('Unable to save — please log in');
@@ -256,23 +331,7 @@ export default function NarrativePage() {
     setIsSaving(true);
     dispatchActivity(0.5);
     try {
-      const supabase = createClient();
-      const { error } = await supabase.from('narratives').insert({
-        user_id: user.id,
-        ro_number: state.roNumber || null,
-        vehicle_year: state.fieldValues['year']
-          ? parseInt(state.fieldValues['year'], 10) || null
-          : null,
-        vehicle_make: state.fieldValues['make'] || null,
-        vehicle_model: state.fieldValues['model'] || null,
-        concern: state.narrative.concern,
-        cause: state.narrative.cause,
-        correction: state.narrative.correction,
-        full_narrative: state.narrative.block_narrative,
-        story_type: state.storyType,
-      });
-
-      if (error) throw error;
+      await saveToDatabase();
       toast.success('Story saved successfully');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'message' in err) ? String((err as { message: unknown }).message) : 'Unknown error';
@@ -282,6 +341,21 @@ export default function NarrativePage() {
       setIsSaving(false);
     }
   };
+
+  // Auto-save before export — called by ShareExportModal before any export action
+  const handleBeforeExport = useCallback(async () => {
+    if (!state.narrative || !user) return;
+
+    dispatchActivity(0.5);
+    try {
+      await saveToDatabase();
+      toast.success('Narrative auto-saved to your history', { id: 'auto-save' });
+    } catch (err) {
+      console.error('Auto-save on export error:', err);
+      // Don't block the export — just warn
+      toast.error('Auto-save failed, but export will continue');
+    }
+  }, [state.narrative, user, saveToDatabase]);
 
   // Edit handler
   const handleEditSave = (updated: NarrativeData) => {
@@ -534,6 +608,7 @@ export default function NarrativePage() {
           model: state.fieldValues['model'] || '',
           roNumber: state.roNumber || '',
         }}
+        onBeforeExport={handleBeforeExport}
       />
 
       {/* Start Over Confirmation */}
@@ -560,6 +635,34 @@ export default function NarrativePage() {
             onClick={handleStartOver}
           >
             START OVER
+          </Button>
+        </div>
+      </Modal>
+
+      {/* Unsaved Narrative Warning */}
+      <Modal
+        isOpen={showUnsavedModal}
+        onClose={() => { setShowUnsavedModal(false); setPendingNavigation(null); }}
+        title="Unsaved Narrative"
+        width="max-w-[460px]"
+      >
+        <p className="text-[var(--text-secondary)] mb-6">
+          You have an unsaved narrative. Once you leave this page, this story cannot be recovered.
+        </p>
+        <div className="flex gap-3 justify-end">
+          <Button
+            variant="secondary"
+            size="medium"
+            onClick={() => { setShowUnsavedModal(false); setPendingNavigation(null); }}
+          >
+            STAY ON PAGE
+          </Button>
+          <Button
+            variant="primary"
+            size="medium"
+            onClick={handleConfirmLeave}
+          >
+            LEAVE WITHOUT SAVING
           </Button>
         </div>
       </Modal>
