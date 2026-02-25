@@ -115,10 +115,10 @@ export default function LoginPage() {
   if (checkingAuth) {
     return (
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-        <WaveBackground centerYPercent={0.35} />
+        <WaveBackground centerYPercent={0.40} />
         <div className="relative z-30 w-full max-w-md">
           <div className="flex justify-center mb-8">
-            <div className="scale-[2] origin-bottom">
+            <div className="scale-[2] origin-bottom translate-y-16">
               <Logo size="large" glow className="max-w-[90vw]" />
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-      <WaveBackground centerYPercent={0.35} />
+      <WaveBackground centerYPercent={0.40} />
 
       <motion.div
         className="relative z-30 w-full max-w-md"
@@ -143,7 +143,7 @@ export default function LoginPage() {
         transition={{ duration: 0.4, ease: 'easeOut' }}
       >
         <div className="flex justify-center mb-8">
-          <div className="scale-[2] origin-bottom">
+          <div className="scale-[2] origin-bottom translate-y-16">
             <Link href="/">
               <Logo size="large" glow className="max-w-[90vw]" />
             </Link>
