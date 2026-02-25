@@ -1,17 +1,31 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import Link from 'next/link';
 import WaveBackground from '@/components/ui/WaveBackground';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 
 export default function LandingPage() {
+  const router = useRouter();
+  const [exiting, setExiting] = useState(false);
+
+  const handleNavigate = (href: string) => {
+    if (exiting) return;
+    setExiting(true);
+    setTimeout(() => router.push(href), 350);
+  };
+
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden">
       <WaveBackground centerYPercent={0.50} />
 
-      <div className="relative z-30 flex flex-col items-center px-4">
+      <motion.div
+        className="relative z-30 flex flex-col items-center px-4"
+        animate={{ opacity: exiting ? 0 : 1 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+      >
         {/* Logo — dominant visual, enters first */}
         <motion.div
           className="pointer-events-none"
@@ -41,17 +55,13 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.1, ease: 'easeOut' }}
           >
-            <Link href="/login" className="w-full">
-              <Button size="fullWidth">LOGIN</Button>
-            </Link>
-            <Link href="/signup" className="w-full">
-              <Button variant="secondary" size="fullWidth">
-                REQUEST ACCESS
-              </Button>
-            </Link>
+            <Button size="fullWidth" onClick={() => handleNavigate('/login')}>LOGIN</Button>
+            <Button variant="secondary" size="fullWidth" onClick={() => handleNavigate('/signup')}>
+              REQUEST ACCESS
+            </Button>
           </motion.div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

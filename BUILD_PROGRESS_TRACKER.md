@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-24
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 76 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 78 post-build fixes applied)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1486,6 +1486,20 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] All content (logo, subtitle, LOGIN, REQUEST ACCESS) fits within the viewport at 1080p without scrolling
 - [x] **Revised:** Doubled negative margin from `-mt-28` (112px) to `-mt-56` (224px) — initial shift was insufficient, subtitle and buttons were still too far down
 - [x] **Revised:** Re-centered wave animation `centerYPercent` from `0.40` to `0.50` — waves were offset toward the top of viewport after layout shift; now aligned with logo's flex-centered position. Login/signup pages unchanged (waves at `0.35` still correct for logo-above-card layout).
+- **Completed:** 2026-02-24
+
+### PB.77 — Login Page Logo Doubled in Size
+- [x] Root cause: Login page logo was constrained by parent `max-w-md` (448px) wrapper — the 1200×300 image rendered at only ~448×112px, much smaller than the landing page logo
+- [x] Added `scale-[2] origin-bottom` CSS transform wrapper around the Logo on the login page — visually doubles the logo without changing layout flow (CSS transforms don't affect box model)
+- [x] `origin-bottom` ensures the logo scales upward into the wave background area; the `mb-8` gap to the Sign In card is preserved, card position unchanged
+- [x] Applied to both the loading state and the main render path
+- **Completed:** 2026-02-24
+
+### PB.78 — Smooth Page Transition from Landing Page to Login Page
+- [x] Landing page (`src/app/page.tsx`): added exit fade-out animation — `exiting` state triggers `opacity: 0` over 350ms via Framer Motion, then `router.push()` navigates after the animation completes
+- [x] Replaced `<Link>` wrappers on LOGIN and REQUEST ACCESS buttons with `onClick` handlers calling `handleNavigate()` — intercepts click, fades out, then navigates
+- [x] Login page (`login/page.tsx`): added `motion.div` wrapper with `initial={{ opacity: 0 }} animate={{ opacity: 1 }}` fade-in over 400ms — smooth entrance after landing page fade-out
+- [x] Combined effect: landing page fades out (350ms) → login page fades in (400ms) — premium crossfade feel, no hard jump cut
 - **Completed:** 2026-02-24
 
 ---

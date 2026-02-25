@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
 import WaveBackground from '@/components/ui/WaveBackground';
@@ -117,7 +118,9 @@ export default function LoginPage() {
         <WaveBackground centerYPercent={0.35} />
         <div className="relative z-30 w-full max-w-md">
           <div className="flex justify-center mb-8">
-            <Logo size="large" glow className="max-w-[90vw]" />
+            <div className="scale-[2] origin-bottom">
+              <Logo size="large" glow className="max-w-[90vw]" />
+            </div>
           </div>
           <LiquidCard size="spacious">
             <div className="py-12">
@@ -133,11 +136,18 @@ export default function LoginPage() {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
       <WaveBackground centerYPercent={0.35} />
 
-      <div className="relative z-30 w-full max-w-md">
+      <motion.div
+        className="relative z-30 w-full max-w-md"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+      >
         <div className="flex justify-center mb-8">
-          <Link href="/">
-            <Logo size="large" glow className="max-w-[90vw]" />
-          </Link>
+          <div className="scale-[2] origin-bottom">
+            <Link href="/">
+              <Logo size="large" glow className="max-w-[90vw]" />
+            </Link>
+          </div>
         </div>
 
         <LiquidCard size="spacious">
@@ -185,7 +195,7 @@ export default function LoginPage() {
             </Link>
           </p>
         </LiquidCard>
-      </div>
+      </motion.div>
     </div>
   );
 }
