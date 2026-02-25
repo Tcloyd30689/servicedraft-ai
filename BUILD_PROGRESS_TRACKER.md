@@ -23,11 +23,12 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-02-24
+**Last Updated:** 2026-02-25
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 81 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 81 post-build fixes applied, + 5 Stage 2 tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
+**Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1132,7 +1133,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
 | Post-Build Fixes | 81 | 81 |
-| **TOTAL** | **159** | **154** |
+| Stage 2 Sprint S2-1 | 5 | 5 |
+| **TOTAL** | **164** | **159** |
 
 ---
 
@@ -1532,8 +1534,61 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ---
 
+## STAGE 2 SPRINT S2-1 — Dashboard Search & Filtering
+*Enhanced search, sort controls, filter pills, and results count for the saved narratives table on the User Dashboard.*
+
+### S2-1.1 — Enhanced Search Bar
+- [x] Search input now searches across ALL visible columns: R.O. #, Year, Make, Model, Concern, Cause, Correction, and Date
+- [x] Search is case-insensitive and matches partial strings (e.g. "sil" matches "Silverado")
+- [x] Added "X" clear button inside search input (visible only when text is present)
+- [x] Search icon (lucide Search) on the left inside the input (already existed, preserved)
+- [x] Debounced search by 300ms using useRef timer — no filtering on every keystroke
+- **Completed:** 2026-02-25
+
+### S2-1.2 — Sort Controls
+- [x] Added row of sort buttons below the search bar: Date (Newest), Date (Oldest), Vehicle (A-Z by Make then Model), R.O. # (Ascending)
+- [x] Date (Newest) is the default active sort
+- [x] Only ONE sort active at a time — active button shows `var(--accent-primary)` bg with `var(--btn-text-on-accent)` text
+- [x] Inactive buttons use `var(--bg-input)` bg with `var(--text-secondary)` text
+- [x] Each sort button has an ArrowUp or ArrowDown icon indicating direction
+- [x] Framer Motion `whileHover={{ scale: 1.05 }}` and `whileTap={{ scale: 0.95 }}`
+- **Completed:** 2026-02-25
+
+### S2-1.3 — Filter Pills
+- [x] Added horizontal row of filter pills below sort buttons: "All", "Diagnostic Only", "Repair Complete"
+- [x] "All" is active by default — shows all narratives regardless of story_type
+- [x] Clicking a pill filters the table to only show narratives of that `story_type`
+- [x] Active pill: accent border + accent tint background; Inactive: muted border, muted text
+- [x] Filter pills combine with search — user can search "Silverado" AND filter to "Repair Complete"
+- [x] Framer Motion `whileHover={{ scale: 1.05 }}` and `whileTap={{ scale: 0.95 }}`
+- **Completed:** 2026-02-25
+
+### S2-1.4 — Results Count
+- [x] Below the filters, shows "Showing X of Y narratives" that updates dynamically
+- [x] When all narratives are visible (no filters/search), shows "Showing Y narratives"
+- [x] When no results match: shows "No matching narratives found" with a ghost "Clear Filters" button
+- [x] Clear Filters resets search input, sort to default (date-newest), and filter to "All"
+- **Completed:** 2026-02-25
+
+### S2-1.5 — Visual Polish
+- [x] All new controls use existing CSS variables (`var(--accent-*)`, `var(--bg-input)`, `var(--text-*)`) — no hardcoded colors
+- [x] Framer Motion hover/tap animations on sort buttons and filter pills
+- [x] Search/sort/filter section is sticky at the top of the narrative history card
+- [x] AnimatePresence on table rows for smooth fade-in/fade-out when list changes
+- [x] NarrativeDetailModal unchanged — no modifications to the popup
+- [x] Database schema unchanged — all filtering/sorting is client-side
+- **Completed:** 2026-02-25
+
+### SESSION S2-1 — Dashboard Search & Filtering — COMPLETE
+- **Scope:** S2-1.1, S2-1.2, S2-1.3, S2-1.4, S2-1.5
+- **Completed:** 2026-02-25
+- **Notes:** Enhanced NarrativeHistory.tsx with: (1) Multi-column debounced search across R.O.#, Year, Make, Model, Concern, Cause, Correction, Date. (2) Four sort options with accent-styled active button. (3) Story type filter pills (All / Diagnostic Only / Repair Complete) that combine with search. (4) Dynamic results count with "Clear Filters" fallback. (5) Sticky header, AnimatePresence row transitions, full CSS variable theming. No changes to NarrativeDetailModal, database schema, or dashboard page layout.
+
+---
+
+| Stage 2 Sprint S2-1 | 5 | 5 |
 | Post-Build Fixes | 81 | 81 |
-| **TOTAL** | **159** | **154** |
+| **TOTAL** | **164** | **159** |
 
 ---
 
