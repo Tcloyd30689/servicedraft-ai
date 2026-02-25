@@ -1485,6 +1485,7 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Removed `gap-8` from parent flex column (spacing now handled by the negative margin and `mt-6` on the buttons)
 - [x] All content (logo, subtitle, LOGIN, REQUEST ACCESS) fits within the viewport at 1080p without scrolling
 - [x] **Revised:** Doubled negative margin from `-mt-28` (112px) to `-mt-56` (224px) — initial shift was insufficient, subtitle and buttons were still too far down
+- [x] **Revised:** Re-centered wave animation `centerYPercent` from `0.40` to `0.50` — waves were offset toward the top of viewport after layout shift; now aligned with logo's flex-centered position. Login/signup pages unchanged (waves at `0.35` still correct for logo-above-card layout).
 - **Completed:** 2026-02-24
 
 ---

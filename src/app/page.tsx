@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button';
 export default function LandingPage() {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden">
-      <WaveBackground centerYPercent={0.40} />
+      <WaveBackground centerYPercent={0.50} />
 
       <div className="relative z-30 flex flex-col items-center px-4">
         {/* Logo — dominant visual, enters first */}
