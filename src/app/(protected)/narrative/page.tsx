@@ -292,15 +292,13 @@ export default function NarrativePage() {
     }
   };
 
-  // Save to Supabase (returns saved narrative ID, or existing ID if already saved)
+  // Save to Supabase — UPSERT: overwrites if same user + RO# exists
   const saveToDatabase = useCallback(async (): Promise<string | null> => {
     if (!state.narrative || !user) return null;
 
-    // Duplicate prevention: if already saved, return existing ID
-    if (state.savedNarrativeId) return state.savedNarrativeId;
-
     const supabase = createClient();
-    const { data, error } = await supabase.from('narratives').insert({
+
+    const narrativeData = {
       user_id: user.id,
       ro_number: state.roNumber || null,
       vehicle_year: state.fieldValues['year']
@@ -313,13 +311,23 @@ export default function NarrativePage() {
       correction: state.narrative.correction,
       full_narrative: state.narrative.block_narrative,
       story_type: state.storyType,
-    }).select('id').single();
+      updated_at: new Date().toISOString(),
+    };
+
+    // UPSERT: if a row with the same (user_id, ro_number) exists, overwrite it
+    const { data, error } = await supabase
+      .from('narratives')
+      .upsert(narrativeData, {
+        onConflict: 'user_id,ro_number',
+      })
+      .select('id')
+      .single();
 
     if (error) throw error;
     const id = data?.id ?? null;
     if (id) markSaved(id);
     return id;
-  }, [state.narrative, state.savedNarrativeId, state.roNumber, state.fieldValues, state.storyType, user, markSaved]);
+  }, [state.narrative, state.roNumber, state.fieldValues, state.storyType, user, markSaved]);
 
   // Manual save handler
   const handleSave = async () => {
@@ -342,20 +350,23 @@ export default function NarrativePage() {
     }
   };
 
-  // Auto-save before export — called by ShareExportModal before any export action
+  // Auto-save before export — fire-and-forget, NEVER blocks the export
   const handleBeforeExport = useCallback(async () => {
     if (!state.narrative || !user) return;
 
     dispatchActivity(0.5);
     try {
-      await saveToDatabase();
-      toast.success('Narrative auto-saved to your history', { id: 'auto-save' });
+      // Only auto-save if not already saved
+      if (!state.isSaved) {
+        await saveToDatabase();
+        toast.success('Narrative auto-saved to your history', { id: 'auto-save' });
+      }
     } catch (err) {
       console.error('Auto-save on export error:', err);
       // Don't block the export — just warn
       toast.error('Auto-save failed, but export will continue');
     }
-  }, [state.narrative, user, saveToDatabase]);
+  }, [state.narrative, state.isSaved, user, saveToDatabase]);
 
   // Edit handler
   const handleEditSave = (updated: NarrativeData) => {
@@ -559,7 +570,7 @@ export default function NarrativePage() {
                 className="flex items-center gap-2"
               >
                 <Save size={15} />
-                {isSaving ? 'SAVING...' : 'SAVE STORY'}
+                {isSaving ? 'SAVING...' : state.isSaved ? '✓ SAVED' : 'SAVE STORY'}
               </Button>
 
               <Button

@@ -57,7 +57,7 @@ export default function NarrativeHistory({ userId }: NarrativeHistoryProps) {
         .from('narratives')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
       if (error) {
         console.error('Failed to fetch narratives:', error.message);
@@ -88,7 +88,7 @@ export default function NarrativeHistory({ userId }: NarrativeHistoryProps) {
     if (debouncedQuery.trim()) {
       const q = debouncedQuery.toLowerCase();
       result = result.filter((n) => {
-        const dateStr = new Date(n.created_at).toLocaleDateString().toLowerCase();
+        const dateStr = new Date(n.updated_at || n.created_at).toLocaleDateString().toLowerCase();
         return (
           (n.ro_number && n.ro_number.toLowerCase().includes(q)) ||
           (n.vehicle_year && String(n.vehicle_year).includes(q)) ||
@@ -105,10 +105,10 @@ export default function NarrativeHistory({ userId }: NarrativeHistoryProps) {
     // Sort
     switch (activeSort) {
       case 'date-newest':
-        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        result.sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime());
         break;
       case 'date-oldest':
-        result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        result.sort((a, b) => new Date(a.updated_at || a.created_at).getTime() - new Date(b.updated_at || b.created_at).getTime());
         break;
       case 'vehicle-az':
         result.sort((a, b) => {
@@ -271,7 +271,7 @@ export default function NarrativeHistory({ userId }: NarrativeHistoryProps) {
             <tbody>
               <AnimatePresence mode="popLayout">
                 {processedNarratives.map((n) => {
-                  const date = new Date(n.created_at);
+                  const date = new Date(n.updated_at || n.created_at);
                   const preview = (n.concern || n.full_narrative || '').slice(0, 30);
                   return (
                     <motion.tr

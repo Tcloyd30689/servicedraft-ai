@@ -43,4 +43,5 @@ export interface Narrative {
   full_narrative: string | null;
   story_type: 'diagnostic_only' | 'repair_complete';
   created_at: string;
+  updated_at: string;
 }

@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-25
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 81 post-build fixes applied, + 5 Stage 2 tasks complete)
+**Overall Progress:** 73 / 78 tasks complete (+ 83 post-build fixes applied, + 5 Stage 2 tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
@@ -40,6 +40,8 @@ This file is a living document that Claude Code reads at the start of every sess
 **Session 10A:** COMPLETE — Dashboard modal portal fix, wave amplitude/centering, nav consolidation, logo sizing, default dark mode, 8hr auto-logout (PB.61–PB.68)
 **Session 11A:** COMPLETE — Fixed Main Menu page scroll and centered container, fixed white accent theme Generate Story button text to black, fixed black accent theme visibility with comprehensive dark styling and white text on Generate Story button (PB.70–PB.72)
 **Session 12A:** COMPLETE — Gemini 3-flash-preview upgrade, signup page animation + logo doubling, final documentation sync (PB.79–PB.81)
+**Session 13A:** COMPLETE — Pre-generation output customization panel on input page (PB.82)
+**Hotfix 14A:** COMPLETE — Save narrative upsert on RO#, export freeze fix, UPDATE RLS policy, dashboard updated_at ordering (PB.83)
 
 ---
 
@@ -553,7 +555,7 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Toast: "Story saved successfully"
 - [x] Error handling for database failures
 - **Completed:** 2026-02-15
-- **Notes:** Direct Supabase client insert from client side with RLS.
+- **Notes:** Direct Supabase client insert from client side with RLS. **Fixed 2026-02-25:** Changed `.insert()` to `.upsert()` on `(user_id, ro_number)` — re-saving the same R.O.# now overwrites instead of duplicating. Added `updated_at` column, UPDATE RLS policy, and unique constraint via migration `003_narrative_upsert_support.sql`.
 
 ### 6.8 — Share/Export Modal
 - [x] SHARE/EXPORT STORY button opens export options modal
@@ -1586,9 +1588,41 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ---
 
+## SESSION 13A — Pre-Generation Output Customization Panel — COMPLETE
+
+### PB.82 — Pre-Generation Customization Panel on Input Page
+- [x] Created `src/components/input/PreGenCustomization.tsx` — collapsible panel with Length, Tone, and Detail Level segmented controls
+- [x] Toggle button with Sliders icon (lucide-react) and chevron, shows accent dot indicator when any setting is non-standard
+- [x] Same three segmented controls as post-generation CustomizationPanel: Length (Short/Standard/Detailed), Tone (Warranty/Standard/Customer Friendly), Detail Level (Concise/Standard/Additional Steps)
+- [x] All defaults to Standard (center position)
+- [x] No Apply button — selections are included automatically when GENERATE STORY is clicked
+- [x] Subtle info note: "Customization will be applied to the initial generation. You can further adjust after generating."
+- [x] Added `PreGenCustomization` interface and `preGenCustomization` state to `src/stores/narrativeStore.ts` with `setPreGenCustomization(key, value)` action
+- [x] `clearForNewGeneration()` resets pre-gen customization to all-standard defaults
+- [x] Updated `src/lib/compileDataBlock.ts` to accept optional `PreGenCustomization` parameter — appends `--- OUTPUT STYLE PREFERENCES ---` block with modifier text from existing constants in `src/constants/prompts.ts` when any setting is non-standard
+- [x] Wired into `src/app/(protected)/input/page.tsx` — rendered between last input field and GENERATE STORY button, pre-gen state passed to `compileDataBlock()` in `handleGenerate()`
+- [x] localStorage persistence (`sd-pregen-customization`) — loads saved preferences on mount, saves on every change
+- [x] No changes to existing CustomizationPanel.tsx, /api/generate/route.ts, or prompts.ts
+- **Completed:** 2026-02-25
+
+### PB.83 — Save Narrative Upsert + Export Freeze Fix + UPDATE RLS Policy
+- [x] Created SQL migration `supabase/migrations/003_narrative_upsert_support.sql`: adds `updated_at` column, backfills from `created_at`, deduplicates existing rows, adds `UNIQUE(user_id, ro_number)` constraint, adds UPDATE RLS policy, adds `on_narratives_updated` trigger, adds `updated_at` index
+- [x] Fixed `saveToDatabase()` in `src/app/(protected)/narrative/page.tsx`: replaced `.insert()` with `.upsert()` using `onConflict: 'user_id,ro_number'` — re-saving same R.O.# overwrites instead of duplicating
+- [x] Removed `savedNarrativeId` short-circuit that prevented re-saves after editing
+- [x] Added `updated_at` to upsert payload
+- [x] Save button now shows "SAVE STORY" / "SAVING..." / "✓ SAVED" based on state
+- [x] Fixed `handleBeforeExport` to skip auto-save if already saved (`state.isSaved` check), preventing redundant DB calls and race conditions
+- [x] Updated `src/components/dashboard/NarrativeHistory.tsx`: changed query ordering and sort logic from `created_at` to `updated_at` so re-saved narratives appear at top
+- [x] Added `updated_at: string` to `Narrative` interface in `src/types/database.ts`
+- [x] Updated `NarrativeDetailModal.tsx` to show both "Created" and "Last Updated" dates instead of single "Saved" date
+- **Completed:** 2026-02-25
+- **Notes:** ⚠️ BLOCKED until SQL migration `003_narrative_upsert_support.sql` is run in Supabase Dashboard (SQL Editor → New Query → Paste → Run). Without the migration, upsert will fail due to missing unique constraint and UPDATE policy.
+
+---
+
 | Stage 2 Sprint S2-1 | 5 | 5 |
-| Post-Build Fixes | 81 | 81 |
-| **TOTAL** | **164** | **159** |
+| Post-Build Fixes | 83 | 83 |
+| **TOTAL** | **166** | **161** |
 
 ---
 
