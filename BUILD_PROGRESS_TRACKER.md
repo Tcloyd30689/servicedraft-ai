@@ -26,7 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-24
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 80 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 81 post-build fixes applied)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
@@ -38,7 +38,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Session 9A:** COMPLETE — Particle Network animation + background animation toggle (PB.57–PB.60)
 **Session 10A:** COMPLETE — Dashboard modal portal fix, wave amplitude/centering, nav consolidation, logo sizing, default dark mode, 8hr auto-logout (PB.61–PB.68)
 **Session 11A:** COMPLETE — Fixed Main Menu page scroll and centered container, fixed white accent theme Generate Story button text to black, fixed black accent theme visibility with comprehensive dark styling and white text on Generate Story button (PB.70–PB.72)
-**Session 12A:** COMPLETE — Gemini 3.0 Flash upgrade, signup page animation, final documentation sync (PB.79–PB.80)
+**Session 12A:** COMPLETE — Gemini 3-flash-preview upgrade, signup page animation + logo doubling, final documentation sync (PB.79–PB.81)
 
 ---
 
@@ -1131,8 +1131,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 80 | 80 |
-| **TOTAL** | **158** | **153** |
+| Post-Build Fixes | 81 | 81 |
+| **TOTAL** | **159** | **154** |
 
 ---
 
@@ -1518,14 +1518,22 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] All pages in the app now have Framer Motion entrance animations
 - **Completed:** 2026-02-24
 
-### SESSION 12A — Gemini 3.0 Flash Upgrade + Final Polish + Documentation Sync — COMPLETE
-- **Scope:** PB.79, PB.80
+### PB.81 — Signup Page Logo Doubled in Size
+- [x] Changed Logo from `size="medium"` to `size="large"` with `className="max-w-[90vw]"` in `src/app/(auth)/signup/page.tsx`
+- [x] Added `scale-[2] origin-bottom translate-y-16` CSS transform wrapper — identical to login page (PB.77)
+- [x] `origin-bottom` ensures logo scales upward without pushing the form card down
+- [x] Wave animation `centerYPercent={0.35}` unchanged — stays aligned since card position is preserved
 - **Completed:** 2026-02-24
-- **Notes:** Upgraded Gemini AI model from 2.0 Flash to 3.0 Flash (single change point in gemini/client.ts). Added missing entrance animation to signup page. Verified all pages have Framer Motion animations, background animation runs on all protected pages, toast notifications have consistent styling. Updated all documentation to reflect Gemini 3.0 Flash. Stage 1 build complete — all core features implemented.
+
+### SESSION 12A — Gemini 3-Flash-Preview Upgrade + Final Polish + Documentation Sync — COMPLETE
+- **Scope:** PB.79, PB.80, PB.81
+- **Completed:** 2026-02-24
+- **Notes:** Upgraded Gemini AI model from 2.0 Flash to 3-flash-preview (single change point in gemini/client.ts). Added missing entrance animation to signup page. Doubled signup page logo to match login page. Verified all pages have Framer Motion animations, background animation runs on all protected pages, toast notifications have consistent styling. Updated all documentation to reflect gemini-3-flash-preview. Stage 1 build complete — all core features implemented.
 
 ---
 
-| Post-Build Fixes | 66 | 66 |
+| Post-Build Fixes | 81 | 81 |
+| **TOTAL** | **159** | **154** |
 
 ---
 

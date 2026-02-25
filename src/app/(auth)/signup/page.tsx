@@ -265,9 +265,11 @@ function SignupContent() {
         className="relative z-30 w-full max-w-md"
       >
         <div className="flex justify-center mb-8">
-          <Link href="/">
-            <Logo size="medium" glow />
-          </Link>
+          <div className="scale-[2] origin-bottom translate-y-16">
+            <Link href="/">
+              <Logo size="large" glow className="max-w-[90vw]" />
+            </Link>
+          </div>
         </div>
 
         <LiquidCard size="spacious">
