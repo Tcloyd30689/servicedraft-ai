@@ -444,10 +444,10 @@ This file is a living document that Claude Code reads at the start of every sess
 ### 5.1 — Gemini Client Setup
 - [x] Create `src/lib/gemini/client.ts` — configured Gemini API client
 - [x] Uses GEMINI_API_KEY from environment
-- [x] Configures model (gemini-3.0-flash)
+- [x] Configures model (gemini-3-flash-preview)
 - [x] Utility function for sending prompts and parsing JSON responses
 - **Completed:** 2026-02-15
-- **Notes:** Uses gemini-3.0-flash. parseJsonResponse strips markdown code fences before parsing.
+- **Notes:** Uses gemini-3-flash-preview. parseJsonResponse strips markdown code fences before parsing.
 
 ### 5.2 — Generate Narrative API Route
 - [x] Create `src/app/api/generate/route.ts`
@@ -1505,10 +1505,10 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Completed:** 2026-02-24
 
 ### PB.79 — Gemini 3.0 Flash Model Upgrade
-- [x] Updated `src/lib/gemini/client.ts` — model string changed from `gemini-2.0-flash` to `gemini-3.0-flash`
+- [x] Updated `src/lib/gemini/client.ts` — model string changed from `gemini-2.0-flash` to `gemini-3-flash-preview`
 - [x] All API routes (generate, customize, proofread, apply-edits) use `generateWithGemini()` which centralizes the model — no other files needed updating
-- [x] Updated `CLAUDE_CODE_BUILD_INSTRUCTIONS.md` — code example now shows `gemini-3.0-flash`
-- [x] Updated `BUILD_PROGRESS_TRACKER.md` — Phase 5 notes now reference `gemini-3.0-flash`
+- [x] Updated `CLAUDE_CODE_BUILD_INSTRUCTIONS.md` — code example now shows `gemini-3-flash-preview`
+- [x] Updated `BUILD_PROGRESS_TRACKER.md` — Phase 5 notes now reference `gemini-3-flash-preview`
 - **Completed:** 2026-02-24
 
 ### PB.80 — Signup Page Entrance Animation

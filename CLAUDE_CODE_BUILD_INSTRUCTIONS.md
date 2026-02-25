@@ -539,7 +539,7 @@ export async function generateWithGemini(
   userPrompt: string
 ): Promise<string> {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-3.0-flash',
+    model: 'gemini-3-flash-preview',
     systemInstruction: systemPrompt,
   });
 
