@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
 import WaveBackground from '@/components/ui/WaveBackground';
@@ -257,7 +258,12 @@ function SignupContent() {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
       <WaveBackground centerYPercent={0.35} />
 
-      <div className="relative z-30 w-full max-w-md">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="relative z-30 w-full max-w-md"
+      >
         <div className="flex justify-center mb-8">
           <Link href="/">
             <Logo size="medium" glow />
@@ -429,7 +435,7 @@ function SignupContent() {
             </Link>
           </p>
         </LiquidCard>
-      </div>
+      </motion.div>
     </div>
   );
 }

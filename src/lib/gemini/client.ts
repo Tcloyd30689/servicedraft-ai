@@ -8,7 +8,7 @@ export async function generateWithGemini(
   maxOutputTokens: number = 8192,
 ): Promise<string> {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3.0-flash',
     systemInstruction: systemPrompt,
     generationConfig: {
       maxOutputTokens,

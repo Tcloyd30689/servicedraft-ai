@@ -26,7 +26,8 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-24
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 78 post-build fixes applied)
+**Overall Progress:** 73 / 78 tasks complete (+ 80 post-build fixes applied)
+**Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -37,6 +38,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Session 9A:** COMPLETE — Particle Network animation + background animation toggle (PB.57–PB.60)
 **Session 10A:** COMPLETE — Dashboard modal portal fix, wave amplitude/centering, nav consolidation, logo sizing, default dark mode, 8hr auto-logout (PB.61–PB.68)
 **Session 11A:** COMPLETE — Fixed Main Menu page scroll and centered container, fixed white accent theme Generate Story button text to black, fixed black accent theme visibility with comprehensive dark styling and white text on Generate Story button (PB.70–PB.72)
+**Session 12A:** COMPLETE — Gemini 3.0 Flash upgrade, signup page animation, final documentation sync (PB.79–PB.80)
 
 ---
 
@@ -442,10 +444,10 @@ This file is a living document that Claude Code reads at the start of every sess
 ### 5.1 — Gemini Client Setup
 - [x] Create `src/lib/gemini/client.ts` — configured Gemini API client
 - [x] Uses GEMINI_API_KEY from environment
-- [x] Configures model (gemini-2.0-flash or gemini-2.0-pro)
+- [x] Configures model (gemini-3.0-flash)
 - [x] Utility function for sending prompts and parsing JSON responses
 - **Completed:** 2026-02-15
-- **Notes:** Uses gemini-2.0-flash. parseJsonResponse strips markdown code fences before parsing.
+- **Notes:** Uses gemini-3.0-flash. parseJsonResponse strips markdown code fences before parsing.
 
 ### 5.2 — Generate Narrative API Route
 - [x] Create `src/app/api/generate/route.ts`
@@ -1129,8 +1131,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Phase 8: Stripe | 5 | 5 |
 | Phase 9: Polish | 6 | 6 |
 | Phase 10: Deployment | 5 | 0 |
-| Post-Build Fixes | 64 | 64 |
-| **TOTAL** | **142** | **137** |
+| Post-Build Fixes | 80 | 80 |
+| **TOTAL** | **158** | **153** |
 
 ---
 
@@ -1501,6 +1503,29 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Login page (`login/page.tsx`): added `motion.div` wrapper with `initial={{ opacity: 0 }} animate={{ opacity: 1 }}` fade-in over 400ms — smooth entrance after landing page fade-out
 - [x] Combined effect: landing page fades out (350ms) → login page fades in (400ms) — premium crossfade feel, no hard jump cut
 - **Completed:** 2026-02-24
+
+### PB.79 — Gemini 3.0 Flash Model Upgrade
+- [x] Updated `src/lib/gemini/client.ts` — model string changed from `gemini-2.0-flash` to `gemini-3.0-flash`
+- [x] All API routes (generate, customize, proofread, apply-edits) use `generateWithGemini()` which centralizes the model — no other files needed updating
+- [x] Updated `CLAUDE_CODE_BUILD_INSTRUCTIONS.md` — code example now shows `gemini-3.0-flash`
+- [x] Updated `BUILD_PROGRESS_TRACKER.md` — Phase 5 notes now reference `gemini-3.0-flash`
+- **Completed:** 2026-02-24
+
+### PB.80 — Signup Page Entrance Animation
+- [x] Added `motion` import from `framer-motion` to `src/app/(auth)/signup/page.tsx`
+- [x] Wrapped main content `<div>` in `<motion.div>` with `initial={{ opacity: 0 }}` → `animate={{ opacity: 1 }}` (duration: 0.4s, easeOut)
+- [x] Matches login page entrance animation pattern for consistency
+- [x] All pages in the app now have Framer Motion entrance animations
+- **Completed:** 2026-02-24
+
+### SESSION 12A — Gemini 3.0 Flash Upgrade + Final Polish + Documentation Sync — COMPLETE
+- **Scope:** PB.79, PB.80
+- **Completed:** 2026-02-24
+- **Notes:** Upgraded Gemini AI model from 2.0 Flash to 3.0 Flash (single change point in gemini/client.ts). Added missing entrance animation to signup page. Verified all pages have Framer Motion animations, background animation runs on all protected pages, toast notifications have consistent styling. Updated all documentation to reflect Gemini 3.0 Flash. Stage 1 build complete — all core features implemented.
+
+---
+
+| Post-Build Fixes | 66 | 66 |
 
 ---
 
