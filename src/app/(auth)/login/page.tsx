@@ -36,11 +36,15 @@ export default function LoginPage() {
 
         if (user) {
           // Check onboarding status
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('users')
             .select('subscription_status, username')
             .eq('id', user.id)
             .single();
+
+          if (profileError) {
+            console.error('Login mount profile query failed:', profileError.message, profileError.code);
+          }
 
           if (!active) return;
 
@@ -88,11 +92,15 @@ export default function LoginPage() {
 
     // Check onboarding status before routing
     if (data.user) {
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('users')
         .select('subscription_status, username')
         .eq('id', data.user.id)
         .single();
+
+      if (profileError) {
+        console.error('Login handler profile query failed:', profileError.message, profileError.code);
+      }
 
       if (!profile || !profile.subscription_status || profile.subscription_status === 'trial') {
         toast.success('Please complete your account setup');

@@ -34,7 +34,17 @@ CREATE INDEX IF NOT EXISTS idx_activity_log_user_id ON public.activity_log(user_
 CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON public.activity_log(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_log_action_type ON public.activity_log(action_type);
 
--- 6. RLS for activity_log
+-- 6. Helper function to check admin status without RLS recursion
+-- SECURITY DEFINER bypasses RLS on the internal query, breaking the recursion loop
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- 7. RLS for activity_log
 ALTER TABLE public.activity_log ENABLE ROW LEVEL SECURITY;
 
 -- Users can insert their own activity logs
@@ -47,27 +57,18 @@ CREATE POLICY "Users can read own activity logs"
   ON public.activity_log FOR SELECT
   USING (auth.uid() = user_id);
 
--- Admins can read all activity logs (check role in users table)
+-- Admins can read all activity logs
 CREATE POLICY "Admins can read all activity logs"
   ON public.activity_log FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM public.users
-      WHERE id = auth.uid() AND role = 'admin'
-    )
-  );
+  USING (public.is_admin());
 
--- 7. Replace the existing users SELECT policy to also grant admin read access
--- (Admins need to see user names/emails in the activity log join)
--- Drop the old policy first, then create the combined one.
-DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
-
-CREATE POLICY "Users can view own profile or admin can view all"
+-- 8. Admin read access on users table (for activity log user join)
+-- Uses is_admin() helper to avoid infinite recursion
+CREATE POLICY "Admin can view all users"
   ON public.users FOR SELECT
-  USING (
-    auth.uid() = id
-    OR EXISTS (
-      SELECT 1 FROM public.users u
-      WHERE u.id = auth.uid() AND u.role = 'admin'
-    )
-  );
+  USING (auth.uid() = id OR public.is_admin());
+
+-- 9. Admin read access on narratives table
+CREATE POLICY "Admin can view all narratives"
+  ON public.narratives FOR SELECT
+  USING (auth.uid() = user_id OR public.is_admin());
