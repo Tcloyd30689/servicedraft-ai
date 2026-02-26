@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     // ══════════════════════════════════════════════
     let footerParagraph: Paragraph;
     try {
-      const logoPath = path.join(process.cwd(), 'public', 'ServiceDraft-ai-tight logo.PNG');
+      const logoPath = path.join(process.cwd(), 'public', 'ServiceDraft-Ai Vector Logo.png');
       const logoBuffer = fs.readFileSync(logoPath);
       footerParagraph = new Paragraph({
         children: [

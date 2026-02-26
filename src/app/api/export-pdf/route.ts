@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     const logoHeight = 15;   // ~0.6 in
     let logoBase64: string | null = null;
     try {
-      const logoPath = path.join(process.cwd(), 'public', 'ServiceDraft-ai-tight logo.PNG');
+      const logoPath = path.join(process.cwd(), 'public', 'ServiceDraft-Ai Vector Logo.png');
       const logoBuffer = fs.readFileSync(logoPath);
       logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
     } catch {

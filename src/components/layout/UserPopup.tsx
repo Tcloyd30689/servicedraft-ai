@@ -63,7 +63,7 @@ export default function UserPopup() {
 
       {/* Popup dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-12 w-64 bg-[var(--bg-card)] border border-[var(--accent-30)] rounded-xl backdrop-blur-md shadow-[var(--shadow-glow-md)] p-4">
+        <div className="absolute right-0 top-12 w-64 bg-[var(--bg-elevated)] border border-[var(--accent-40)] rounded-xl backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.6),var(--shadow-glow-sm)] p-4">
           <div className="mb-3 pb-3 border-b border-[var(--accent-15)]">
             <p className="text-[var(--text-primary)] font-medium text-sm truncate">
               {profile?.first_name || profile?.last_name
