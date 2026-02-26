@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw, Eye, EyeOff } from 'lucide-react';
+import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw } from 'lucide-react';
 import { findHighlightRanges, type HighlightRange } from '@/lib/highlightUtils';
 import { dispatchActivity } from '@/hooks/useActivityPulse';
 import { useNarrativeStore } from '@/stores/narrativeStore';
@@ -597,15 +597,6 @@ export default function NarrativePage() {
                     highlightActive={highlightActive}
                     issueDescriptions={issueDescriptions}
                   />
-                  {highlightRanges.length > 0 && (
-                    <button
-                      onClick={() => setHighlightActive((prev) => !prev)}
-                      className="mt-3 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer flex items-center gap-2"
-                    >
-                      {highlightActive ? <EyeOff size={13} /> : <Eye size={13} />}
-                      {highlightActive ? 'Hide' : 'Show'} Suggested Edits
-                    </button>
-                  )}
                 </>
               )}
             </LiquidCard>

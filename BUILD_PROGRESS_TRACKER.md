@@ -1667,17 +1667,16 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Badge stays visible as long as proofread data exists
 - **Completed:** 2026-02-25
 
-### S2-4.6 — Show/Hide Toggle
-- [x] Added "Show/Hide Suggested Edits" toggle link with Eye/EyeOff icons below the narrative display
-- [x] Only visible when highlight ranges exist (proofread has been run)
-- [x] Toggles `highlightActive` on/off — highlights appear/disappear with CSS opacity transition
+### S2-4.6 — Highlight Persistence
+- [x] Highlights remain visible until user clicks Apply Suggested Edits or edits the story text
+- [x] No manual dismiss button — highlights clear automatically when the narrative changes
 - [x] Updated `ProofreadResults.tsx` to handle new `{ issue, snippet }` object format for `flagged_issues`
 - **Completed:** 2026-02-25
 
 ### SESSION S2-4 — Proofread Highlighting — COMPLETE
 - **Scope:** S2-4.1 through S2-4.6
 - **Completed:** 2026-02-25
-- **Notes:** Proofread API now returns exact text snippets from the narrative for each flagged issue. NarrativeDisplay renders highlighted `<mark>` elements with pulsing accent-colored animation, hover tooltips showing issue descriptions. User can toggle highlights on/off via "Show/Hide Suggested Edits" link below the narrative. Highlights clear when narrative text changes (regenerate, customize, edit, apply edits). Counter badge shows issue count with color-coded rating. Works in both Block and C/C/C format views. All colors use CSS variables for accent color compatibility.
+- **Notes:** Proofread API now returns exact text snippets from the narrative for each flagged issue. NarrativeDisplay renders highlighted `<mark>` elements with pulsing accent-colored animation, hover tooltips showing issue descriptions. Highlights persist until user applies suggested edits, manually edits the story, regenerates, or customizes. Counter badge shows issue count with color-coded rating. Works in both Block and C/C/C format views. All colors use CSS variables for accent color compatibility.
 
 ---
 
