@@ -13,6 +13,7 @@ import Input from '@/components/ui/Input';
 import AutoTextarea from '@/components/ui/AutoTextarea';
 import StoryTypeSelector from '@/components/input/StoryTypeSelector';
 import ConditionalField from '@/components/input/ConditionalField';
+import PreGenCustomization from '@/components/input/PreGenCustomization';
 
 export default function InputPage() {
   const router = useRouter();
@@ -163,6 +164,8 @@ export default function InputPage() {
                 </>
               )}
             </LiquidCard>
+
+            <PreGenCustomization />
 
             {/* Generate Button */}
             <div className="flex justify-center">
