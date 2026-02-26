@@ -3,12 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Activity, Users, BarChart3, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Shield, Activity, Users, BarChart3, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Search, Mail, Lock, Unlock, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
 import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import Modal from '@/components/ui/Modal';
 
 type TabKey = 'activity' | 'users' | 'analytics';
 
@@ -54,6 +56,35 @@ interface ActivityRow {
 
 const PAGE_SIZE = 25;
 
+interface AdminUser {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  position: string | null;
+  subscription_status: 'active' | 'trial' | 'expired' | 'bypass';
+  is_restricted: boolean;
+  role: 'user' | 'admin';
+  created_at: string;
+  narrative_count: number;
+  last_active: string | null;
+}
+
+interface UserDetailData {
+  profile: Record<string, unknown>;
+  recent_activity: Array<Record<string, unknown>>;
+  recent_narratives: Array<Record<string, unknown>>;
+}
+
+const SUB_BADGE: Record<string, { bg: string; text: string }> = {
+  active: { bg: 'rgba(22,163,74,0.15)', text: '#16a34a' },
+  trial: { bg: 'rgba(234,179,8,0.15)', text: '#eab308' },
+  expired: { bg: 'rgba(239,68,68,0.15)', text: '#ef4444' },
+  bypass: { bg: 'rgba(59,130,246,0.15)', text: '#3b82f6' },
+};
+
+type UserSortColumn = 'name' | 'email' | 'position' | 'created_at' | 'subscription_status' | 'narrative_count' | 'last_active';
+
 export default function AdminPage() {
   const router = useRouter();
   const { profile, loading: authLoading } = useAuth();
@@ -68,6 +99,18 @@ export default function AdminPage() {
   const [filterAction, setFilterAction] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  // User management state
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [userSortCol, setUserSortCol] = useState<UserSortColumn>('created_at');
+  const [userSortAsc, setUserSortAsc] = useState(false);
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
+  const [userDetails, setUserDetails] = useState<Record<string, UserDetailData>>({});
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; email: string; step: number } | null>(null);
+  const [restrictTarget, setRestrictTarget] = useState<{ id: string; name: string; restricted: boolean } | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Redirect non-admin users
   useEffect(() => {
@@ -185,6 +228,200 @@ export default function AdminPage() {
     return action
       .replace(/_/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+  // ─── User Management ─────────────────────────────────────────
+  const fetchUsers = useCallback(async () => {
+    setUsersLoading(true);
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list_users' }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setUsers(json.data);
+      } else {
+        console.error('Failed to fetch users:', json.error);
+      }
+    } catch (err) {
+      console.error('User fetch error:', err);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
+
+  const fetchUserDetails = useCallback(async (userId: string) => {
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_user_details', userId }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setUserDetails((prev) => ({ ...prev, [userId]: json.data }));
+      }
+    } catch (err) {
+      console.error('User detail fetch error:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'users' && profile?.role === 'admin' && users.length === 0 && !usersLoading) {
+      fetchUsers();
+    }
+  }, [activeTab, profile, users.length, usersLoading, fetchUsers]);
+
+  const handleExpandUser = (userId: string) => {
+    if (expandedUserId === userId) {
+      setExpandedUserId(null);
+      return;
+    }
+    setExpandedUserId(userId);
+    if (!userDetails[userId]) {
+      fetchUserDetails(userId);
+    }
+  };
+
+  const adminAction = async (action: string, params: Record<string, unknown>) => {
+    const res = await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...params }),
+    });
+    return res.json();
+  };
+
+  const handlePasswordReset = async (email: string) => {
+    setActionLoading(`reset-${email}`);
+    try {
+      const json = await adminAction('send_password_reset', { email });
+      if (json.success) {
+        toast.success(`Password reset sent to ${email}`);
+      } else {
+        toast.error(json.error || 'Failed to send reset');
+      }
+    } catch {
+      toast.error('Failed to send reset');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRestrict = async () => {
+    if (!restrictTarget) return;
+    setActionLoading(`restrict-${restrictTarget.id}`);
+    try {
+      const json = await adminAction('restrict_user', {
+        userId: restrictTarget.id,
+        restricted: !restrictTarget.restricted,
+      });
+      if (json.success) {
+        toast.success(restrictTarget.restricted ? 'User unrestricted' : 'User restricted');
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === restrictTarget.id ? { ...u, is_restricted: !restrictTarget.restricted } : u,
+          ),
+        );
+      } else {
+        toast.error(json.error || 'Failed to update restriction');
+      }
+    } catch {
+      toast.error('Failed to update restriction');
+    } finally {
+      setActionLoading(null);
+      setRestrictTarget(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setActionLoading(`delete-${deleteTarget.id}`);
+    try {
+      const json = await adminAction('delete_user', { userId: deleteTarget.id });
+      if (json.success) {
+        toast.success('User deleted permanently');
+        setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+        if (expandedUserId === deleteTarget.id) setExpandedUserId(null);
+      } else {
+        toast.error(json.error || 'Failed to delete user');
+      }
+    } catch {
+      toast.error('Failed to delete user');
+    } finally {
+      setActionLoading(null);
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleSubscriptionChange = async (userId: string, status: string) => {
+    setActionLoading(`sub-${userId}`);
+    try {
+      const json = await adminAction('change_subscription', { userId, status });
+      if (json.success) {
+        toast.success(`Subscription updated to ${status}`);
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === userId
+              ? { ...u, subscription_status: status as AdminUser['subscription_status'] }
+              : u,
+          ),
+        );
+      } else {
+        toast.error(json.error || 'Failed to update subscription');
+      }
+    } catch {
+      toast.error('Failed to update subscription');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Filtered and sorted users
+  const filteredUsers = users.filter((u) => {
+    if (!userSearch.trim()) return true;
+    const q = userSearch.toLowerCase();
+    const name = [u.first_name, u.last_name].filter(Boolean).join(' ').toLowerCase();
+    return name.includes(q) || u.email.toLowerCase().includes(q);
+  });
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    const dir = userSortAsc ? 1 : -1;
+    switch (userSortCol) {
+      case 'name': {
+        const aName = [a.first_name, a.last_name].filter(Boolean).join(' ');
+        const bName = [b.first_name, b.last_name].filter(Boolean).join(' ');
+        return aName.localeCompare(bName) * dir;
+      }
+      case 'email':
+        return a.email.localeCompare(b.email) * dir;
+      case 'position':
+        return (a.position || '').localeCompare(b.position || '') * dir;
+      case 'created_at':
+        return (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * dir;
+      case 'subscription_status':
+        return a.subscription_status.localeCompare(b.subscription_status) * dir;
+      case 'narrative_count':
+        return (a.narrative_count - b.narrative_count) * dir;
+      case 'last_active': {
+        const aTime = a.last_active ? new Date(a.last_active).getTime() : 0;
+        const bTime = b.last_active ? new Date(b.last_active).getTime() : 0;
+        return (aTime - bTime) * dir;
+      }
+      default:
+        return 0;
+    }
+  });
+
+  const toggleUserSort = (col: UserSortColumn) => {
+    if (userSortCol === col) {
+      setUserSortAsc(!userSortAsc);
+    } else {
+      setUserSortCol(col);
+      setUserSortAsc(true);
+    }
   };
 
   // Show loading while auth resolves
@@ -416,12 +653,292 @@ export default function AdminPage() {
         )}
 
         {activeTab === 'users' && (
-          <LiquidCard size="standard">
-            <div className="flex flex-col items-center justify-center py-16">
-              <Users size={48} className="text-[var(--accent-30)] mb-4" />
-              <p className="text-[var(--text-muted)] text-lg">User Management</p>
-              <p className="text-[var(--text-muted)] text-sm mt-1">Coming in next session</p>
+          <LiquidCard size="standard" className="!rounded-[16px]">
+            {/* Search + Refresh */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-5">
+              <div className="relative flex-1">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
+                />
+              </div>
+              <Button variant="ghost" size="small" onClick={fetchUsers} disabled={usersLoading}>
+                Refresh
+              </Button>
             </div>
+
+            {/* Results count */}
+            <p className="text-xs text-[var(--text-muted)] mb-3">
+              {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
+              {userSearch.trim() ? ' matching' : ' total'}
+            </p>
+
+            {/* Table */}
+            {usersLoading ? (
+              <div className="py-12">
+                <LoadingSpinner size="medium" message="Loading users..." />
+              </div>
+            ) : sortedUsers.length === 0 ? (
+              <p className="text-center text-[var(--text-muted)] py-12">No users found.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-[var(--text-muted)] text-xs uppercase tracking-wider border-b border-[var(--accent-15)]">
+                      {([
+                        ['name', 'Name'],
+                        ['email', 'Email'],
+                        ['position', 'Position'],
+                        ['created_at', 'Signed Up'],
+                        ['subscription_status', 'Status'],
+                        ['narrative_count', 'Narratives'],
+                        ['last_active', 'Last Active'],
+                      ] as [UserSortColumn, string][]).map(([col, label]) => (
+                        <th
+                          key={col}
+                          className="pb-3 pr-4 cursor-pointer hover:text-[var(--text-secondary)] transition-colors select-none"
+                          onClick={() => toggleUserSort(col)}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {label}
+                            {userSortCol === col && (
+                              userSortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                            )}
+                          </span>
+                        </th>
+                      ))}
+                      <th className="pb-3 pr-4">Flags</th>
+                      <th className="pb-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedUsers.map((user) => {
+                      const userName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'No name';
+                      const subBadge = SUB_BADGE[user.subscription_status] || SUB_BADGE.trial;
+                      const details = userDetails[user.id];
+
+                      return (
+                        <AnimatePresence key={user.id}>
+                          <motion.tr
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="border-b border-[var(--accent-10)] hover:bg-[var(--accent-10)] transition-colors cursor-pointer"
+                            onClick={() => handleExpandUser(user.id)}
+                          >
+                            <td className="py-3 pr-4 text-[var(--text-primary)] font-medium">{userName}</td>
+                            <td className="py-3 pr-4 text-[var(--text-muted)]">{user.email}</td>
+                            <td className="py-3 pr-4 text-[var(--text-muted)]">{user.position || '—'}</td>
+                            <td className="py-3 pr-4 text-[var(--text-secondary)] whitespace-nowrap">
+                              {formatDate(user.created_at)}
+                            </td>
+                            <td className="py-3 pr-4">
+                              <span
+                                className="inline-block px-2 py-0.5 rounded text-xs font-medium capitalize"
+                                style={{ background: subBadge.bg, color: subBadge.text }}
+                              >
+                                {user.subscription_status}
+                              </span>
+                            </td>
+                            <td className="py-3 pr-4 text-[var(--text-secondary)] text-center">
+                              {user.narrative_count}
+                            </td>
+                            <td className="py-3 pr-4 text-[var(--text-muted)] whitespace-nowrap">
+                              {user.last_active ? formatDate(user.last_active) : '—'}
+                            </td>
+                            <td className="py-3 pr-4">
+                              {user.is_restricted && (
+                                <span
+                                  className="inline-block px-2 py-0.5 rounded text-xs font-medium"
+                                  style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}
+                                >
+                                  RESTRICTED
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center gap-1.5">
+                                {/* Password Reset */}
+                                <button
+                                  onClick={() => handlePasswordReset(user.email)}
+                                  disabled={actionLoading === `reset-${user.email}`}
+                                  className="p-1.5 rounded hover:bg-[var(--accent-15)] text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-all cursor-pointer disabled:opacity-50"
+                                  title="Send password reset"
+                                >
+                                  <Mail size={14} />
+                                </button>
+
+                                {/* Toggle Restrict */}
+                                <button
+                                  onClick={() =>
+                                    setRestrictTarget({
+                                      id: user.id,
+                                      name: userName,
+                                      restricted: user.is_restricted,
+                                    })
+                                  }
+                                  disabled={actionLoading === `restrict-${user.id}`}
+                                  className="p-1.5 rounded hover:bg-[var(--accent-15)] text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-all cursor-pointer disabled:opacity-50"
+                                  title={user.is_restricted ? 'Unrestrict user' : 'Restrict user'}
+                                >
+                                  {user.is_restricted ? <Unlock size={14} /> : <Lock size={14} />}
+                                </button>
+
+                                {/* Subscription Change */}
+                                <select
+                                  value={user.subscription_status}
+                                  onChange={(e) => handleSubscriptionChange(user.id, e.target.value)}
+                                  disabled={actionLoading === `sub-${user.id}`}
+                                  className="px-1.5 py-1 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded text-xs text-[var(--text-secondary)] cursor-pointer focus:outline-none focus:border-[var(--accent-hover)] disabled:opacity-50"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <option value="active">Active</option>
+                                  <option value="trial">Trial</option>
+                                  <option value="expired">Expired</option>
+                                  <option value="bypass">Bypass</option>
+                                </select>
+
+                                {/* Delete */}
+                                <button
+                                  onClick={() =>
+                                    setDeleteTarget({
+                                      id: user.id,
+                                      name: userName,
+                                      email: user.email,
+                                      step: 1,
+                                    })
+                                  }
+                                  disabled={actionLoading === `delete-${user.id}`}
+                                  className="p-1.5 rounded hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-500 transition-all cursor-pointer disabled:opacity-50"
+                                  title="Delete user"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </motion.tr>
+
+                          {/* Expanded detail row */}
+                          {expandedUserId === user.id && (
+                            <motion.tr
+                              key={`${user.id}-detail`}
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                            >
+                              <td colSpan={9} className="p-4 bg-[var(--bg-elevated)]">
+                                {!details ? (
+                                  <LoadingSpinner size="small" message="Loading details..." />
+                                ) : (
+                                  <div className="space-y-4">
+                                    {/* Profile Info */}
+                                    <div>
+                                      <h4 className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2 font-semibold">
+                                        Profile
+                                      </h4>
+                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                        {([
+                                          ['User ID', user.id],
+                                          ['Username', (details.profile as Record<string, unknown>)?.username || '—'],
+                                          ['Location', (details.profile as Record<string, unknown>)?.location || '—'],
+                                          ['Role', user.role],
+                                        ] as [string, string][]).map(([label, val]) => (
+                                          <div key={label}>
+                                            <p className="text-[var(--text-muted)] text-xs">{label}</p>
+                                            <p className="text-[var(--text-secondary)] font-mono text-xs break-all">
+                                              {val}
+                                            </p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    {/* Accent divider */}
+                                    <div className="h-px bg-[var(--accent-30)]" />
+
+                                    {/* Recent Activity */}
+                                    <div>
+                                      <h4 className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2 font-semibold">
+                                        Recent Activity (Last 5)
+                                      </h4>
+                                      {details.recent_activity.length === 0 ? (
+                                        <p className="text-[var(--text-muted)] text-xs">No activity recorded.</p>
+                                      ) : (
+                                        <div className="space-y-1.5">
+                                          {details.recent_activity.map((a, i) => (
+                                            <div
+                                              key={i}
+                                              className="flex items-center gap-3 text-xs text-[var(--text-secondary)]"
+                                            >
+                                              <span className="text-[var(--text-muted)] whitespace-nowrap">
+                                                {formatDate(a.created_at as string)}
+                                              </span>
+                                              <span className="inline-block px-2 py-0.5 rounded bg-[var(--accent-10)] text-[var(--accent-bright)] font-medium">
+                                                {formatActionLabel(a.action_type as string)}
+                                              </span>
+                                              {typeof a.output_preview === 'string' && a.output_preview && (
+                                                <span className="truncate max-w-[300px] text-[var(--text-muted)]">
+                                                  {a.output_preview}
+                                                </span>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Accent divider */}
+                                    <div className="h-px bg-[var(--accent-30)]" />
+
+                                    {/* Recent Narratives */}
+                                    <div>
+                                      <h4 className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2 font-semibold">
+                                        Recent Narratives (Last 5)
+                                      </h4>
+                                      {details.recent_narratives.length === 0 ? (
+                                        <p className="text-[var(--text-muted)] text-xs">No narratives saved.</p>
+                                      ) : (
+                                        <div className="space-y-1.5">
+                                          {details.recent_narratives.map((n, i) => (
+                                            <div key={i} className="text-xs text-[var(--text-secondary)]">
+                                              <span className="text-[var(--text-muted)] mr-2">
+                                                {formatDate(n.created_at as string)}
+                                              </span>
+                                              <span className="font-medium mr-2">
+                                                {[n.vehicle_year, n.vehicle_make, n.vehicle_model]
+                                                  .filter(Boolean)
+                                                  .join(' ') || 'No vehicle'}
+                                              </span>
+                                              {typeof n.ro_number === 'string' && n.ro_number && (
+                                                <span className="text-[var(--text-muted)] mr-2">
+                                                  RO# {n.ro_number}
+                                                </span>
+                                              )}
+                                              {typeof n.full_narrative === 'string' && n.full_narrative && (
+                                                <span className="text-[var(--text-muted)] truncate inline-block max-w-[400px] align-bottom">
+                                                  {n.full_narrative.substring(0, 100)}...
+                                                </span>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </td>
+                            </motion.tr>
+                          )}
+                        </AnimatePresence>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </LiquidCard>
         )}
 
@@ -434,6 +951,82 @@ export default function AdminPage() {
             </div>
           </LiquidCard>
         )}
+        {/* Restrict Confirmation Modal */}
+        <Modal
+          isOpen={!!restrictTarget}
+          onClose={() => setRestrictTarget(null)}
+          title={restrictTarget?.restricted ? 'Unrestrict User' : 'Restrict User'}
+          width="max-w-[420px]"
+        >
+          <p className="text-[var(--text-secondary)] text-sm mb-5">
+            {restrictTarget?.restricted
+              ? `Unrestrict ${restrictTarget?.name}? They will be able to generate narratives again.`
+              : `Restrict ${restrictTarget?.name}? They won't be able to generate narratives.`}
+          </p>
+          <div className="flex gap-3 justify-end">
+            <Button variant="ghost" size="small" onClick={() => setRestrictTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant={restrictTarget?.restricted ? 'primary' : 'secondary'}
+              size="small"
+              onClick={handleRestrict}
+              disabled={!!actionLoading}
+            >
+              {restrictTarget?.restricted ? 'Unrestrict' : 'Restrict'}
+            </Button>
+          </div>
+        </Modal>
+
+        {/* Delete Confirmation Modal — Two-Step */}
+        <Modal
+          isOpen={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          title="Delete User"
+          width="max-w-[460px]"
+        >
+          {deleteTarget?.step === 1 ? (
+            <>
+              <p className="text-[var(--text-secondary)] text-sm mb-2">
+                Are you sure you want to delete this user? This cannot be undone.
+              </p>
+              <div className="bg-[var(--bg-input)] rounded-lg p-3 mb-5 text-sm">
+                <p className="text-[var(--text-primary)] font-medium">{deleteTarget?.name}</p>
+                <p className="text-[var(--text-muted)]">{deleteTarget?.email}</p>
+              </div>
+              <div className="flex gap-3 justify-end">
+                <Button variant="ghost" size="small" onClick={() => setDeleteTarget(null)}>
+                  Cancel
+                </Button>
+                <button
+                  onClick={() => setDeleteTarget((prev) => (prev ? { ...prev, step: 2 } : null))}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500/20 text-red-500 hover:bg-red-500/30 transition-all cursor-pointer"
+                >
+                  Continue
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-red-400 text-sm font-medium mb-4">
+                Final confirmation: This will permanently delete {deleteTarget?.name} (
+                {deleteTarget?.email}) and all their data.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button variant="ghost" size="small" onClick={() => setDeleteTarget(null)}>
+                  Cancel
+                </Button>
+                <button
+                  onClick={handleDelete}
+                  disabled={!!actionLoading}
+                  className="px-4 py-2 rounded-lg text-sm font-bold bg-red-600 text-white hover:bg-red-700 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  DELETE PERMANENTLY
+                </button>
+              </div>
+            </>
+          )}
+        </Modal>
       </motion.div>
     </div>
   );

@@ -26,12 +26,13 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-26
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 85 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete)
+**Overall Progress:** 73 / 78 tasks complete (+ 85 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
 **Stage 2 Sprint S2-5:** COMPLETE — Email export via Resend integration with professional HTML template
 **Stage 2 Sprint S2-6A:** COMPLETE — Admin dashboard with activity logging, route protection, and restriction check
+**Stage 2 Sprint S2-6B:** COMPLETE — Admin user management: list, restrict, delete, password reset, subscription change
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1145,7 +1146,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Stage 2 Sprint S2-4 | 6 | 6 |
 | Stage 2 Sprint S2-5 | 5 | 5 |
 | Stage 2 Sprint S2-6A | 7 | 7 |
-| **TOTAL** | **186** | **181** |
+| Stage 2 Sprint S2-6B | 4 | 4 |
+| **TOTAL** | **190** | **185** |
 
 ---
 
@@ -1698,8 +1700,9 @@ This file is a living document that Claude Code reads at the start of every sess
 | Stage 2 Sprint S2-4 | 6 | 6 |
 | Stage 2 Sprint S2-5 | 5 | 5 |
 | Stage 2 Sprint S2-6A | 7 | 7 |
+| Stage 2 Sprint S2-6B | 4 | 4 |
 | Post-Build Fixes | 85 | 85 |
-| **TOTAL** | **186** | **181** |
+| **TOTAL** | **190** | **185** |
 
 ---
 
@@ -1808,6 +1811,55 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** S2-6A.1 through S2-6A.7
 - **Completed:** 2026-02-26
 - **Notes:** Admin dashboard with role-based access control. Activity logger records all user actions (generate, regenerate, save, customize, proofread, export, login) as fire-and-forget inserts. Admin page shows full activity log with filtering, search, sort, pagination, and expandable detail rows. Admin Panel link in UserPopup visible only to admin users. Generate API checks is_restricted flag and returns 403 if restricted. SQL migration documents the schema (manually created tables + new RLS policies).
+
+---
+
+## Stage 2 Sprint S2-6B — Admin Dashboard: User Management — COMPLETE
+
+### S2-6B.1 — Admin API Route
+- [x] Created `src/app/api/admin/route.ts` with service role Supabase client
+- [x] Admin verification: reads user session via server client, checks role = 'admin' before processing
+- [x] `list_users` action: returns all users with narrative count and last activity date (enriched via separate queries on narratives and activity_log tables)
+- [x] `get_user_details` action: returns full profile, 5 most recent activity log entries, and 5 most recent saved narratives for a given user
+- [x] `send_password_reset` action: generates recovery link via `auth.admin.generateLink`, sends branded email via Resend (falls back to Supabase built-in if Resend not configured)
+- [x] `restrict_user` action: updates `is_restricted` column on users table
+- [x] `delete_user` action: deletes from Supabase Auth via `auth.admin.deleteUser` (cascades to users table)
+- [x] `change_subscription` action: updates `subscription_status` on users table (validates: active, trial, expired, bypass)
+- [x] All actions return `{ success: boolean, data?: any, error?: string }`
+- **Completed:** 2026-02-26
+
+### S2-6B.2 — User Management Table & Search
+- [x] Fetches user list from `/api/admin` on tab mount
+- [x] Table columns: Name, Email, Position, Signup Date, Subscription Status, Narratives Generated, Last Active, Flags, Actions
+- [x] Subscription status shown as colored badge: active (green), trial (yellow), expired (red), bypass (blue)
+- [x] Restricted users show red "RESTRICTED" badge in Flags column
+- [x] Search bar filters by name or email (client-side)
+- [x] All columns sortable — click header to sort, click again to toggle direction (with ChevronUp/ChevronDown indicator)
+- [x] Results count display, Refresh button
+- **Completed:** 2026-02-26
+
+### S2-6B.3 — User Action Buttons
+- [x] Send Password Reset — Mail icon button, sends reset email, shows success/error toast
+- [x] Toggle Restrict — Lock/Unlock icon button with confirmation modal dialog ("Restrict this user?" / "Unrestrict this user?"), updates local state on success
+- [x] Change Subscription — inline select dropdown showing current status, auto-saves on change with toast confirmation
+- [x] Delete User — red Trash2 icon button with TWO-STEP confirmation: first modal shows user name/email with "Continue" button, second step shows red "DELETE PERMANENTLY" button
+- [x] All action buttons use `e.stopPropagation()` to prevent row expansion when clicking actions
+- [x] Loading states (disabled + opacity) while actions are in progress
+- **Completed:** 2026-02-26
+
+### S2-6B.4 — User Detail Expansion
+- [x] Clicking a user row (not on action buttons) expands to show detail section
+- [x] Full profile information: User ID, Username, Location, Role
+- [x] 5 most recent activity log entries with date, action badge, and output preview
+- [x] 5 most recent saved narratives with date, vehicle info, RO#, and narrative preview (truncated to 100 chars)
+- [x] Accent-colored dividers between profile, activity, and narrative sections
+- [x] Loading spinner while details are being fetched, with caching (details fetched once per user per session)
+- **Completed:** 2026-02-26
+
+### SESSION S2-6B — Admin Dashboard: User Management — COMPLETE
+- **Scope:** S2-6B.1 through S2-6B.4
+- **Completed:** 2026-02-26
+- **Notes:** Admin user management with full CRUD operations. API route uses service role client for privileged operations (password reset, user deletion) while verifying admin role via session. User table supports search, sort, expandable detail rows. Two-step delete confirmation prevents accidental user deletion. Restrict/unrestrict with confirmation dialog. Subscription status changes auto-save. Password reset emails sent via Resend with branded template (Supabase fallback if Resend unavailable).
 
 ---
 
