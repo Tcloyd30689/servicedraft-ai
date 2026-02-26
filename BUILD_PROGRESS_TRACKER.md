@@ -26,9 +26,10 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-25
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 83 post-build fixes applied, + 5 Stage 2 tasks complete)
+**Overall Progress:** 73 / 78 tasks complete (+ 83 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
+**Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -42,6 +43,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Session 12A:** COMPLETE — Gemini 3-flash-preview upgrade, signup page animation + logo doubling, final documentation sync (PB.79–PB.81)
 **Session 13A:** COMPLETE — Pre-generation output customization panel on input page (PB.82)
 **Hotfix 14A:** COMPLETE — Save narrative upsert on RO#, export freeze fix, UPDATE RLS policy, dashboard updated_at ordering (PB.83)
+**Session 15A:** COMPLETE — Proofread highlighting with 30-second fade, highlight counter badge, clear highlights button (PB.84)
 
 ---
 
@@ -1620,9 +1622,71 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ---
 
+## Stage 2 Sprint S2-4 — Audit/Proofread Highlighting — COMPLETE
+
+### PB.84 — Proofread Highlighting with 30-Second Fade
+
+### S2-4.1 — Proofread API Snippet Extraction
+- [x] Updated `PROOFREAD_SYSTEM_PROMPT` in `src/constants/prompts.ts` to instruct AI to include exact text snippets enclosed in `[[double brackets]]` for each flagged issue
+- [x] Updated `src/app/api/proofread/route.ts`: added `extractSnippet()` function to parse `[[snippet]]` from each flagged issue string
+- [x] Changed API response format: `flagged_issues` now returns `{ issue: string, snippet: string }[]` instead of `string[]`
+- [x] Graceful fallback: if AI omits brackets for an issue, `snippet` defaults to empty string (issue still shows in results, just no highlight)
+- **Completed:** 2026-02-25
+
+### S2-4.2 — Highlight Utility
+- [x] Created `src/lib/highlightUtils.ts` with `findHighlightRanges(narrativeText, snippets)` function
+- [x] Returns `HighlightRange[]` with `{ start, end, issueIndex }` objects
+- [x] Case-insensitive matching via `toLowerCase()` comparison
+- [x] Overlapping ranges merged automatically (sorted by start, extended on overlap)
+- [x] Non-matching snippets (AI hallucinated text) silently skipped
+- **Completed:** 2026-02-25
+
+### S2-4.3 — NarrativeDisplay Highlight Rendering
+- [x] Added `highlights`, `highlightActive`, and `issueDescriptions` props to `NarrativeDisplay`
+- [x] Created `HighlightedText` component: splits narrative text at highlight boundaries, wraps matches in `<mark>` elements
+- [x] Highlight styling: `var(--accent-30)` background, `2px solid var(--accent-primary)` bottom border, pulsing animation
+- [x] Pulsing animation: `@keyframes highlightPulse` in `globals.css` — opacity oscillates 0.2 to 0.4 over 2 seconds
+- [x] Tooltip on hover: shows issue description in elevated panel with accent border and glow shadow
+- [x] CSS fade-out: `transition: opacity 1s ease-out` when `highlightActive` becomes false
+- [x] Created `getSectionHighlights()` for C/C/C format — finds matching highlight text within each individual section
+- [x] Works in both Block and C/C/C format views
+- **Completed:** 2026-02-25
+
+### S2-4.4 — Highlight Lifecycle Management
+- [x] Added highlight state to narrative page: `highlightRanges`, `highlightActive`, `issueDescriptions`
+- [x] After proofread completes: extracts snippets → computes ranges → activates highlights
+- [x] 30-second timer starts on highlight activation → sets `highlightActive = false` (triggers CSS fade)
+- [x] 1-second cleanup timer after fade → clears `highlightRanges` array (removes `<mark>` from DOM)
+- [x] Highlights cleared immediately on: regenerate, customize, apply edits, manual edit
+- [x] Re-proofread clears old highlights before applying new ones
+- [x] Timer cleanup on component unmount via `useEffect` return
+- **Completed:** 2026-02-25
+
+### S2-4.5 — Highlight Counter Badge
+- [x] Added badge next to "REVIEW & PROOFREAD" button showing issue count after proofread
+- [x] Badge color: green (`#16a34a`) for PASS, yellow (`#ca8a04`) for NEEDS_REVIEW, red (`#dc2626`) for FAIL
+- [x] Shows "PASS" for zero issues, "N issue(s)" for flagged issues
+- [x] Badge fades with highlights after 30 seconds
+- **Completed:** 2026-02-25
+
+### S2-4.6 — Manual Dismiss
+- [x] Added "Clear Highlights" ghost link with × icon below the narrative display
+- [x] Only visible when highlights are active
+- [x] Clicking immediately fades and removes all highlights without waiting 30 seconds
+- [x] Updated `ProofreadResults.tsx` to handle new `{ issue, snippet }` object format for `flagged_issues`
+- **Completed:** 2026-02-25
+
+### SESSION S2-4 — Proofread Highlighting — COMPLETE
+- **Scope:** S2-4.1 through S2-4.6
+- **Completed:** 2026-02-25
+- **Notes:** Proofread API now returns exact text snippets from the narrative for each flagged issue. NarrativeDisplay renders highlighted `<mark>` elements with pulsing accent-colored animation, hover tooltips showing issue descriptions, and a smooth 30-second auto-fade. Highlights clear immediately when the narrative text changes (regenerate, customize, edit, apply edits). Counter badge shows issue count with color-coded rating. "Clear Highlights" button for manual dismiss. Works in both Block and C/C/C format views. All colors use CSS variables for accent color compatibility.
+
+---
+
 | Stage 2 Sprint S2-1 | 5 | 5 |
-| Post-Build Fixes | 83 | 83 |
-| **TOTAL** | **166** | **161** |
+| Stage 2 Sprint S2-4 | 6 | 6 |
+| Post-Build Fixes | 84 | 84 |
+| **TOTAL** | **173** | **168** |
 
 ---
 

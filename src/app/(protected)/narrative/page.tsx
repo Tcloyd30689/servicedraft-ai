@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw } from 'lucide-react';
+import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw, X } from 'lucide-react';
+import { findHighlightRanges, type HighlightRange } from '@/lib/highlightUtils';
 import { dispatchActivity } from '@/hooks/useActivityPulse';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,8 +21,13 @@ import ShareExportModal from '@/components/narrative/ShareExportModal';
 import Modal from '@/components/ui/Modal';
 import type { NarrativeData } from '@/stores/narrativeStore';
 
+interface ParsedIssue {
+  issue: string;
+  snippet: string;
+}
+
 interface ProofreadData {
-  flagged_issues: string[];
+  flagged_issues: ParsedIssue[];
   suggested_edits: string[];
   overall_rating: 'PASS' | 'NEEDS_REVIEW' | 'FAIL';
   summary: string;
@@ -50,6 +56,13 @@ export default function NarrativePage() {
   const [showCustomization, setShowCustomization] = useState(false);
   const [proofreadData, setProofreadData] = useState<ProofreadData | null>(null);
   const [animateProofread, setAnimateProofread] = useState(false);
+
+  // Highlight state
+  const [highlightRanges, setHighlightRanges] = useState<HighlightRange[]>([]);
+  const [highlightActive, setHighlightActive] = useState(false);
+  const [issueDescriptions, setIssueDescriptions] = useState<string[]>([]);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const highlightCleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -104,6 +117,14 @@ export default function NarrativePage() {
     }
   }, [state.compiledDataBlock, state.storyType, state.narrative, state.generationId, router, generateNarrative]);
 
+  // Cleanup highlight timers on unmount
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+      if (highlightCleanupRef.current) clearTimeout(highlightCleanupRef.current);
+    };
+  }, []);
+
   // Navigation guard: browser close / back button
   useEffect(() => {
     if (state.isSaved) return;
@@ -147,10 +168,20 @@ export default function NarrativePage() {
     }
   };
 
+  // Clear all highlights immediately
+  const clearHighlights = useCallback(() => {
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    if (highlightCleanupRef.current) clearTimeout(highlightCleanupRef.current);
+    setHighlightActive(false);
+    setHighlightRanges([]);
+    setIssueDescriptions([]);
+  }, []);
+
   // Regenerate — re-runs API with original input
   const handleRegenerate = async () => {
     setIsRegenerating(true);
     setProofreadData(null);
+    clearHighlights();
     dispatchActivity(0.8);
     try {
       const res = await fetch('/api/generate', {
@@ -196,6 +227,7 @@ export default function NarrativePage() {
     }
 
     setIsCustomizing(true);
+    clearHighlights();
     dispatchActivity(0.7);
     try {
       const res = await fetch('/api/customize', {
@@ -232,6 +264,7 @@ export default function NarrativePage() {
     if (!state.narrative) return;
 
     setIsProofreading(true);
+    clearHighlights();
     dispatchActivity(0.6);
     try {
       const res = await fetch('/api/proofread', {
@@ -253,6 +286,27 @@ export default function NarrativePage() {
       const data: ProofreadData = await res.json();
       setProofreadData(data);
       setAnimateProofread(true);
+
+      // Extract snippets and compute highlight ranges
+      const snippets = data.flagged_issues.map((item) => item.snippet);
+      const descriptions = data.flagged_issues.map((item) => item.issue);
+      const ranges = findHighlightRanges(state.narrative.block_narrative, snippets);
+
+      if (ranges.length > 0) {
+        setHighlightRanges(ranges);
+        setIssueDescriptions(descriptions);
+        setHighlightActive(true);
+
+        // Start 30-second timer to fade out
+        highlightTimerRef.current = setTimeout(() => {
+          setHighlightActive(false);
+          // After 1s fade completes, remove marks from DOM
+          highlightCleanupRef.current = setTimeout(() => {
+            setHighlightRanges([]);
+            setIssueDescriptions([]);
+          }, 1000);
+        }, 30000);
+      }
     } catch {
       toast.error('Failed to proofread. Please try again.');
     } finally {
@@ -265,6 +319,7 @@ export default function NarrativePage() {
     if (!state.narrative || !proofreadData?.suggested_edits?.length) return;
 
     setIsApplyingEdits(true);
+    clearHighlights();
     dispatchActivity(0.7);
     try {
       const res = await fetch('/api/apply-edits', {
@@ -373,6 +428,7 @@ export default function NarrativePage() {
     setNarrative(updated);
     setAnimateNarrative(false);
     setProofreadData(null);
+    clearHighlights();
     toast.success('Story updated');
   };
 
@@ -460,16 +516,39 @@ export default function NarrativePage() {
 
             {/* Review & Proofread */}
             <LiquidCard size="compact">
-              <Button
-                variant="secondary"
-                size="fullWidth"
-                onClick={handleProofread}
-                disabled={isAnyLoading}
-                className="flex items-center justify-center gap-2"
-              >
-                <Search size={16} />
-                {isProofreading ? 'REVIEWING...' : 'REVIEW & PROOFREAD STORY'}
-              </Button>
+              <div className="relative">
+                <Button
+                  variant="secondary"
+                  size="fullWidth"
+                  onClick={handleProofread}
+                  disabled={isAnyLoading}
+                  className="flex items-center justify-center gap-2"
+                >
+                  <Search size={16} />
+                  {isProofreading ? 'REVIEWING...' : 'REVIEW & PROOFREAD STORY'}
+                </Button>
+
+                {/* Highlight counter badge */}
+                {proofreadData && !isProofreading && (
+                  <span
+                    className="absolute -top-2 -right-2 text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
+                    style={{
+                      backgroundColor:
+                        proofreadData.overall_rating === 'PASS'
+                          ? '#16a34a'
+                          : proofreadData.overall_rating === 'NEEDS_REVIEW'
+                            ? '#ca8a04'
+                            : '#dc2626',
+                      transition: 'opacity 1s ease-out',
+                      opacity: highlightActive || highlightRanges.length === 0 ? 1 : 0,
+                    }}
+                  >
+                    {proofreadData.flagged_issues.length === 0
+                      ? 'PASS'
+                      : `${proofreadData.flagged_issues.length} issue${proofreadData.flagged_issues.length !== 1 ? 's' : ''}`}
+                  </span>
+                )}
+              </div>
 
               {isProofreading && (
                 <div className="mt-4">
@@ -533,11 +612,25 @@ export default function NarrativePage() {
               )}
 
               {!isRegenerating && !isCustomizing && !isApplyingEdits && (
-                <NarrativeDisplay
-                  narrative={state.narrative}
-                  displayFormat={state.displayFormat}
-                  animate={animateNarrative}
-                />
+                <>
+                  <NarrativeDisplay
+                    narrative={state.narrative}
+                    displayFormat={state.displayFormat}
+                    animate={animateNarrative}
+                    highlights={highlightRanges}
+                    highlightActive={highlightActive}
+                    issueDescriptions={issueDescriptions}
+                  />
+                  {highlightRanges.length > 0 && (
+                    <button
+                      onClick={clearHighlights}
+                      className="mt-3 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      <X size={12} />
+                      Clear Highlights
+                    </button>
+                  )}
+                </>
               )}
             </LiquidCard>
 

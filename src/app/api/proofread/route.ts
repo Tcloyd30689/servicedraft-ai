@@ -2,11 +2,23 @@ import { NextResponse } from 'next/server';
 import { generateWithGemini, parseJsonResponse } from '@/lib/gemini/client';
 import { PROOFREAD_SYSTEM_PROMPT } from '@/constants/prompts';
 
-interface ProofreadResponse {
+interface RawProofreadResponse {
   flagged_issues: string[];
   suggested_edits: string[];
   overall_rating: 'PASS' | 'NEEDS_REVIEW' | 'FAIL';
   summary: string;
+}
+
+interface ParsedIssue {
+  issue: string;
+  snippet: string;
+}
+
+function extractSnippet(issueText: string): ParsedIssue {
+  const match = issueText.match(/\[\[(.+?)\]\]/);
+  const snippet = match ? match[1].trim() : '';
+  const issue = issueText.replace(/\[\[.*?\]\]/, '').trim();
+  return { issue, snippet };
 }
 
 export async function POST(request: Request) {
@@ -35,17 +47,25 @@ CORRECTION: ${correction}
 ---`;
 
     const rawResponse = await generateWithGemini(PROOFREAD_SYSTEM_PROMPT, userPrompt);
-    const parsed = parseJsonResponse<ProofreadResponse>(rawResponse);
+    const parsed = parseJsonResponse<RawProofreadResponse>(rawResponse);
 
     if (!parsed.overall_rating || !parsed.summary) {
       throw new Error('Response missing required keys');
     }
 
     // Ensure arrays exist
-    parsed.flagged_issues = parsed.flagged_issues || [];
+    const rawIssues = parsed.flagged_issues || [];
     parsed.suggested_edits = parsed.suggested_edits || [];
 
-    return NextResponse.json(parsed);
+    // Extract [[snippet]] from each flagged issue
+    const parsedIssues: ParsedIssue[] = rawIssues.map(extractSnippet);
+
+    return NextResponse.json({
+      flagged_issues: parsedIssues,
+      suggested_edits: parsed.suggested_edits,
+      overall_rating: parsed.overall_rating,
+      summary: parsed.summary,
+    });
   } catch (error) {
     console.error('Proofread narrative error:', error);
     return NextResponse.json(

@@ -107,13 +107,16 @@ AUDIT CRITERIA — Flag any of the following:
 9. Overly brief narratives that lack the detail expected for warranty documentation
 10. Any manufacturer-specific branding or proprietary terminology that should be replaced with universal language
 
+SNIPPET EXTRACTION:
+For each flagged issue, you MUST include the EXACT text snippet from the narrative that contains the issue, enclosed in double brackets like [[exact text here]]. This exact text will be used for highlighting in the UI. The snippet should be the shortest phrase that captures the problematic text — typically 3-15 words. Copy the text EXACTLY as it appears in the narrative (same capitalization, punctuation, spacing).
+
 RESPONSE FORMAT:
 You must respond with ONLY a valid JSON object. No additional text, no markdown formatting, no code fences. Just the raw JSON.
 
 {
   "flagged_issues": [
-    "Description of issue 1",
-    "Description of issue 2"
+    "Description of issue 1 [[exact problematic text from narrative]]",
+    "Description of issue 2 [[exact problematic text from narrative]]"
   ],
   "suggested_edits": [
     "Specific suggestion to fix issue 1",
@@ -125,6 +128,7 @@ You must respond with ONLY a valid JSON object. No additional text, no markdown 
 
 RULES:
 - Each flagged issue should have a corresponding suggested edit at the same array index.
+- Each flagged_issues entry MUST contain the exact problematic text from the narrative enclosed in [[double brackets]]. If the issue is about missing content rather than specific text, use [[]] (empty brackets).
 - If the narrative passes audit with no issues found, return empty arrays for both flagged_issues and suggested_edits, with overall_rating "PASS".
 - The overall_rating should be:
   - "PASS" — No issues found, narrative is audit-ready

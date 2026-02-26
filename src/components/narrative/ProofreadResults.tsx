@@ -2,8 +2,13 @@
 
 import { useTypingAnimation } from '@/hooks/useTypingAnimation';
 
+interface ParsedIssue {
+  issue: string;
+  snippet: string;
+}
+
 interface ProofreadData {
-  flagged_issues: string[];
+  flagged_issues: ParsedIssue[];
   suggested_edits: string[];
   overall_rating: 'PASS' | 'NEEDS_REVIEW' | 'FAIL';
   summary: string;
@@ -26,7 +31,7 @@ export default function ProofreadResults({
 }: ProofreadResultsProps) {
   const issuesText = useTypingAnimation(
     data.flagged_issues.length > 0
-      ? data.flagged_issues.map((issue, i) => `${i + 1}. ${issue}`).join('\n')
+      ? data.flagged_issues.map((item, i) => `${i + 1}. ${item.issue}`).join('\n')
       : 'No issues found.',
     { speed: 10, enabled: animate },
   );
@@ -59,7 +64,7 @@ export default function ProofreadResults({
           <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">
             {animate ? issuesText.displayText : (
               data.flagged_issues.length > 0
-                ? data.flagged_issues.map((issue, i) => `${i + 1}. ${issue}`).join('\n')
+                ? data.flagged_issues.map((item, i) => `${i + 1}. ${item.issue}`).join('\n')
                 : 'No issues found.'
             )}
           </p>
