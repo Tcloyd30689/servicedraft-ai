@@ -23,10 +23,10 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-02-25
+**Last Updated:** 2026-02-26
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 83 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete)
+**Overall Progress:** 73 / 78 tasks complete (+ 84 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
@@ -44,6 +44,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Session 13A:** COMPLETE — Pre-generation output customization panel on input page (PB.82)
 **Hotfix 14A:** COMPLETE — Save narrative upsert on RO#, export freeze fix, UPDATE RLS policy, dashboard updated_at ordering (PB.83)
 **Session 15A:** COMPLETE — Proofread highlighting with 30-second fade, highlight counter badge, clear highlights button (PB.84)
+**Hotfix 16A:** COMPLETE — Export logo aspect ratio fix — preserve native 2.09:1 ratio (PB.85)
 
 ---
 
@@ -1673,6 +1674,13 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Updated `ProofreadResults.tsx` to handle new `{ issue, snippet }` object format for `flagged_issues`
 - **Completed:** 2026-02-25
 
+### PB.85 — Export Logo Aspect Ratio Fix (Native 2.09:1 Ratio)
+- [x] Fixed PDF export (`src/app/api/export-pdf/route.ts`): changed logo dimensions from 18×17mm (near-square) to 25×12mm matching native 2.09:1 aspect ratio (1038×497px)
+- [x] Fixed DOCX export (`src/app/api/export-docx/route.ts`): changed logo dimensions from 50×47px (near-square) to 55×26px matching native 2.09:1 aspect ratio
+- [x] Both export paths affected: narrative page ShareExportModal and dashboard NarrativeDetailModal (both use the same API routes via `downloadExport()`)
+- [x] Build verified — no errors
+- **Completed:** 2026-02-26
+
 ### SESSION S2-4 — Proofread Highlighting — COMPLETE
 - **Scope:** S2-4.1 through S2-4.6
 - **Completed:** 2026-02-25
@@ -1682,8 +1690,8 @@ This file is a living document that Claude Code reads at the start of every sess
 
 | Stage 2 Sprint S2-1 | 5 | 5 |
 | Stage 2 Sprint S2-4 | 6 | 6 |
-| Post-Build Fixes | 84 | 84 |
-| **TOTAL** | **173** | **168** |
+| Post-Build Fixes | 85 | 85 |
+| **TOTAL** | **174** | **169** |
 
 ---
 

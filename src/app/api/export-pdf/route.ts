@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
     // ══════════════════════════════════════════════
     // LOGO — read for footer placement (bottom-right of every page)
     // ══════════════════════════════════════════════
-    const logoWidth = 18;    // Near-square aspect ratio matching vector logo
-    const logoHeight = 17;   // Corrected to prevent horizontal stretching
+    const logoWidth = 25;    // Native aspect ratio 2.09:1 (1038x497px)
+    const logoHeight = 12;   // 25 / 2.09 = ~12mm
     let logoBase64: string | null = null;
     try {
       const logoPath = path.join(process.cwd(), 'public', 'ServiceDraft-Ai Vector Logo.png');

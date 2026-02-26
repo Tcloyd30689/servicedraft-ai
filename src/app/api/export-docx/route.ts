@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
           new ImageRun({
             type: 'png',
             data: logoBuffer,
-            transformation: { width: 50, height: 47 }, // Corrected near-square ratio matching vector logo
+            transformation: { width: 55, height: 26 }, // Native aspect ratio 2.09:1 (1038x497px)
           }),
         ],
         alignment: AlignmentType.RIGHT,
