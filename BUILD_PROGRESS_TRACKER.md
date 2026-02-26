@@ -26,13 +26,14 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-26
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 85 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete)
+**Overall Progress:** 73 / 78 tasks complete (+ 85 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
 **Stage 2 Sprint S2-5:** COMPLETE — Email export via Resend integration with professional HTML template
 **Stage 2 Sprint S2-6A:** COMPLETE — Admin dashboard with activity logging, route protection, and restriction check
 **Stage 2 Sprint S2-6B:** COMPLETE — Admin user management: list, restrict, delete, password reset, subscription change
+**Stage 2 Sprint S2-6C:** COMPLETE — Admin analytics dashboard with stat cards, charts, and auto-refresh
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1147,7 +1148,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Stage 2 Sprint S2-5 | 5 | 5 |
 | Stage 2 Sprint S2-6A | 7 | 7 |
 | Stage 2 Sprint S2-6B | 4 | 4 |
-| **TOTAL** | **190** | **185** |
+| Stage 2 Sprint S2-6C | 6 | 6 |
+| **TOTAL** | **196** | **191** |
 
 ---
 
@@ -1860,6 +1862,56 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** S2-6B.1 through S2-6B.4
 - **Completed:** 2026-02-26
 - **Notes:** Admin user management with full CRUD operations. API route uses service role client for privileged operations (password reset, user deletion) while verifying admin role via session. User table supports search, sort, expandable detail rows. Two-step delete confirmation prevents accidental user deletion. Restrict/unrestrict with confirmation dialog. Subscription status changes auto-save. Password reset emails sent via Resend with branded template (Supabase fallback if Resend unavailable).
+
+---
+
+## Stage 2 Sprint S2-6C — Admin Dashboard: Analytics — COMPLETE
+
+### S2-6C.1 — Analytics API Route
+- [x] Created `src/app/api/admin/analytics/route.ts` with admin role verification
+- [x] Returns aggregated data: total users, new users this week, active subscriptions, total narratives, narratives this week/today
+- [x] Activity by type (last 30 days), daily narrative counts (configurable range), top 5 users by narratives, story type breakdown
+- [x] All queries run in parallel via `Promise.all` for performance
+- [x] Accepts `?range=` query parameter for configurable chart date range (7, 14, 30, or all-time)
+- **Completed:** 2026-02-26
+
+### S2-6C.2 — Stat Cards (2x3 Grid)
+- [x] Six stat cards: Total Users, New This Week, Active Subscriptions, Total Narratives, Narratives This Week, Narratives Today
+- [x] Each card uses LiquidCard with CursorGlow, big accent-colored number, muted label, oversized icon at 15% opacity in top-right
+- [x] Responsive: 2 per row on mobile, 3 per row on desktop (grid-cols-2 lg:grid-cols-3)
+- **Completed:** 2026-02-26
+
+### S2-6C.3 — Charts: Generation Trend + Story Type + Activity Breakdown
+- [x] 14-day (configurable) narrative generation bar chart built with pure CSS divs — no charting library
+- [x] Hover tooltips show exact count per day, accent-colored bars, date labels on x-axis
+- [x] Story type breakdown: horizontal stacked bar with accent color for diagnostic, green for repair, percentage + raw count legend
+- [x] Activity type breakdown: horizontal bar chart sorted by count, color-coded bars matching Activity Log tab's ACTION_BORDER_COLORS
+- **Completed:** 2026-02-26
+
+### S2-6C.4 — Top 5 Users Table
+- [x] Ranked table with name, position, narratives generated — sorted by count descending
+- [x] #1 gold, #2 silver, #3 bronze rank badges with subtle accent backgrounds
+- [x] Monospace accent-colored count column
+- **Completed:** 2026-02-26
+
+### S2-6C.5 — Auto-Refresh & Date Range Selector
+- [x] Analytics auto-refreshes every 60 seconds while analytics tab is active
+- [x] "Last updated: Xs ago" timestamp with live ticker
+- [x] Manual refresh button (RefreshCw icon) with spin animation while loading
+- [x] Date range selector: 7d, 14d, 30d, All Time — changes re-fetch all analytics
+- **Completed:** 2026-02-26
+
+### S2-6C.6 — Styling & Responsiveness
+- [x] All colors from CSS variables (accent-primary, accent-bright, text-primary, text-muted, etc.)
+- [x] Charts use CSS-based bars (no external libraries installed)
+- [x] Stat cards wrap to 2-per-row on mobile, 3-per-row on desktop
+- [x] Two-column layout for story type + activity breakdown on desktop, stacked on mobile
+- **Completed:** 2026-02-26
+
+### SESSION S2-6C — Admin Dashboard: Analytics — COMPLETE
+- **Scope:** S2-6C.1 through S2-6C.6
+- **Completed:** 2026-02-26
+- **Notes:** Full analytics tab with 6 stat cards, 4 chart/table visualizations, auto-refresh with 60s interval, date range selector (7d/14d/30d/all-time). All charts built with pure CSS (no charting library). Analytics API route uses service role client with admin verification, parallel queries via Promise.all. Colors reuse CSS variables and ACTION_BORDER_COLORS from activity log tab.
 
 ---
 

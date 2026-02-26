@@ -1426,4 +1426,60 @@ src/app/(protected)/dashboard/page.tsx   → Preferences button + panel integrat
 
 ---
 
+## ADMIN DASHBOARD (Sprint S2-6A/6B/6C)
+
+### Route & Access
+
+- **Page:** `src/app/(protected)/admin/page.tsx` — admin-only page with three tabs
+- **API:** `src/app/api/admin/route.ts` — POST endpoint for user management actions (list_users, get_user_details, send_password_reset, restrict_user, delete_user, change_subscription)
+- **Analytics API:** `src/app/api/admin/analytics/route.ts` — GET endpoint returning aggregated analytics data
+- **Access:** Both routes verify `role = 'admin'` on the user's profile. Non-admins are redirected.
+
+### Admin API Actions (`POST /api/admin`)
+
+| Action | Params | Description |
+|--------|--------|-------------|
+| `list_users` | — | Returns all users with narrative counts and last activity |
+| `get_user_details` | `userId` | Returns profile, recent activity (5), recent narratives (5) |
+| `send_password_reset` | `email` | Sends reset via Resend (branded) or Supabase fallback |
+| `restrict_user` | `userId`, `restricted` | Sets `is_restricted` flag |
+| `delete_user` | `userId` | Permanently deletes user via `auth.admin.deleteUser` |
+| `change_subscription` | `userId`, `status` | Updates subscription_status (active/trial/expired/bypass) |
+
+### Analytics API (`GET /api/admin/analytics`)
+
+Query param: `?range=14` (default) — controls chart date range (7, 14, 30, or large number for all-time).
+
+Returns:
+- `totalUsers`, `newUsersWeek`, `activeSubscriptions` — user counts
+- `totalNarratives`, `narrativesWeek`, `narrativesToday` — narrative counts
+- `activityByType` — `Record<string, number>` grouped action_type counts (last 30 days)
+- `dailyNarratives` — `Array<{date, count}>` for chart (range-based)
+- `topUsers` — `Array<{rank, name, position, count}>` top 5 by narratives
+- `storyTypes` — `{diagnostic_only: number, repair_complete: number}`
+
+### Database Tables Used
+
+| Table | Fields Referenced |
+|-------|-------------------|
+| `users` | id, email, first_name, last_name, position, subscription_status, is_restricted, role, created_at |
+| `narratives` | id, user_id, story_type, created_at |
+| `activity_log` | id, user_id, action_type, story_type, input_data, output_preview, metadata, created_at |
+
+### Admin Page Tabs
+
+1. **Activity Log** — Paginated table of all user activity with search, action filter, sort, expandable detail rows
+2. **User Management** — Sortable user table with search, inline actions (reset password, restrict, change subscription, delete)
+3. **Analytics** — Stat cards (6), generation trend chart (CSS bars), story type breakdown, activity type breakdown, top 5 users table, auto-refresh (60s), date range selector
+
+### Key Patterns
+
+- Service role client (`SUPABASE_SERVICE_ROLE_KEY`) used for admin operations that bypass RLS
+- Admin verification via session client (`createServerClient`) — checks user's own auth, then reads role from `users` table
+- Activity log joined to users table via `activity_log_user_id_fkey` foreign key
+- All analytics charts built with CSS divs (no external charting library)
+- Auto-refresh uses `setInterval(fetchAnalytics, 60000)` with cleanup on tab switch
+
+---
+
 *— End of Claude Code Build Instructions —*

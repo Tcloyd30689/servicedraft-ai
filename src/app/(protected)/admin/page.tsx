@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Activity, Users, BarChart3, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Search, Mail, Lock, Unlock, Trash2 } from 'lucide-react';
+import { Shield, Activity, Users, BarChart3, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Search, Mail, Lock, Unlock, Trash2, TrendingUp, CreditCard, FileText, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
@@ -76,6 +76,19 @@ interface UserDetailData {
   recent_narratives: Array<Record<string, unknown>>;
 }
 
+interface AnalyticsData {
+  totalUsers: number;
+  newUsersWeek: number;
+  activeSubscriptions: number;
+  totalNarratives: number;
+  narrativesWeek: number;
+  narrativesToday: number;
+  activityByType: Record<string, number>;
+  dailyNarratives: Array<{ date: string; count: number }>;
+  topUsers: Array<{ rank: number; name: string; position: string; count: number }>;
+  storyTypes: Record<string, number>;
+}
+
 const SUB_BADGE: Record<string, { bg: string; text: string }> = {
   active: { bg: 'rgba(22,163,74,0.15)', text: '#16a34a' },
   trial: { bg: 'rgba(234,179,8,0.15)', text: '#eab308' },
@@ -111,6 +124,13 @@ export default function AdminPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; email: string; step: number } | null>(null);
   const [restrictTarget, setRestrictTarget] = useState<{ id: string; name: string; restricted: boolean } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Analytics state
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsRange, setAnalyticsRange] = useState<'7' | '14' | '30' | 'all'>('14');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [secondsAgo, setSecondsAgo] = useState(0);
 
   // Redirect non-admin users
   useEffect(() => {
@@ -423,6 +443,50 @@ export default function AdminPage() {
       setUserSortAsc(true);
     }
   };
+
+  // ─── Analytics ──────────────────────────────────────────────
+  const fetchAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
+    try {
+      const rangeParam = analyticsRange === 'all' ? '3650' : analyticsRange;
+      const res = await fetch(`/api/admin/analytics?range=${rangeParam}`);
+      const json = await res.json();
+      if (json.success) {
+        setAnalyticsData(json.data);
+        setLastUpdated(new Date());
+        setSecondsAgo(0);
+      } else {
+        console.error('Failed to fetch analytics:', json.error);
+      }
+    } catch (err) {
+      console.error('Analytics fetch error:', err);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [analyticsRange]);
+
+  // Fetch when tab is active
+  useEffect(() => {
+    if (activeTab === 'analytics' && profile?.role === 'admin') {
+      fetchAnalytics();
+    }
+  }, [activeTab, profile, fetchAnalytics]);
+
+  // Auto-refresh every 60s while analytics tab is active
+  useEffect(() => {
+    if (activeTab !== 'analytics') return;
+    const interval = setInterval(fetchAnalytics, 60000);
+    return () => clearInterval(interval);
+  }, [activeTab, fetchAnalytics]);
+
+  // Seconds-ago ticker
+  useEffect(() => {
+    if (activeTab !== 'analytics' || !lastUpdated) return;
+    const ticker = setInterval(() => {
+      setSecondsAgo(Math.floor((Date.now() - lastUpdated.getTime()) / 1000));
+    }, 1000);
+    return () => clearInterval(ticker);
+  }, [activeTab, lastUpdated]);
 
   // Show loading while auth resolves
   if (authLoading) {
@@ -943,13 +1007,249 @@ export default function AdminPage() {
         )}
 
         {activeTab === 'analytics' && (
-          <LiquidCard size="standard">
-            <div className="flex flex-col items-center justify-center py-16">
-              <BarChart3 size={48} className="text-[var(--accent-30)] mb-4" />
-              <p className="text-[var(--text-muted)] text-lg">Analytics</p>
-              <p className="text-[var(--text-muted)] text-sm mt-1">Coming in next session</p>
+          <div className="space-y-6">
+            {/* Header Row: Last Updated + Range Selector + Refresh */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <p className="text-xs text-[var(--text-muted)]">
+                {lastUpdated
+                  ? `Last updated: ${secondsAgo < 5 ? 'just now' : `${secondsAgo}s ago`}`
+                  : 'Loading...'}
+              </p>
+              <div className="flex items-center gap-2">
+                {(['7', '14', '30', 'all'] as const).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setAnalyticsRange(r)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      analyticsRange === r
+                        ? 'bg-[var(--accent-20)] text-[var(--accent-bright)] border border-[var(--accent-50)]'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--accent-10)] border border-transparent'
+                    }`}
+                  >
+                    {r === 'all' ? 'All Time' : `${r}d`}
+                  </button>
+                ))}
+                <button
+                  onClick={fetchAnalytics}
+                  disabled={analyticsLoading}
+                  className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--accent-bright)] hover:bg-[var(--accent-10)] transition-all cursor-pointer disabled:opacity-50"
+                  title="Refresh analytics"
+                >
+                  <RefreshCw size={16} className={analyticsLoading ? 'animate-spin' : ''} />
+                </button>
+              </div>
             </div>
-          </LiquidCard>
+
+            {analyticsLoading && !analyticsData ? (
+              <LiquidCard size="standard">
+                <div className="py-12">
+                  <LoadingSpinner size="medium" message="Loading analytics..." />
+                </div>
+              </LiquidCard>
+            ) : analyticsData ? (
+              <>
+                {/* ── Stat Cards (2x3 grid) ── */}
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                  {([
+                    { label: 'Total Users', value: analyticsData.totalUsers, icon: Users, color: 'var(--accent-bright)' },
+                    { label: 'New This Week', value: analyticsData.newUsersWeek, icon: TrendingUp, color: '#16a34a' },
+                    { label: 'Active Subscriptions', value: analyticsData.activeSubscriptions, icon: CreditCard, color: '#3b82f6' },
+                    { label: 'Total Narratives', value: analyticsData.totalNarratives, icon: FileText, color: 'var(--accent-bright)' },
+                    { label: 'Narratives This Week', value: analyticsData.narrativesWeek, icon: BarChart3, color: '#f59e0b' },
+                    { label: 'Narratives Today', value: analyticsData.narrativesToday, icon: Activity, color: '#ef4444' },
+                  ] as const).map(({ label, value, icon: Icon, color }) => (
+                    <LiquidCard key={label} size="compact" className="!rounded-[16px] relative overflow-hidden">
+                      <div className="relative z-10">
+                        <p className="text-3xl font-bold" style={{ color }}>{value.toLocaleString()}</p>
+                        <p className="text-[var(--text-muted)] text-sm mt-1">{label}</p>
+                      </div>
+                      <Icon
+                        size={48}
+                        className="absolute top-3 right-3"
+                        style={{ color, opacity: 0.15 }}
+                      />
+                    </LiquidCard>
+                  ))}
+                </div>
+
+                {/* ── 14-Day Generation Trend ── */}
+                <LiquidCard size="standard" className="!rounded-[16px]">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
+                    Narrative Generation Trend ({analyticsRange === 'all' ? 'All Time' : `Last ${analyticsRange} Days`})
+                  </h3>
+                  {analyticsData.dailyNarratives.length > 0 ? (() => {
+                    const maxCount = Math.max(...analyticsData.dailyNarratives.map((d) => d.count), 1);
+                    return (
+                      <div className="flex items-end gap-[3px] h-[180px]">
+                        {analyticsData.dailyNarratives.map(({ date, count }) => {
+                          const pct = (count / maxCount) * 100;
+                          const d = new Date(date + 'T12:00:00');
+                          const dayLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                          return (
+                            <div key={date} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                              {/* Tooltip */}
+                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[var(--bg-elevated)] border border-[var(--accent-30)] text-[var(--text-primary)] text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                                {count} narrative{count !== 1 ? 's' : ''}
+                              </div>
+                              {/* Bar */}
+                              <div
+                                className="w-full rounded-t-sm transition-all duration-300 min-h-[2px]"
+                                style={{
+                                  height: `${Math.max(pct, 1.5)}%`,
+                                  background: 'var(--accent-primary)',
+                                  opacity: count > 0 ? 1 : 0.25,
+                                }}
+                              />
+                              {/* Date label — show every other on small sets, every 3rd on larger */}
+                              <p className="text-[9px] text-[var(--text-muted)] mt-1.5 rotate-[-45deg] origin-top-left whitespace-nowrap">
+                                {dayLabel}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })() : (
+                    <p className="text-[var(--text-muted)] text-sm text-center py-8">No data for this period.</p>
+                  )}
+                </LiquidCard>
+
+                {/* ── Two-Column: Story Type Breakdown + Activity Type Breakdown ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Story Type Breakdown */}
+                  <LiquidCard size="standard" className="!rounded-[16px]">
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Story Type Breakdown</h3>
+                    {(() => {
+                      const diag = analyticsData.storyTypes.diagnostic_only || 0;
+                      const repair = analyticsData.storyTypes.repair_complete || 0;
+                      const total = diag + repair;
+                      const diagPct = total > 0 ? Math.round((diag / total) * 100) : 0;
+                      const repairPct = total > 0 ? 100 - diagPct : 0;
+                      return total === 0 ? (
+                        <p className="text-[var(--text-muted)] text-sm text-center py-8">No narratives generated yet.</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {/* Horizontal stacked bar */}
+                          <div className="h-8 rounded-full overflow-hidden flex">
+                            <div
+                              className="h-full transition-all duration-500"
+                              style={{ width: `${diagPct}%`, background: 'var(--accent-primary)' }}
+                            />
+                            <div
+                              className="h-full transition-all duration-500"
+                              style={{ width: `${repairPct}%`, background: '#16a34a' }}
+                            />
+                          </div>
+                          {/* Legend */}
+                          <div className="flex justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full" style={{ background: 'var(--accent-primary)' }} />
+                              <span className="text-[var(--text-secondary)]">Diagnostic Only</span>
+                              <span className="text-[var(--text-muted)] font-mono">{diag} ({diagPct}%)</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full" style={{ background: '#16a34a' }} />
+                              <span className="text-[var(--text-secondary)]">Repair Complete</span>
+                              <span className="text-[var(--text-muted)] font-mono">{repair} ({repairPct}%)</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </LiquidCard>
+
+                  {/* Activity Type Breakdown */}
+                  <LiquidCard size="standard" className="!rounded-[16px]">
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Activity by Type (Last 30 Days)</h3>
+                    {Object.keys(analyticsData.activityByType).length === 0 ? (
+                      <p className="text-[var(--text-muted)] text-sm text-center py-8">No activity recorded.</p>
+                    ) : (() => {
+                      const entries = Object.entries(analyticsData.activityByType).sort(([, a], [, b]) => b - a);
+                      const maxVal = Math.max(...entries.map(([, v]) => v), 1);
+                      return (
+                        <div className="space-y-2.5">
+                          {entries.map(([type, count]) => {
+                            const pct = (count / maxVal) * 100;
+                            const color = ACTION_BORDER_COLORS[type] || 'var(--accent-30)';
+                            return (
+                              <div key={type} className="space-y-1">
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-[var(--text-secondary)] capitalize">
+                                    {type.replace(/_/g, ' ')}
+                                  </span>
+                                  <span className="text-[var(--text-muted)] font-mono">{count}</span>
+                                </div>
+                                <div className="h-2 rounded-full bg-[var(--accent-10)] overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full transition-all duration-500"
+                                    style={{ width: `${pct}%`, background: color }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </LiquidCard>
+                </div>
+
+                {/* ── Top 5 Users Table ── */}
+                <LiquidCard size="standard" className="!rounded-[16px]">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Top Users by Narratives Generated</h3>
+                  {analyticsData.topUsers.length === 0 ? (
+                    <p className="text-[var(--text-muted)] text-sm text-center py-8">No data yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-[var(--text-muted)] text-xs uppercase tracking-wider border-b border-[var(--accent-15)]">
+                            <th className="pb-3 pr-4 w-16">Rank</th>
+                            <th className="pb-3 pr-4">Name</th>
+                            <th className="pb-3 pr-4">Position</th>
+                            <th className="pb-3 text-right">Narratives</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analyticsData.topUsers.map((user) => {
+                            const rankColors: Record<number, string> = {
+                              1: '#fbbf24', // gold
+                              2: '#9ca3af', // silver
+                              3: '#cd7f32', // bronze
+                            };
+                            const rankColor = rankColors[user.rank];
+                            return (
+                              <tr key={user.rank} className="border-b border-[var(--accent-10)]">
+                                <td className="py-3 pr-4">
+                                  <span
+                                    className="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold"
+                                    style={rankColor ? {
+                                      background: `${rankColor}20`,
+                                      color: rankColor,
+                                      border: `1px solid ${rankColor}40`,
+                                    } : {
+                                      color: 'var(--text-muted)',
+                                    }}
+                                  >
+                                    {user.rank}
+                                  </span>
+                                </td>
+                                <td className="py-3 pr-4 text-[var(--text-primary)] font-medium">{user.name}</td>
+                                <td className="py-3 pr-4 text-[var(--text-muted)]">{user.position}</td>
+                                <td className="py-3 text-right text-[var(--accent-bright)] font-mono font-semibold">
+                                  {user.count.toLocaleString()}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </LiquidCard>
+              </>
+            ) : null}
+          </div>
         )}
         {/* Restrict Confirmation Modal */}
         <Modal
