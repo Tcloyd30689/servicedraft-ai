@@ -77,9 +77,7 @@ function buildHtmlEmail(
           <!-- Logo Header -->
           <tr>
             <td align="center" style="background-color:#ffffff;padding:20px 28px;border-radius:8px 8px 0 0;">
-              <a href="https://servicedraft.ai" target="_blank" style="text-decoration:none;">
-                <img src="https://servicedraft.ai/ServiceDraft-Ai%20Vector%20logo.png" alt="ServiceDraft.AI" width="156" height="75" style="display:block;margin:0 auto;border:0;outline:none;" />
-              </a>
+              <img src="https://servicedraft.ai/ServiceDraft-Ai%20Vector%20logo.png" alt="ServiceDraft.AI" width="156" height="75" style="display:block;margin:0 auto;border:0;outline:none;" />
             </td>
           </tr>
 
