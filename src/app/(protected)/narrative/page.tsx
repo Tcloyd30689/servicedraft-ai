@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw, X } from 'lucide-react';
+import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw, Eye, EyeOff } from 'lucide-react';
 import { findHighlightRanges, type HighlightRange } from '@/lib/highlightUtils';
 import { dispatchActivity } from '@/hooks/useActivityPulse';
 import { useNarrativeStore } from '@/stores/narrativeStore';
@@ -61,8 +61,6 @@ export default function NarrativePage() {
   const [highlightRanges, setHighlightRanges] = useState<HighlightRange[]>([]);
   const [highlightActive, setHighlightActive] = useState(false);
   const [issueDescriptions, setIssueDescriptions] = useState<string[]>([]);
-  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const highlightCleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -117,14 +115,6 @@ export default function NarrativePage() {
     }
   }, [state.compiledDataBlock, state.storyType, state.narrative, state.generationId, router, generateNarrative]);
 
-  // Cleanup highlight timers on unmount
-  useEffect(() => {
-    return () => {
-      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
-      if (highlightCleanupRef.current) clearTimeout(highlightCleanupRef.current);
-    };
-  }, []);
-
   // Navigation guard: browser close / back button
   useEffect(() => {
     if (state.isSaved) return;
@@ -168,10 +158,8 @@ export default function NarrativePage() {
     }
   };
 
-  // Clear all highlights immediately
+  // Clear all highlights (used when narrative text changes)
   const clearHighlights = useCallback(() => {
-    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
-    if (highlightCleanupRef.current) clearTimeout(highlightCleanupRef.current);
     setHighlightActive(false);
     setHighlightRanges([]);
     setIssueDescriptions([]);
@@ -292,20 +280,10 @@ export default function NarrativePage() {
       const descriptions = data.flagged_issues.map((item) => item.issue);
       const ranges = findHighlightRanges(state.narrative.block_narrative, snippets);
 
+      setHighlightRanges(ranges);
+      setIssueDescriptions(descriptions);
       if (ranges.length > 0) {
-        setHighlightRanges(ranges);
-        setIssueDescriptions(descriptions);
         setHighlightActive(true);
-
-        // Start 30-second timer to fade out
-        highlightTimerRef.current = setTimeout(() => {
-          setHighlightActive(false);
-          // After 1s fade completes, remove marks from DOM
-          highlightCleanupRef.current = setTimeout(() => {
-            setHighlightRanges([]);
-            setIssueDescriptions([]);
-          }, 1000);
-        }, 30000);
       }
     } catch {
       toast.error('Failed to proofread. Please try again.');
@@ -539,8 +517,6 @@ export default function NarrativePage() {
                           : proofreadData.overall_rating === 'NEEDS_REVIEW'
                             ? '#ca8a04'
                             : '#dc2626',
-                      transition: 'opacity 1s ease-out',
-                      opacity: highlightActive || highlightRanges.length === 0 ? 1 : 0,
                     }}
                   >
                     {proofreadData.flagged_issues.length === 0
@@ -623,11 +599,11 @@ export default function NarrativePage() {
                   />
                   {highlightRanges.length > 0 && (
                     <button
-                      onClick={clearHighlights}
-                      className="mt-3 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer flex items-center gap-1"
+                      onClick={() => setHighlightActive((prev) => !prev)}
+                      className="mt-3 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer flex items-center gap-2"
                     >
-                      <X size={12} />
-                      Clear Highlights
+                      {highlightActive ? <EyeOff size={13} /> : <Eye size={13} />}
+                      {highlightActive ? 'Hide' : 'Show'} Suggested Edits
                     </button>
                   )}
                 </>

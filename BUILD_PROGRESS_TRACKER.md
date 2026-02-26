@@ -1654,32 +1654,30 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ### S2-4.4 — Highlight Lifecycle Management
 - [x] Added highlight state to narrative page: `highlightRanges`, `highlightActive`, `issueDescriptions`
-- [x] After proofread completes: extracts snippets → computes ranges → activates highlights
-- [x] 30-second timer starts on highlight activation → sets `highlightActive = false` (triggers CSS fade)
-- [x] 1-second cleanup timer after fade → clears `highlightRanges` array (removes `<mark>` from DOM)
+- [x] After proofread completes: extracts snippets → computes ranges → activates highlights (on by default)
+- [x] Highlights persist until user toggles them off or narrative text changes
 - [x] Highlights cleared immediately on: regenerate, customize, apply edits, manual edit
 - [x] Re-proofread clears old highlights before applying new ones
-- [x] Timer cleanup on component unmount via `useEffect` return
 - **Completed:** 2026-02-25
 
 ### S2-4.5 — Highlight Counter Badge
 - [x] Added badge next to "REVIEW & PROOFREAD" button showing issue count after proofread
 - [x] Badge color: green (`#16a34a`) for PASS, yellow (`#ca8a04`) for NEEDS_REVIEW, red (`#dc2626`) for FAIL
 - [x] Shows "PASS" for zero issues, "N issue(s)" for flagged issues
-- [x] Badge fades with highlights after 30 seconds
+- [x] Badge stays visible as long as proofread data exists
 - **Completed:** 2026-02-25
 
-### S2-4.6 — Manual Dismiss
-- [x] Added "Clear Highlights" ghost link with × icon below the narrative display
-- [x] Only visible when highlights are active
-- [x] Clicking immediately fades and removes all highlights without waiting 30 seconds
+### S2-4.6 — Show/Hide Toggle
+- [x] Added "Show/Hide Suggested Edits" toggle link with Eye/EyeOff icons below the narrative display
+- [x] Only visible when highlight ranges exist (proofread has been run)
+- [x] Toggles `highlightActive` on/off — highlights appear/disappear with CSS opacity transition
 - [x] Updated `ProofreadResults.tsx` to handle new `{ issue, snippet }` object format for `flagged_issues`
 - **Completed:** 2026-02-25
 
 ### SESSION S2-4 — Proofread Highlighting — COMPLETE
 - **Scope:** S2-4.1 through S2-4.6
 - **Completed:** 2026-02-25
-- **Notes:** Proofread API now returns exact text snippets from the narrative for each flagged issue. NarrativeDisplay renders highlighted `<mark>` elements with pulsing accent-colored animation, hover tooltips showing issue descriptions, and a smooth 30-second auto-fade. Highlights clear immediately when the narrative text changes (regenerate, customize, edit, apply edits). Counter badge shows issue count with color-coded rating. "Clear Highlights" button for manual dismiss. Works in both Block and C/C/C format views. All colors use CSS variables for accent color compatibility.
+- **Notes:** Proofread API now returns exact text snippets from the narrative for each flagged issue. NarrativeDisplay renders highlighted `<mark>` elements with pulsing accent-colored animation, hover tooltips showing issue descriptions. User can toggle highlights on/off via "Show/Hide Suggested Edits" link below the narrative. Highlights clear when narrative text changes (regenerate, customize, edit, apply edits). Counter badge shows issue count with color-coded rating. Works in both Block and C/C/C format views. All colors use CSS variables for accent color compatibility.
 
 ---
 
