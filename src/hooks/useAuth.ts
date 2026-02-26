@@ -14,6 +14,8 @@ interface UserProfile {
   position: string | null;
   profile_picture_url: string | null;
   subscription_status: string;
+  role: 'user' | 'admin';
+  is_restricted: boolean;
 }
 
 interface UseAuthReturn {
@@ -60,6 +62,8 @@ function buildFallbackProfile(userId: string, email: string): UserProfile {
     position: null,
     profile_picture_url: null,
     subscription_status: 'trial',
+    role: 'user',
+    is_restricted: false,
   };
 }
 

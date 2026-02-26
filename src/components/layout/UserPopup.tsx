@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { LogOut, LayoutDashboard, ChevronDown } from 'lucide-react';
+import { LogOut, LayoutDashboard, Shield, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import PositionIcon from '@/components/ui/PositionIcon';
@@ -87,6 +87,19 @@ export default function UserPopup() {
               <LayoutDashboard size={16} />
               Dashboard
             </Link>
+            {profile?.role === 'admin' && (
+              <>
+                <div className="border-t border-[var(--accent-15)] my-1" />
+                <Link
+                  href="/admin"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-2 text-[var(--text-secondary)] text-sm px-3 py-2 rounded-md hover:bg-[var(--accent-10)] hover:text-[var(--text-primary)] transition-all"
+                >
+                  <Shield size={16} />
+                  Admin Panel
+                </Link>
+              </>
+            )}
             <button
               onClick={async () => {
                 setIsOpen(false);

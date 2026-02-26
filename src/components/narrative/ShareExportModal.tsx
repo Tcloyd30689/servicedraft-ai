@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Copy, Printer, FileDown, FileText, Mail } from 'lucide-react';
+import { logActivity } from '@/lib/activityLogger';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { downloadExport } from '@/lib/exportUtils';
@@ -71,6 +72,7 @@ export default function ShareExportModal({
     try {
       await onBeforeExport?.();
       await navigator.clipboard.writeText(getTextContent());
+      logActivity('export_copy');
       toast.success('Copied to clipboard');
       onClose();
     } catch {
@@ -132,6 +134,7 @@ export default function ShareExportModal({
       document.body.removeChild(iframe);
     }, 1000);
 
+    logActivity('export_print');
     onClose();
   };
 
@@ -140,6 +143,7 @@ export default function ShareExportModal({
     try {
       await onBeforeExport?.();
       await downloadExport('pdf', buildPayload());
+      logActivity('export_pdf');
       toast.success('PDF downloaded');
       onClose();
     } catch {
@@ -154,6 +158,7 @@ export default function ShareExportModal({
     try {
       await onBeforeExport?.();
       await downloadExport('docx', buildPayload());
+      logActivity('export_docx');
       toast.success('Word document downloaded');
       onClose();
     } catch {

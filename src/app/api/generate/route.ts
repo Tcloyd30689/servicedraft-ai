@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 import { generateWithGemini, parseJsonResponse } from '@/lib/gemini/client';
 import { DIAGNOSTIC_ONLY_SYSTEM_PROMPT, REPAIR_COMPLETE_SYSTEM_PROMPT } from '@/constants/prompts';
 
@@ -11,6 +12,25 @@ interface NarrativeResponse {
 
 export async function POST(request: Request) {
   try {
+    // Check if user is restricted
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from('users')
+        .select('is_restricted')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.is_restricted) {
+        return NextResponse.json(
+          { error: 'Your account has been restricted. Contact support for assistance.' },
+          { status: 403 },
+        );
+      }
+    }
+
     const { compiledDataBlock, storyType } = await request.json();
 
     if (!compiledDataBlock || !storyType) {

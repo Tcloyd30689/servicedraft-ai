@@ -25,9 +25,22 @@ export interface UserProfile {
   profile_picture_url: string | null;
   subscription_status: 'active' | 'trial' | 'expired' | 'bypass';
   stripe_customer_id: string | null;
+  role: 'user' | 'admin';
+  is_restricted: boolean;
   preferences?: UserPreferences;
   created_at: string;
   updated_at: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  user_id: string;
+  action_type: string;
+  story_type: string | null;
+  input_data: Record<string, unknown> | null;
+  output_preview: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface Narrative {

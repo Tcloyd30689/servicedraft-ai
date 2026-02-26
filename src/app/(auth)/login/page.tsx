@@ -13,6 +13,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { setLoginTimestamp } from '@/hooks/useSessionExpiry';
+import { logActivity } from '@/lib/activityLogger';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -107,6 +108,7 @@ export default function LoginPage() {
     }
 
     setLoginTimestamp();
+    logActivity('login');
     toast.success('Signed in successfully');
     router.push('/main-menu');
   };

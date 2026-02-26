@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw } from 'lucide-react';
+import { logActivity } from '@/lib/activityLogger';
 import { findHighlightRanges, type HighlightRange } from '@/lib/highlightUtils';
 import { dispatchActivity } from '@/hooks/useActivityPulse';
 import { useNarrativeStore } from '@/stores/narrativeStore';
@@ -87,11 +88,19 @@ export default function NarrativePage() {
         }),
       });
 
-      if (!res.ok) throw new Error('API error');
+      if (!res.ok) {
+        if (res.status === 403) {
+          const body = await res.json().catch(() => null);
+          toast.error(body?.error || 'Your account has been restricted. Contact support for assistance.');
+          return;
+        }
+        throw new Error('API error');
+      }
 
       const data: NarrativeData = await res.json();
       setNarrative(data);
       setAnimateNarrative(true);
+      logActivity('generate', { story_type: state.storyType || undefined, output_preview: data.block_narrative.substring(0, 100) });
     } catch {
       toast.error('Failed to generate narrative. Please try again.');
     } finally {
@@ -181,12 +190,20 @@ export default function NarrativePage() {
         }),
       });
 
-      if (!res.ok) throw new Error('API error');
+      if (!res.ok) {
+        if (res.status === 403) {
+          const body = await res.json().catch(() => null);
+          toast.error(body?.error || 'Your account has been restricted. Contact support for assistance.');
+          return;
+        }
+        throw new Error('API error');
+      }
 
       const data: NarrativeData = await res.json();
       setNarrative(data);
       setAnimateNarrative(true);
       resetCustomization();
+      logActivity('regenerate', { story_type: state.storyType || undefined });
       toast.success('Story regenerated');
     } catch {
       toast.error('Failed to regenerate. Please try again.');
@@ -239,6 +256,7 @@ export default function NarrativePage() {
       setNarrative(data);
       setAnimateNarrative(true);
       setProofreadData(null);
+      logActivity('customize', { story_type: state.storyType || undefined });
       toast.success('Customization applied');
     } catch {
       toast.error('Failed to customize narrative. Please try again.');
@@ -285,6 +303,7 @@ export default function NarrativePage() {
       if (ranges.length > 0) {
         setHighlightActive(true);
       }
+      logActivity('proofread', { story_type: state.storyType || undefined });
     } catch {
       toast.error('Failed to proofread. Please try again.');
     } finally {
@@ -373,6 +392,7 @@ export default function NarrativePage() {
     dispatchActivity(0.5);
     try {
       await saveToDatabase();
+      logActivity('save', { story_type: state.storyType || undefined });
       toast.success('Story saved successfully');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'message' in err) ? String((err as { message: unknown }).message) : 'Unknown error';
