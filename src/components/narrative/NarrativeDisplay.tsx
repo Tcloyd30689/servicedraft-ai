@@ -69,10 +69,10 @@ function HighlightedText({
           <span
             className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-xs whitespace-normal max-w-[280px] pointer-events-none"
             style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--accent-border)',
+              background: '#0a0414',
+              border: '1px solid var(--accent-primary)',
               color: 'var(--text-primary)',
-              boxShadow: 'var(--shadow-glow-sm)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.8), var(--shadow-glow-sm)',
             }}
           >
             {tooltip}
