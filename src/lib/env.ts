@@ -13,6 +13,7 @@ const optionalEnvVars = [
   'STRIPE_WEBHOOK_SECRET',
   'ACCESS_CODE',
   'NEXT_PUBLIC_APP_URL',
+  'RESEND_API_KEY',
 ] as const;
 
 type RequiredEnvVar = (typeof requiredEnvVars)[number];

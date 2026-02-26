@@ -82,7 +82,7 @@ export default function DashboardPage() {
         />
 
         {/* Narrative History */}
-        <NarrativeHistory userId={user.id} />
+        <NarrativeHistory userId={user.id} senderName={[profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username || ''} />
       </motion.div>
 
       {/* Edit Profile Modal */}

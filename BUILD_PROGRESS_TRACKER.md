@@ -26,10 +26,11 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-02-26
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 84 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete)
+**Overall Progress:** 73 / 78 tasks complete (+ 84 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
+**Stage 2 Sprint S2-5:** COMPLETE — Email export via Resend integration with professional HTML template
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -45,6 +46,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Hotfix 14A:** COMPLETE — Save narrative upsert on RO#, export freeze fix, UPDATE RLS policy, dashboard updated_at ordering (PB.83)
 **Session 15A:** COMPLETE — Proofread highlighting with 30-second fade, highlight counter badge, clear highlights button (PB.84)
 **Hotfix 16A:** COMPLETE — Export logo aspect ratio fix — preserve native 2.09:1 ratio (PB.85)
+**Session 17A:** COMPLETE — Email export feature with Resend integration and professional HTML template (S2-5)
 
 ---
 
@@ -1690,8 +1692,54 @@ This file is a living document that Claude Code reads at the start of every sess
 
 | Stage 2 Sprint S2-1 | 5 | 5 |
 | Stage 2 Sprint S2-4 | 6 | 6 |
+| Stage 2 Sprint S2-5 | 5 | 5 |
 | Post-Build Fixes | 85 | 85 |
-| **TOTAL** | **174** | **169** |
+| **TOTAL** | **179** | **174** |
+
+---
+
+## Stage 2 Sprint S2-5 — Email Export — COMPLETE
+
+### S2-5.1 — Resend SDK Installation & Environment Configuration
+- [x] Installed `resend` npm package for email sending
+- [x] Added `RESEND_API_KEY` as an optional env var in `src/lib/env.ts` — app works without email export if key is missing
+- **Completed:** 2026-02-26
+
+### S2-5.2 — Email API Route (POST /api/send-email)
+- [x] Created `src/app/api/send-email/route.ts` — authenticated POST endpoint using Resend SDK
+- [x] Validates Supabase session (401 if unauthenticated), validates email addresses (basic regex), max 3 recipients
+- [x] Sends from `noreply@servicedraft.ai` with `Reply-To` set to authenticated user's email
+- [x] Subject line: "Repair Narrative — [YEAR MAKE MODEL] — R.O. #[RO_NUMBER]"
+- [x] Professional HTML email: table-based layout, dark header bar with "SERVICEDRAFT.AI" branding, vehicle info section, narrative content (Block or C/C/C), sender attribution, footer
+- [x] Plain text fallback for email clients that don't render HTML
+- [x] Error handling for missing API key, invalid email, Resend API failures
+- **Completed:** 2026-02-26
+
+### S2-5.3 — EmailExportModal Component
+- [x] Created `src/components/narrative/EmailExportModal.tsx` — modal with email input, multi-recipient support (up to 3), subject line preview
+- [x] Remembers last-used email in localStorage (`sd-last-export-email`) for convenience
+- [x] Email validation with per-field error messages
+- [x] Loading state with spinner during send, success/error toast notifications
+- [x] Add/remove recipient buttons with smooth UX
+- **Completed:** 2026-02-26
+
+### S2-5.4 — ShareExportModal Integration (Narrative Page)
+- [x] Added "EMAIL NARRATIVE" button with Mail icon between Print and PDF buttons in `ShareExportModal.tsx`
+- [x] Triggers `onBeforeExport()` (auto-save) before opening EmailExportModal
+- [x] Passes `senderName` (user's full name from profile) through to EmailExportModal
+- [x] Updated narrative page to destructure `profile` from `useAuth()` and pass sender name
+- **Completed:** 2026-02-26
+
+### S2-5.5 — Dashboard NarrativeDetailModal Integration
+- [x] Added "EMAIL" button with Mail icon to dashboard saved narrative actions in `NarrativeDetailModal.tsx`
+- [x] Normalizes saved narrative data (vehicle_year → year, etc.) before passing to EmailExportModal
+- [x] `senderName` threaded from dashboard page → NarrativeHistory → NarrativeDetailModal
+- **Completed:** 2026-02-26
+
+### SESSION S2-5 — Email Export — COMPLETE
+- **Scope:** S2-5.1 through S2-5.5
+- **Completed:** 2026-02-26
+- **Notes:** Email export feature using Resend SDK. Professional HTML email template with table-based layout for cross-client compatibility (Gmail, Outlook, Apple Mail). Supports Block and C/C/C narrative formats, up to 3 recipients, auto-saved last email, reply-to set to sender's email. Accessible from both narrative page Share/Export modal and dashboard saved narrative popup. Requires RESEND_API_KEY in .env.local (same key used for Supabase auth SMTP).
 
 ---
 

@@ -2,26 +2,30 @@
 
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Copy, Printer, FileDown, FileText } from 'lucide-react';
+import { Copy, Printer, FileDown, FileText, Mail } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { downloadExport } from '@/lib/exportUtils';
 import type { ExportPayload } from '@/lib/exportUtils';
+import EmailExportModal from '@/components/narrative/EmailExportModal';
 import type { Narrative } from '@/types/database';
 
 interface NarrativeDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   narrative: Narrative | null;
+  senderName?: string;
 }
 
 export default function NarrativeDetailModal({
   isOpen,
   onClose,
   narrative,
+  senderName,
 }: NarrativeDetailModalProps) {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
 
   if (!narrative) return null;
 
@@ -209,7 +213,36 @@ export default function NarrativeDetailModal({
           <FileText size={15} />
           {isGeneratingDocx ? 'DOCX...' : 'WORD'}
         </Button>
+        <Button
+          variant="secondary"
+          size="medium"
+          onClick={() => setShowEmailModal(true)}
+          disabled={isExporting}
+          className="flex items-center gap-2"
+        >
+          <Mail size={15} />
+          EMAIL
+        </Button>
       </div>
+
+      <EmailExportModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        narrative={{
+          block_narrative: narrative.full_narrative || '',
+          concern: narrative.concern || '',
+          cause: narrative.cause || '',
+          correction: narrative.correction || '',
+        }}
+        displayFormat="ccc"
+        vehicleInfo={{
+          year: narrative.vehicle_year ? String(narrative.vehicle_year) : '',
+          make: narrative.vehicle_make || '',
+          model: narrative.vehicle_model || '',
+          roNumber: narrative.ro_number || '',
+        }}
+        senderName={senderName || ''}
+      />
     </Modal>
   );
 }

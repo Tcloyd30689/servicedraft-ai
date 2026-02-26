@@ -35,7 +35,7 @@ interface ProofreadData {
 
 export default function NarrativePage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const {
     state,
     setNarrative,
@@ -679,6 +679,7 @@ export default function NarrativePage() {
           model: state.fieldValues['model'] || '',
           roNumber: state.roNumber || '',
         }}
+        senderName={[profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || ''}
         onBeforeExport={handleBeforeExport}
       />
 

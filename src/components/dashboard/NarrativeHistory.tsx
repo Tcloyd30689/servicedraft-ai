@@ -11,6 +11,7 @@ import type { Narrative } from '@/types/database';
 
 interface NarrativeHistoryProps {
   userId: string;
+  senderName?: string;
 }
 
 type SortOption = 'date-newest' | 'date-oldest' | 'vehicle-az' | 'ro-asc';
@@ -29,7 +30,7 @@ const FILTER_OPTIONS: { key: FilterOption; label: string }[] = [
   { key: 'repair_complete', label: 'Repair Complete' },
 ];
 
-export default function NarrativeHistory({ userId }: NarrativeHistoryProps) {
+export default function NarrativeHistory({ userId, senderName }: NarrativeHistoryProps) {
   const [narratives, setNarratives] = useState<Narrative[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
@@ -306,6 +307,7 @@ export default function NarrativeHistory({ userId }: NarrativeHistoryProps) {
         isOpen={!!selectedNarrative}
         onClose={() => setSelectedNarrative(null)}
         narrative={selectedNarrative}
+        senderName={senderName}
       />
     </LiquidCard>
   );
