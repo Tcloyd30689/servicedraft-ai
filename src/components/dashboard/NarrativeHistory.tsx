@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Search, X, ArrowDown, ArrowUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createClient } from '@/lib/supabase/client';
-import { withTimeout } from '@/lib/utils';
 import LiquidCard from '@/components/ui/LiquidCard';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import NarrativeDetailModal from './NarrativeDetailModal';
@@ -54,21 +52,14 @@ export default function NarrativeHistory({ userId, senderName }: NarrativeHistor
 
   const fetchNarratives = useCallback(async () => {
     try {
-      const supabase = createClient();
-
-      const executeQuery = async () => {
-        return await supabase
-          .from('narratives')
-          .select('*')
-          .eq('user_id', userId)
-          .order('updated_at', { ascending: false });
-      };
-
-      const { data, error } = await withTimeout(executeQuery(), 10000);
-
-      if (error) {
-        console.error('Failed to fetch narratives:', error.message);
-      } else if (data) {
+      const res = await fetch('/api/narratives');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error('Failed to fetch narratives:', body.error || res.statusText);
+        return;
+      }
+      const { narratives: data } = await res.json();
+      if (data) {
         setNarratives(data as Narrative[]);
       }
     } catch (err) {

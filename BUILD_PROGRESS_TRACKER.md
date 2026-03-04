@@ -1953,6 +1953,14 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Completed:** 2026-03-04
 - **Notes:** Fixes incorrect behavior where diagnostic-only stories were flagged for missing completed repair or verification steps. The diagnostic optimizer prompt instead evaluates whether the narrative is strong enough to convince an extended warranty company to authorize the repair without a third-party inspection.
 
+### PB.90 — Move Narrative Save and Fetch to Server-Side API Routes
+- [x] Created `src/app/api/narratives/route.ts` — GET endpoint that authenticates via cookies, fetches all narratives for the logged-in user
+- [x] Created `src/app/api/narratives/save/route.ts` — POST endpoint that authenticates via cookies, upserts narrative data with onConflict on user_id+ro_number
+- [x] Updated `src/components/dashboard/NarrativeHistory.tsx` — replaced client-side Supabase query with `fetch('/api/narratives')`, removed `createClient` and `withTimeout` imports
+- [x] Updated `src/app/(protected)/narrative/page.tsx` — replaced client-side Supabase upsert in `saveToDatabase` with `fetch('/api/narratives/save')`, removed `createClient` and `withTimeout` imports, simplified `handleSave` error handling
+- **Completed:** 2026-03-04
+- **Notes:** The client-side Supabase browser client had unreliable auth state for standalone SELECT/INSERT queries, causing dashboard narrative fetch to timeout every time. All other working features (generate, proofread, admin) already used server-side API routes where Supabase authenticates via HTTP cookies. This fix eliminates client-side Supabase queries from the entire narrative workflow.
+
 ---
 
 *— End of Build Progress Tracker —*

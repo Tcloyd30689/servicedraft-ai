@@ -10,8 +10,6 @@ import { findHighlightRanges, type HighlightRange } from '@/lib/highlightUtils';
 import { dispatchActivity } from '@/hooks/useActivityPulse';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import { useAuth } from '@/hooks/useAuth';
-import { createClient } from '@/lib/supabase/client';
-import { withTimeout } from '@/lib/utils';
 import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -345,43 +343,34 @@ export default function NarrativePage() {
     }
   };
 
-  // Save to Supabase — UPSERT: overwrites if same user + RO# exists
+  // Save to server-side API route — UPSERT: overwrites if same user + RO# exists
   const saveToDatabase = useCallback(async (): Promise<string | null> => {
     if (!state.narrative || !user) return null;
 
-    const supabase = createClient();
+    const res = await fetch('/api/narratives/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ro_number: state.roNumber || null,
+        vehicle_year: state.fieldValues['year']
+          ? parseInt(state.fieldValues['year'], 10) || null
+          : null,
+        vehicle_make: state.fieldValues['make'] || null,
+        vehicle_model: state.fieldValues['model'] || null,
+        concern: state.narrative.concern,
+        cause: state.narrative.cause,
+        correction: state.narrative.correction,
+        full_narrative: state.narrative.block_narrative,
+        story_type: state.storyType,
+      }),
+    });
 
-    const narrativeData = {
-      user_id: user.id,
-      ro_number: state.roNumber || null,
-      vehicle_year: state.fieldValues['year']
-        ? parseInt(state.fieldValues['year'], 10) || null
-        : null,
-      vehicle_make: state.fieldValues['make'] || null,
-      vehicle_model: state.fieldValues['model'] || null,
-      concern: state.narrative.concern,
-      cause: state.narrative.cause,
-      correction: state.narrative.correction,
-      full_narrative: state.narrative.block_narrative,
-      story_type: state.storyType,
-      updated_at: new Date().toISOString(),
-    };
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Failed to save narrative');
+    }
 
-    // Wrap Supabase thenable in a proper async function so withTimeout works reliably
-    const executeQuery = async () => {
-      return await supabase
-        .from('narratives')
-        .upsert(narrativeData, {
-          onConflict: 'user_id,ro_number',
-        })
-        .select('id')
-        .single();
-    };
-
-    const { data, error } = await withTimeout(executeQuery(), 10000);
-
-    if (error) throw error;
-    const id = data?.id ?? null;
+    const { id } = await res.json();
     if (id) markSaved(id);
     return id;
   }, [state.narrative, state.roNumber, state.fieldValues, state.storyType, user, markSaved]);
@@ -400,7 +389,7 @@ export default function NarrativePage() {
       logActivity('save', { story_type: state.storyType || undefined });
       toast.success('Story saved successfully');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'message' in err) ? String((err as { message: unknown }).message) : 'Unknown error';
+      const message = err instanceof Error ? err.message : 'Unknown error';
       console.error('Save story error:', err);
       toast.error(`Failed to save story: ${message}`);
     } finally {
