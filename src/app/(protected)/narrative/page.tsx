@@ -11,6 +11,7 @@ import { dispatchActivity } from '@/hooks/useActivityPulse';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
+import { withTimeout } from '@/lib/utils';
 import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -367,13 +368,18 @@ export default function NarrativePage() {
     };
 
     // UPSERT: if a row with the same (user_id, ro_number) exists, overwrite it
-    const { data, error } = await supabase
-      .from('narratives')
-      .upsert(narrativeData, {
-        onConflict: 'user_id,ro_number',
-      })
-      .select('id')
-      .single();
+    const { data, error } = await withTimeout(
+      Promise.resolve(
+        supabase
+          .from('narratives')
+          .upsert(narrativeData, {
+            onConflict: 'user_id,ro_number',
+          })
+          .select('id')
+          .single()
+      ),
+      8000
+    );
 
     if (error) throw error;
     const id = data?.id ?? null;
@@ -391,7 +397,7 @@ export default function NarrativePage() {
     setIsSaving(true);
     dispatchActivity(0.5);
     try {
-      await saveToDatabase();
+      await withTimeout(saveToDatabase(), 8000);
       logActivity('save', { story_type: state.storyType || undefined });
       toast.success('Story saved successfully');
     } catch (err: unknown) {
@@ -408,16 +414,11 @@ export default function NarrativePage() {
     if (!state.narrative || !user) return;
 
     dispatchActivity(0.5);
-    try {
-      // Only auto-save if not already saved
-      if (!state.isSaved) {
-        await saveToDatabase();
-        toast.success('Narrative auto-saved to your history', { id: 'auto-save' });
-      }
-    } catch (err) {
-      console.error('Auto-save on export error:', err);
-      // Don't block the export — just warn
-      toast.error('Auto-save failed, but export will continue');
+    if (!state.isSaved) {
+      // Fire-and-forget: don't block exports on save
+      saveToDatabase()
+        .then(() => toast.success('Narrative auto-saved to your history', { id: 'auto-save' }))
+        .catch((err) => console.error('Auto-save on export error:', err));
     }
   }, [state.narrative, state.isSaved, user, saveToDatabase]);
 

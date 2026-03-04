@@ -23,10 +23,10 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-02-26
+**Last Updated:** 2026-03-03
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 85 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete)
+**Overall Progress:** 73 / 78 tasks complete (+ 86 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
@@ -1703,8 +1703,8 @@ This file is a living document that Claude Code reads at the start of every sess
 | Stage 2 Sprint S2-5 | 5 | 5 |
 | Stage 2 Sprint S2-6A | 7 | 7 |
 | Stage 2 Sprint S2-6B | 4 | 4 |
-| Post-Build Fixes | 85 | 85 |
-| **TOTAL** | **190** | **185** |
+| Post-Build Fixes | 86 | 86 |
+| **TOTAL** | **191** | **186** |
 
 ---
 
@@ -1912,6 +1912,18 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** S2-6C.1 through S2-6C.6
 - **Completed:** 2026-02-26
 - **Notes:** Full analytics tab with 6 stat cards, 4 chart/table visualizations, auto-refresh with 60s interval, date range selector (7d/14d/30d/all-time). All charts built with pure CSS (no charting library). Analytics API route uses service role client with admin verification, parallel queries via Promise.all. Colors reuse CSS variables and ACTION_BORDER_COLORS from activity log tab.
+
+---
+
+## Post-Build Bug Fixes — Second-Generation Export/Save Lockup
+
+### PB.86 — Fix Second-Generation Export/Save Lockup
+- [x] **Bug 1 — Narrative Store Subscription Leak:** Replaced broken `useState`/`useCallback` pub/sub pattern in `src/stores/narrativeStore.ts` with React's `useSyncExternalStore` hook. Module-level `subscribe()` and `getSnapshot()` functions ensure automatic listener cleanup on component unmount, eliminating stale listener accumulation across page navigations.
+- [x] **Bug 2 — Export Chain Blocking:** Added `withTimeout` utility to `src/lib/utils.ts` (8-second timeout). Wrapped Supabase upsert in `saveToDatabase()` with timeout so a hung DB call can't block indefinitely. Made `handleBeforeExport` fire-and-forget (no longer awaits `saveToDatabase`) so exports proceed immediately regardless of save state.
+- [x] **Bug 3 — Dashboard Narrative History Hang:** Wrapped `fetchNarratives` Supabase query in `src/components/dashboard/NarrativeHistory.tsx` with `withTimeout(8000)` so the dashboard can't lock up on a stalled fetch.
+- [x] **Bug 4 — handleSave Timeout:** Wrapped `handleSave`'s `saveToDatabase()` call with `withTimeout(8000)` so the save button can't spin indefinitely. Existing try/catch handles timeout errors and shows toast.
+- **Completed:** 2026-03-03
+- **Notes:** Root cause was two interacting bugs: (1) `useState(() => subscribe())` in narrativeStore never cleaned up listeners on unmount — every page navigation added a permanent listener to the global Set, causing stale re-renders and state corruption after the first generation cycle; (2) `handleBeforeExport` awaited `saveToDatabase()` which could hang forever if Supabase client was in a bad state — since all 5 export buttons called this function, a hung save blocked every export. Fix uses `useSyncExternalStore` (React 18+) for proper subscription lifecycle and `withTimeout` + fire-and-forget pattern to prevent any single Supabase call from blocking the UI.
 
 ---
 

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Search, X, ArrowDown, ArrowUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
+import { withTimeout } from '@/lib/utils';
 import LiquidCard from '@/components/ui/LiquidCard';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import NarrativeDetailModal from './NarrativeDetailModal';
@@ -54,11 +55,16 @@ export default function NarrativeHistory({ userId, senderName }: NarrativeHistor
   const fetchNarratives = useCallback(async () => {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from('narratives')
-        .select('*')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false });
+      const { data, error } = await withTimeout(
+        Promise.resolve(
+          supabase
+            .from('narratives')
+            .select('*')
+            .eq('user_id', userId)
+            .order('updated_at', { ascending: false })
+        ),
+        8000
+      );
 
       if (error) {
         console.error('Failed to fetch narratives:', error.message);

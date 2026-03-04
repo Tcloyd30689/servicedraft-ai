@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import type { StoryType, DropdownOption } from '@/constants/fieldConfig';
 
 export interface NarrativeData {
@@ -63,20 +63,18 @@ function notifyListeners() {
   listeners.forEach((fn) => fn());
 }
 
+// Module-level subscribe/getSnapshot for useSyncExternalStore
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+function getSnapshot() {
+  return globalState;
+}
+
 export function useNarrativeStore() {
-  const [, forceUpdate] = useState(0);
-
-  const subscribe = useCallback(() => {
-    const listener = () => forceUpdate((c) => c + 1);
-    listeners.add(listener);
-    return () => { listeners.delete(listener); };
-  }, []);
-
-  // Subscribe on mount
-  useState(() => {
-    const unsub = subscribe();
-    return unsub;
-  });
+  const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const setStoryType = useCallback((type: StoryType | null) => {
     globalState = { ...globalState, storyType: type, fieldValues: {}, dropdownSelections: {} };
@@ -177,7 +175,7 @@ export function useNarrativeStore() {
   }, []);
 
   return {
-    state: globalState,
+    state,
     setStoryType,
     setFieldValue,
     setDropdownSelection,
