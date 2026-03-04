@@ -367,19 +367,18 @@ export default function NarrativePage() {
       updated_at: new Date().toISOString(),
     };
 
-    // UPSERT: if a row with the same (user_id, ro_number) exists, overwrite it
-    const { data, error } = await withTimeout(
-      Promise.resolve(
-        supabase
-          .from('narratives')
-          .upsert(narrativeData, {
-            onConflict: 'user_id,ro_number',
-          })
-          .select('id')
-          .single()
-      ),
-      8000
-    );
+    // Wrap Supabase thenable in a proper async function so withTimeout works reliably
+    const executeQuery = async () => {
+      return await supabase
+        .from('narratives')
+        .upsert(narrativeData, {
+          onConflict: 'user_id,ro_number',
+        })
+        .select('id')
+        .single();
+    };
+
+    const { data, error } = await withTimeout(executeQuery(), 10000);
 
     if (error) throw error;
     const id = data?.id ?? null;
@@ -397,7 +396,7 @@ export default function NarrativePage() {
     setIsSaving(true);
     dispatchActivity(0.5);
     try {
-      await withTimeout(saveToDatabase(), 8000);
+      await saveToDatabase();
       logActivity('save', { story_type: state.storyType || undefined });
       toast.success('Story saved successfully');
     } catch (err: unknown) {

@@ -50,6 +50,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Session 15A:** COMPLETE — Proofread highlighting with 30-second fade, highlight counter badge, clear highlights button (PB.84)
 **Hotfix 16A:** COMPLETE — Export logo aspect ratio fix — preserve native 2.09:1 ratio (PB.85)
 **Session 17A:** COMPLETE — Email export feature with Resend integration and professional HTML template (S2-5)
+**Hotfix 18A:** COMPLETE — Fix save timeout: replace Promise.resolve wrapping with proper async pattern for Supabase queries, remove double timeout on save (PB.86)
 
 ---
 

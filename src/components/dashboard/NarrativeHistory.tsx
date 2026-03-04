@@ -55,16 +55,16 @@ export default function NarrativeHistory({ userId, senderName }: NarrativeHistor
   const fetchNarratives = useCallback(async () => {
     try {
       const supabase = createClient();
-      const { data, error } = await withTimeout(
-        Promise.resolve(
-          supabase
-            .from('narratives')
-            .select('*')
-            .eq('user_id', userId)
-            .order('updated_at', { ascending: false })
-        ),
-        8000
-      );
+
+      const executeQuery = async () => {
+        return await supabase
+          .from('narratives')
+          .select('*')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false });
+      };
+
+      const { data, error } = await withTimeout(executeQuery(), 10000);
 
       if (error) {
         console.error('Failed to fetch narratives:', error.message);
