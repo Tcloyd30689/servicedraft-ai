@@ -23,10 +23,10 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-03-03
+**Last Updated:** 2026-03-04
 **Current Phase:** Phase 10 — Deployment
 **Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 86 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete)
+**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
@@ -1924,6 +1924,12 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] **Bug 4 — handleSave Timeout:** Wrapped `handleSave`'s `saveToDatabase()` call with `withTimeout(8000)` so the save button can't spin indefinitely. Existing try/catch handles timeout errors and shows toast.
 - **Completed:** 2026-03-03
 - **Notes:** Root cause was two interacting bugs: (1) `useState(() => subscribe())` in narrativeStore never cleaned up listeners on unmount — every page navigation added a permanent listener to the global Set, causing stale re-renders and state corruption after the first generation cycle; (2) `handleBeforeExport` awaited `saveToDatabase()` which could hang forever if Supabase client was in a bad state — since all 5 export buttons called this function, a hung save blocked every export. Fix uses `useSyncExternalStore` (React 18+) for proper subscription lifecycle and `withTimeout` + fire-and-forget pattern to prevent any single Supabase call from blocking the UI.
+
+### PB.87 — Fix useAuth Hook Teardown Causing AbortError and Login Lockup
+- [x] **Fix 1 — Remove aggressive teardown:** Removed the `if (listeners.size === 0 && authSubscription)` block from the `useAuth` useEffect cleanup in `src/hooks/useAuth.ts`. The auth subscription, `initialized` flag, and `authState` now persist as module-level singletons across route transitions. Only a full page reload or explicit sign-out resets them.
+- [x] **Fix 2 — AbortError suppression in onAuthStateChange:** Wrapped the `onAuthStateChange` callback body in try/catch with `DOMException`/`AbortError` guard, matching the existing pattern in `initializeAuth`'s initial fetch.
+- **Completed:** 2026-03-04
+- **Notes:** Same class of bug as PB.86 (narrativeStore). During Next.js route transitions, old page unmounts before new page mounts. When the last useAuth listener unmounted, cleanup tore down the Supabase auth subscription, reset `initialized = false`, and set `authState = { loading: true }`. The new page then called `initializeAuth()` again, racing with the previous in-flight `getUser()` call, causing AbortError and login lockup. Fix: auth subscription is now a true app-lifetime singleton — never torn down during navigation.
 
 ---
 

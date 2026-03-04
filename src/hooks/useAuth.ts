@@ -139,15 +139,20 @@ function initializeAuth() {
   // Auth state change listener — single global subscription
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
     async (_event, session) => {
-      const currentUser = session?.user ?? null;
-      setAuthState({ user: currentUser });
+      try {
+        const currentUser = session?.user ?? null;
+        setAuthState({ user: currentUser });
 
-      if (currentUser) {
-        await fetchProfileForUser(currentUser.id, currentUser.email || '');
-      } else {
-        setAuthState({ profile: null });
+        if (currentUser) {
+          await fetchProfileForUser(currentUser.id, currentUser.email || '');
+        } else {
+          setAuthState({ profile: null });
+        }
+        setAuthState({ loading: false });
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        console.error('Auth state change error:', err);
       }
-      setAuthState({ loading: false });
     },
   );
 
@@ -169,14 +174,9 @@ export function useAuth(): UseAuthReturn {
 
     return () => {
       listeners.delete(listener);
-
-      // Tear down global subscription when no consumers remain
-      if (listeners.size === 0 && authSubscription) {
-        authSubscription.unsubscribe();
-        authSubscription = null;
-        initialized = false;
-        authState = { user: null, profile: null, loading: true };
-      }
+      // Do NOT tear down the global auth subscription here.
+      // It must persist across route transitions. The module-level
+      // supabase client and auth listener live for the app lifetime.
     };
   }, []);
 
