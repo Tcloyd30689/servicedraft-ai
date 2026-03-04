@@ -1931,6 +1931,27 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Completed:** 2026-03-04
 - **Notes:** Same class of bug as PB.86 (narrativeStore). During Next.js route transitions, old page unmounts before new page mounts. When the last useAuth listener unmounted, cleanup tore down the Supabase auth subscription, reset `initialized = false`, and set `authState = { loading: true }`. The new page then called `initializeAuth()` again, racing with the previous in-flight `getUser()` call, causing AbortError and login lockup. Fix: auth subscription is now a true app-lifetime singleton — never torn down during navigation.
 
+## Post-Build Improvements — Prompt Refinements
+
+### PB.88 — Prevent AI Detail Omission in Narrative Generation
+- [x] Updated rule #7 in both DIAGNOSTIC_ONLY_SYSTEM_PROMPT and REPAIR_COMPLETE_SYSTEM_PROMPT to require preserving all detailed input (not simplifying detailed diagnostics into generalized statements)
+- [x] Added new detail-preservation rule (rule #9 for Diagnostic Only, rule #10 for Repair Complete) requiring ALL specific technical data points — terminal numbers, connector IDs, circuit numbers, pin numbers, wire colors, voltage/resistance/amperage/pressure/temperature readings, specification values, and all other numerical/technical data — to be included verbatim in the generated narrative
+- [x] Updated ServiceDraft_AI_Prompt_Logic_v1.md Sections 3 and 4 to reflect the new rule text
+- **Completed:** 2026-03-04
+- **Notes:** Addresses warranty audit failures where the AI was summarizing specific technician-provided data points (e.g., terminal numbers, voltage readings) instead of including them verbatim. Both generation prompts now explicitly require that every technical data point appears in the output.
+
+### PB.89 — Split Audit/Proofread by Story Type (Diagnostic Optimizer)
+- [x] Created DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT in src/constants/prompts.ts — evaluates diagnostic strength, authorization-readiness, and repair sellability rather than warranty compliance
+- [x] Updated src/app/api/proofread/route.ts to select system prompt and user prompt based on storyType field from request body
+- [x] Diagnostic Only proofread uses new diagnostic optimizer prompt (10 criteria focused on diagnostic evidence, justification strength, repair sellability)
+- [x] Repair Complete proofread continues using existing warranty audit prompt unchanged
+- [x] Story-type-specific user prompt templates: diagnostic-only evaluates "authorization-readiness," repair-complete evaluates "audit compliance"
+- [x] Frontend already passes storyType to proofread API — no frontend changes needed
+- [x] JSON response format unchanged (flagged_issues, suggested_edits, overall_rating, summary) for both story types
+- [x] Updated ServiceDraft_AI_Prompt_Logic_v1.md Section 6 — renamed to "Story Audit / Proofreading Prompts" (plural), documented both system prompts, both user prompt templates, and the prompt selection logic
+- **Completed:** 2026-03-04
+- **Notes:** Fixes incorrect behavior where diagnostic-only stories were flagged for missing completed repair or verification steps. The diagnostic optimizer prompt instead evaluates whether the narrative is strong enough to convince an extended warranty company to authorize the repair without a third-party inspection.
+
 ---
 
 *— End of Build Progress Tracker —*

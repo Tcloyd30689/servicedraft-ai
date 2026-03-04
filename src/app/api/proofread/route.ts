@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generateWithGemini, parseJsonResponse } from '@/lib/gemini/client';
-import { PROOFREAD_SYSTEM_PROMPT } from '@/constants/prompts';
+import { PROOFREAD_SYSTEM_PROMPT, DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT } from '@/constants/prompts';
 
 interface RawProofreadResponse {
   flagged_issues: string[];
@@ -32,9 +32,29 @@ export async function POST(request: Request) {
       );
     }
 
-    const userPrompt = `Review the following warranty narrative for audit compliance issues. Identify any language, missing information, or structural problems that could cause this claim to be flagged or rejected during a manufacturer warranty audit.
+    const isDiagnosticOnly = storyType === 'diagnostic_only';
 
-STORY TYPE: ${storyType === 'diagnostic_only' ? 'Diagnostic Only' : 'Repair Complete'}
+    const systemPrompt = isDiagnosticOnly
+      ? DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT
+      : PROOFREAD_SYSTEM_PROMPT;
+
+    const userPrompt = isDiagnosticOnly
+      ? `Review the following diagnostic-only narrative for strength, clarity, and authorization-readiness. This is a diagnosis-only scenario — the repair has NOT been performed yet. Evaluate whether this narrative is detailed and compelling enough to support repair authorization from a manufacturer, extended warranty company, or customer approval.
+
+STORY TYPE: Diagnostic Only
+VEHICLE: ${year || ''} ${make || ''} ${model || ''}
+
+NARRATIVE TO REVIEW:
+---
+CONCERN: ${concern}
+
+CAUSE: ${cause}
+
+CORRECTION: ${correction}
+---`
+      : `Review the following warranty narrative for audit compliance issues. Identify any language, missing information, or structural problems that could cause this claim to be flagged or rejected during a manufacturer warranty audit.
+
+STORY TYPE: Repair Complete
 VEHICLE: ${year || ''} ${make || ''} ${model || ''}
 
 NARRATIVE TO REVIEW:
@@ -46,7 +66,7 @@ CAUSE: ${cause}
 CORRECTION: ${correction}
 ---`;
 
-    const rawResponse = await generateWithGemini(PROOFREAD_SYSTEM_PROMPT, userPrompt);
+    const rawResponse = await generateWithGemini(systemPrompt, userPrompt);
     const parsed = parseJsonResponse<RawProofreadResponse>(rawResponse);
 
     if (!parsed.overall_rating || !parsed.summary) {
