@@ -107,7 +107,9 @@ AUDIT CRITERIA — Flag any of the following:
 7. Any language that could be interpreted as the technician being uncertain about the diagnosis (avoid "might be", "could be", "possibly" — auditors want confidence)
 8. Missing diagnostic steps — if a part was replaced without documenting how the technician arrived at that conclusion
 9. Overly brief narratives that lack the detail expected for warranty documentation
-10. Any manufacturer-specific branding or proprietary terminology that should be replaced with universal language
+
+IMPORTANT — OEM TERMINOLOGY IS EXPECTED AND CORRECT:
+Manufacturer-specific terminology, OEM proprietary system names, and brand-specific language (e.g., Active Fuel Management, StabiliTrak, OnStar Diagnostics, EcoTec, VTEC, SkyActiv, BlueTEC, AdvanceTrac, Hill Start Assist, etc.) are EXPECTED and CORRECT in warranty narratives when the vehicle year, make, and model warrant their use. Do NOT flag OEM-specific terminology as an issue. These terms demonstrate accurate, professional documentation that aligns with the manufacturer's own service language.
 
 SNIPPET EXTRACTION:
 For each flagged issue, you MUST include the EXACT text snippet from the narrative that contains the issue, enclosed in double brackets like [[exact text here]]. This exact text will be used for highlighting in the UI. The snippet should be the shortest phrase that captures the problematic text — typically 3-15 words. Copy the text EXACTLY as it appears in the narrative (same capitalization, punctuation, spacing).

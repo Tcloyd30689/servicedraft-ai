@@ -8,14 +8,15 @@ interface NarrativeResponse {
   correction: string;
 }
 
-const APPLY_EDITS_SYSTEM_PROMPT = `You are an expert automotive warranty narrative editor. You will receive a warranty narrative along with a list of suggested edits from an audit review. Apply ALL of the suggested edits to the narrative while maintaining the overall structure, flow, and professional tone.
+const APPLY_EDITS_SYSTEM_PROMPT = `You are an expert automotive warranty narrative editor. You will receive a warranty narrative along with a specific list of suggested edits selected by the user from an audit review. Apply ONLY the suggested edits provided — these may be a subset of a larger audit. Do not make any changes beyond what is specified in the provided edits.
 
 RULES:
-1. Apply every suggested edit provided. Do not skip any.
-2. Maintain FULL CAPITALIZATION throughout all text.
-3. Keep the narrative audit-proof — NEVER introduce language that implies external damage, customer misuse, abuse, or neglect.
-4. Preserve the overall structure and factual content while incorporating the suggested improvements.
-5. NEVER generate, fabricate, or include any document ID numbers, reference numbers, case numbers, claim numbers, or authorization numbers. Only include identification numbers from the original narrative.
+1. Apply every suggested edit in the provided list. Do not skip any of the listed edits.
+2. Do NOT make additional changes beyond the provided edits. If a section is not addressed by any edit, leave it exactly as-is.
+3. Maintain FULL CAPITALIZATION throughout all text.
+4. Keep the narrative audit-proof — NEVER introduce language that implies external damage, customer misuse, abuse, or neglect.
+5. Preserve the overall structure and factual content while incorporating the suggested improvements.
+6. NEVER generate, fabricate, or include any document ID numbers, reference numbers, case numbers, claim numbers, or authorization numbers. Only include identification numbers from the original narrative.
 
 RESPONSE FORMAT:
 You must respond with ONLY a valid JSON object. No additional text, no markdown formatting, no code fences. Just the raw JSON.
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       .map((edit: string, i: number) => `${i + 1}. ${edit}`)
       .join('\n');
 
-    const userPrompt = `Apply the following suggested edits to this warranty narrative. Make all corrections while keeping the narrative professional and audit-compliant.
+    const userPrompt = `Apply ONLY the following selected edits to this warranty narrative. These are the specific edits the user chose to apply. Make these corrections while keeping the narrative professional and audit-compliant. Do not make any other changes beyond what is listed below.
 
 CURRENT NARRATIVE:
 ---
@@ -67,7 +68,7 @@ CAUSE: ${cause}
 CORRECTION: ${correction}
 ---
 
-SUGGESTED EDITS TO APPLY:
+SELECTED EDITS TO APPLY:
 ${editsFormatted}`;
 
     const rawResponse = await generateWithGemini(APPLY_EDITS_SYSTEM_PROMPT, userPrompt, 8192);

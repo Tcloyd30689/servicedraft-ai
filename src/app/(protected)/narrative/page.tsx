@@ -67,6 +67,7 @@ export default function NarrativePage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const [selectedEditIndices, setSelectedEditIndices] = useState<number[]>([]);
 
   const lastGenerationId = useRef(-1);
 
@@ -310,9 +311,16 @@ export default function NarrativePage() {
     }
   };
 
-  // Apply suggested edits from proofread
+  // Apply only selected suggested edits from proofread
   const handleApplyEdits = async () => {
     if (!state.narrative || !proofreadData?.suggested_edits?.length) return;
+
+    if (selectedEditIndices.length === 0) {
+      toast.error('Select at least one suggested edit to apply');
+      return;
+    }
+
+    const selectedEdits = selectedEditIndices.map(i => proofreadData.suggested_edits[i]);
 
     setIsApplyingEdits(true);
     clearHighlights();
@@ -325,7 +333,7 @@ export default function NarrativePage() {
           concern: state.narrative.concern,
           cause: state.narrative.cause,
           correction: state.narrative.correction,
-          suggestedEdits: proofreadData.suggested_edits,
+          suggestedEdits: selectedEdits,
         }),
       });
 
@@ -335,7 +343,8 @@ export default function NarrativePage() {
       setNarrative(data);
       setAnimateNarrative(true);
       setProofreadData(null);
-      toast.success('Suggested edits applied');
+      setSelectedEditIndices([]);
+      toast.success('Selected edits applied');
     } catch {
       toast.error('Failed to apply edits. Please try again.');
     } finally {
@@ -554,7 +563,11 @@ export default function NarrativePage() {
                   transition={{ duration: 0.3 }}
                   className="mt-4"
                 >
-                  <ProofreadResults data={proofreadData} animate={animateProofread} />
+                  <ProofreadResults
+                    data={proofreadData}
+                    animate={animateProofread}
+                    onSelectionChange={setSelectedEditIndices}
+                  />
 
                   {proofreadData.suggested_edits.length > 0 && (
                     <div className="mt-4">
@@ -565,7 +578,7 @@ export default function NarrativePage() {
                         className="flex items-center justify-center gap-2"
                       >
                         <CheckCircle size={16} />
-                        APPLY SUGGESTED EDITS
+                        APPLY SELECTED EDITS
                       </Button>
                     </div>
                   )}

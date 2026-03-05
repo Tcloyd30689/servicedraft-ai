@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import { useTypingAnimation } from '@/hooks/useTypingAnimation';
 
 interface ParsedIssue {
@@ -17,6 +18,7 @@ interface ProofreadData {
 interface ProofreadResultsProps {
   data: ProofreadData;
   animate?: boolean;
+  onSelectionChange?: (selectedIndices: number[]) => void;
 }
 
 const ratingConfig = {
@@ -28,7 +30,12 @@ const ratingConfig = {
 export default function ProofreadResults({
   data,
   animate = false,
+  onSelectionChange,
 }: ProofreadResultsProps) {
+  const [checkedEdits, setCheckedEdits] = useState<boolean[]>(
+    () => new Array(data.suggested_edits.length).fill(false)
+  );
+
   const issuesText = useTypingAnimation(
     data.flagged_issues.length > 0
       ? data.flagged_issues.map((item, i) => `${i + 1}. ${item.issue}`).join('\n')
@@ -36,12 +43,41 @@ export default function ProofreadResults({
     { speed: 10, enabled: animate },
   );
 
-  const editsText = useTypingAnimation(
-    data.suggested_edits.length > 0
-      ? data.suggested_edits.map((edit, i) => `${i + 1}. ${edit}`).join('\n')
-      : 'No edits suggested.',
-    { speed: 10, enabled: animate },
-  );
+  // Notify parent of selection changes
+  const notifyParent = useCallback((checks: boolean[]) => {
+    if (onSelectionChange) {
+      const indices = checks.reduce<number[]>((acc, checked, i) => {
+        if (checked) acc.push(i);
+        return acc;
+      }, []);
+      onSelectionChange(indices);
+    }
+  }, [onSelectionChange]);
+
+  // Reset checkboxes when data changes
+  useEffect(() => {
+    const fresh = new Array(data.suggested_edits.length).fill(false);
+    setCheckedEdits(fresh);
+    notifyParent(fresh);
+  }, [data.suggested_edits, notifyParent]);
+
+  const toggleEdit = (index: number) => {
+    setCheckedEdits(prev => {
+      const next = [...prev];
+      next[index] = !next[index];
+      notifyParent(next);
+      return next;
+    });
+  };
+
+  const allChecked = checkedEdits.length > 0 && checkedEdits.every(Boolean);
+
+  const toggleAll = () => {
+    const newState = !allChecked;
+    const next = new Array(data.suggested_edits.length).fill(newState);
+    setCheckedEdits(next);
+    notifyParent(next);
+  };
 
   const rating = ratingConfig[data.overall_rating];
 
@@ -71,19 +107,51 @@ export default function ProofreadResults({
         </div>
       </div>
 
-      {/* Suggested Edits */}
+      {/* Suggested Edits with Checkboxes */}
       <div>
-        <h4 className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide mb-2">
-          Suggested Edits
-        </h4>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide">
+            Suggested Edits
+          </h4>
+          {data.suggested_edits.length > 0 && (
+            <button
+              onClick={toggleAll}
+              className="text-xs font-medium px-2 py-1 rounded transition-colors"
+              style={{
+                color: 'var(--accent-bright)',
+                backgroundColor: 'var(--accent-10)',
+              }}
+            >
+              {allChecked ? 'Deselect All' : 'Select All'}
+            </button>
+          )}
+        </div>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3 min-h-[60px]">
-          <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">
-            {animate ? editsText.displayText : (
-              data.suggested_edits.length > 0
-                ? data.suggested_edits.map((edit, i) => `${i + 1}. ${edit}`).join('\n')
-                : 'No edits suggested.'
-            )}
-          </p>
+          {data.suggested_edits.length > 0 ? (
+            <div className="space-y-2">
+              {data.suggested_edits.map((edit, i) => (
+                <label
+                  key={i}
+                  className="flex items-start gap-3 cursor-pointer group rounded-md p-2 -mx-1 transition-colors hover:bg-[var(--accent-5)]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checkedEdits[i] || false}
+                    onChange={() => toggleEdit(i)}
+                    className="mt-0.5 h-4 w-4 rounded border-2 cursor-pointer shrink-0 accent-[var(--accent-hover)]"
+                    style={{
+                      accentColor: 'var(--accent-hover)',
+                    }}
+                  />
+                  <span className="text-[var(--text-primary)] text-sm leading-relaxed">
+                    {i + 1}. {edit}
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[var(--text-primary)] text-sm">No edits suggested.</p>
+          )}
         </div>
       </div>
     </div>

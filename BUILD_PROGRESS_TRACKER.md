@@ -25,8 +25,8 @@ This file is a living document that Claude Code reads at the start of every sess
 
 **Last Updated:** 2026-03-05
 **Current Phase:** Stage 3 — UI Polish
-**Next Task:** Stage 3, Sprint 2
-**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 tasks complete)
+**Next Task:** Stage 3, Sprint 5
+**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
@@ -35,6 +35,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 2 Sprint S2-6B:** COMPLETE — Admin user management: list, restrict, delete, password reset, subscription change
 **Stage 2 Sprint S2-6C:** COMPLETE — Admin analytics dashboard with stat cards, charts, and auto-refresh
 **Stage 3 Sprint 1:** COMPLETE — Saved story modal positioning/sizing fix + audit tooltip animation/opacity fix
+**Stage 3 Sprint 4:** COMPLETE — Fixed OEM terminology audit flagging + added selective apply for suggested edits
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1991,6 +1992,39 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** S3-1.1, S3-1.2
 - **Completed:** 2026-03-05
 - **Notes:** Two UI polish fixes: (1) Saved story popup modal on dashboard now renders below the navbar with proper scrolling and wider layout (max-w-5xl). Modal component restructured to use flexbox centering within viewport space below nav, benefiting all modals app-wide. (2) Audit/proofread tooltip no longer pulses or has transparent background — appears instantly with solid opaque dark background on hover.
+
+---
+
+## Stage 3 Sprint 4 — OEM Audit Fix + Selective Apply Edits — COMPLETE
+
+### S3-4.1 — Stop Flagging OEM/Manufacturer Terminology in Proofread
+- [x] Removed audit criterion #10 ("Any manufacturer-specific branding or proprietary terminology that should be replaced with universal language") from `PROOFREAD_SYSTEM_PROMPT` in `src/constants/prompts.ts`
+- [x] Added explicit OEM allowance instruction: manufacturer-specific terminology (Active Fuel Management, StabiliTrak, VTEC, SkyActiv, etc.) is expected and correct when the vehicle year/make/model warrant their use
+- [x] All other audit criteria (1-9) remain intact
+- [x] `DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT` already had no OEM-flagging criterion — no changes needed there
+- **Completed:** 2026-03-05
+- **Notes:** The generation prompts (rules #5) explicitly encourage OEM-specific terminology. The proofread prompt criterion #10 directly contradicted this by flagging OEM terms as issues. Fix aligns the audit prompt with the generation prompt — OEM terminology is now recognized as professional, accurate documentation.
+
+### S3-4.2 — Selective Apply Suggested Edits with Checkboxes
+- [x] Rebuilt `src/components/narrative/ProofreadResults.tsx` — each suggested edit now has a checkbox next to it, default state all unchecked
+- [x] Added "Select All / Deselect All" toggle button at the top of the suggested edits list, styled with accent theme colors
+- [x] Checkbox labels are full-row clickable with hover highlight using `var(--accent-5)`
+- [x] Checkboxes styled with `accent-color: var(--accent-hover)` for purple theme matching
+- [x] Component exposes `onSelectionChange` callback prop to notify parent of selected indices
+- [x] Updated `src/app/(protected)/narrative/page.tsx` — added `selectedEditIndices` state, wired to `ProofreadResults.onSelectionChange`
+- [x] `handleApplyEdits` now sends ONLY the checked suggestions to the apply-edits API
+- [x] If no checkboxes are checked and user clicks apply, shows toast: "Select at least one suggested edit to apply"
+- [x] Button text changed from "APPLY SUGGESTED EDITS" to "APPLY SELECTED EDITS"
+- [x] After applying, clears proofread data and selected indices (user can re-run audit to verify)
+- [x] Updated `src/app/api/apply-edits/route.ts` — system prompt clarified to apply ONLY the provided edits (which may be a subset), no additional changes
+- [x] User prompt updated to say "SELECTED EDITS TO APPLY" to reinforce subset behavior
+- **Completed:** 2026-03-05
+- **Notes:** Previously "Apply Suggested Edits" sent all suggestions at once with no user choice. Users can now opt-in to each individual edit via checkboxes, select all/deselect all for batch control, and apply only their chosen subset. The apply-edits API prompt is updated to respect the subset — it will not make changes beyond the provided list.
+
+### SESSION S3-4 — OEM Audit Fix + Selective Apply Edits — COMPLETE
+- **Scope:** S3-4.1, S3-4.2
+- **Completed:** 2026-03-05
+- **Notes:** Two changes to the Review & Proofread system: (1) Removed criterion #10 that incorrectly flagged OEM/manufacturer terminology as issues, added explicit instruction that OEM terms are expected and correct. (2) Added checkbox selection system to suggested edits — users can pick and choose which edits to apply, with Select All/Deselect All toggle and purple-themed checkboxes.
 
 ---
 
