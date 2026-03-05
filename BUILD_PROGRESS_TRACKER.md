@@ -26,6 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-03-05
 **Current Phase:** Stage 3 — UI Polish
 **Next Task:** Stage 3, Sprint 6
+**Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete, + 1 Stage 3 S5 task complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
@@ -2083,6 +2084,34 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** S3-3.1, S3-3.2, S3-3.3
 - **Completed:** 2026-03-05
 - **Notes:** Unified email and print exports to match the PDF format. Created shared `buildPrintHtml`, `buildEmailHtml`, and `buildPlainTextEmail` functions in exportUtils.ts. Email route refactored to use shared builders. Print handlers in both ShareExportModal and NarrativeDetailModal now use the shared `buildPrintHtml` function. All three export channels (PDF, Email, Print) now produce visually identical professional documents.
+
+---
+
+## Stage 3 Sprint 2 — Auto-Sizing Text Fields in Edit Story Modal — COMPLETE
+
+### S3-2.1 — Increase Text Field Minimum Heights
+- [x] Block format textarea: min-height increased from 300px (was already 300px, confirmed as appropriate)
+- [x] C/C/C format textareas (Concern, Cause, Correction): min-height increased from 100px to 150px each
+- [x] Removed dependency on the generic `Textarea` component — uses native `<textarea>` elements with matching theme styling (`var(--bg-input)`, `var(--accent-border)`, etc.)
+
+### S3-2.2 — Implement Auto-Sizing Behavior
+- [x] Added `useRef` for all four textareas (block, concern, cause, correction)
+- [x] Created `autoResize` callback that measures `scrollHeight` and sets height dynamically
+- [x] Auto-resize triggers on every `onChange` event (as user types)
+- [x] Auto-resize triggers on modal open via `useEffect` with 50ms delay (ensures DOM is rendered with content)
+- [x] Overflow behavior: `overflow: hidden` when content fits within max-height, switches to `overflow: auto` when content exceeds 60vh — no scrollbar shown unless needed
+- [x] `resize: none` on all textareas — manual drag-resizing disabled, auto-sizing handles everything
+
+### S3-2.3 — Modal Scroll Behavior
+- [x] Modal body already has `max-h-[calc(100vh-8rem)] overflow-y-auto` on the content container (from `Modal.tsx`)
+- [x] Individual textareas capped at `max-height: 60vh` — if content exceeds this, the textarea scrolls internally
+- [x] If combined field heights exceed modal viewport, the modal body scrolls (not individual textareas)
+- [x] Both formats (block and C/C/C) work correctly with the auto-sizing system
+
+### S3-2.4 — Verified Build
+- [x] `next build` compiles successfully with zero TypeScript errors
+- **Completed:** 2026-03-05
+- **Notes:** Replaced the `Textarea` UI component import with native `<textarea>` elements styled to match the theme. This was necessary to have direct ref access and full control over the auto-resize behavior (height, overflow toggling). The auto-resize pattern: collapse to `height: auto`, measure `scrollHeight`, compare against `60vh` max, set final height and overflow mode. The modal's existing `overflow-y-auto` on the content container handles cases where expanded textareas push total content beyond the viewport.
 
 ---
 
