@@ -6,7 +6,7 @@ import { Copy, Printer, FileDown, FileText, Mail } from 'lucide-react';
 import { logActivity } from '@/lib/activityLogger';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
-import { downloadExport } from '@/lib/exportUtils';
+import { downloadExport, buildPrintHtml } from '@/lib/exportUtils';
 import type { ExportPayload } from '@/lib/exportUtils';
 import EmailExportModal from '@/components/narrative/EmailExportModal';
 import type { NarrativeData } from '@/stores/narrativeStore';
@@ -41,17 +41,7 @@ export default function ShareExportModal({
     return `CONCERN:\n${narrative.concern}\n\nCAUSE:\n${narrative.cause}\n\nCORRECTION:\n${narrative.correction}`;
   };
 
-  const getVehicleHeader = (): string => {
-    const parts: string[] = [];
-    if (vehicleInfo?.year) parts.push(vehicleInfo.year);
-    if (vehicleInfo?.make) parts.push(vehicleInfo.make);
-    if (vehicleInfo?.model) parts.push(vehicleInfo.model);
-    const vehicleLine = parts.length > 0 ? parts.join(' ') : '';
-    const roLine = vehicleInfo?.roNumber ? `R.O. #${vehicleInfo.roNumber}` : '';
-    return [vehicleLine, roLine].filter(Boolean).join(' — ');
-  };
-
-  /** Build the normalized payload used by both PDF and DOCX exports */
+  /** Build the normalized payload used by PDF, DOCX, and Print exports */
   const buildPayload = (): ExportPayload => ({
     narrative: {
       block_narrative: narrative.block_narrative,
@@ -82,10 +72,6 @@ export default function ShareExportModal({
 
   const handlePrint = async () => {
     await onBeforeExport?.();
-    const header = getVehicleHeader();
-    const content = displayFormat === 'block'
-      ? narrative.block_narrative
-      : `CONCERN:\n${narrative.concern}\n\nCAUSE:\n${narrative.cause}\n\nCORRECTION:\n${narrative.correction}`;
 
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
@@ -103,28 +89,7 @@ export default function ShareExportModal({
     }
 
     doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>ServiceDraft.AI - Narrative</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; line-height: 1.6; color: #000; }
-          h2 { margin-bottom: 4px; }
-          h3 { margin-top: 20px; color: #333; }
-          p { margin: 10px 0; }
-          hr { margin: 12px 0; }
-          .vehicle-header { color: #555; font-size: 14px; margin-bottom: 8px; }
-        </style>
-      </head>
-      <body>
-        <h2>ServiceDraft.AI - Generated Narrative</h2>
-        ${header ? `<p class="vehicle-header">${header}</p>` : ''}
-        <hr />
-        <pre style="white-space:pre-wrap; font-family: Arial, sans-serif; font-size: 14px;">${content}</pre>
-      </body>
-      </html>
-    `);
+    doc.write(buildPrintHtml(buildPayload()));
     doc.close();
 
     iframe.contentWindow?.focus();

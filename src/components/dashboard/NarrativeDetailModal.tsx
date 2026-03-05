@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { Copy, Printer, FileDown, FileText, Mail } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
-import { downloadExport } from '@/lib/exportUtils';
+import { downloadExport, buildPrintHtml } from '@/lib/exportUtils';
 import type { ExportPayload } from '@/lib/exportUtils';
 import EmailExportModal from '@/components/narrative/EmailExportModal';
 import type { Narrative } from '@/types/database';
@@ -77,31 +77,7 @@ export default function NarrativeDetailModal({
     }
 
     doc.open();
-    doc.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>ServiceDraft.AI - Saved Narrative</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; line-height: 1.6; }
-          h3 { margin-top: 20px; color: #333; }
-          p { margin: 10px 0; }
-          .meta { color: #666; font-size: 14px; }
-        </style>
-      </head>
-      <body>
-        <h2>ServiceDraft.AI - Saved Narrative</h2>
-        <p class="meta">R.O. #: ${narrative.ro_number || 'N/A'} | Vehicle: ${narrative.vehicle_year || ''} ${narrative.vehicle_make || ''} ${narrative.vehicle_model || ''} | Created: ${createdDate} | Updated: ${updatedDate}</p>
-        <hr />
-        <h3>CONCERN</h3>
-        <p style="white-space:pre-wrap;">${narrative.concern || ''}</p>
-        <h3>CAUSE</h3>
-        <p style="white-space:pre-wrap;">${narrative.cause || ''}</p>
-        <h3>CORRECTION</h3>
-        <p style="white-space:pre-wrap;">${narrative.correction || ''}</p>
-      </body>
-      </html>
-    `);
+    doc.write(buildPrintHtml(buildPayload()));
     doc.close();
 
     iframe.contentWindow?.focus();

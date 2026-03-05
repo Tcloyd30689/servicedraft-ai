@@ -26,6 +26,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-03-05
 **Current Phase:** Stage 3 — UI Polish
 **Next Task:** Stage 3, Sprint 6
+**Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete, + 1 Stage 3 S5 task complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
@@ -2044,6 +2045,44 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** S3-5.1
 - **Completed:** 2026-03-05
 - **Notes:** Strengthened rule #5 in both DIAGNOSTIC_ONLY_SYSTEM_PROMPT and REPAIR_COMPLETE_SYSTEM_PROMPT. The AI is now explicitly instructed to identify the vehicle's OEM, use manufacturer-specific diagnostic procedures, proprietary system names, and technical terminology with concrete examples for major manufacturers. This aligns with the Sprint 4 fix that stopped the proofread prompt from flagging OEM terms — now generation produces richer OEM-specific content and proofread accepts it.
+
+---
+
+## Stage 3 Sprint 3 — Match Email and Print Exports to PDF Formatting — COMPLETE
+
+### S3-3.1 — Create Shared Export HTML Builders
+- [x] Added `buildPrintHtml(payload)` function to `src/lib/exportUtils.ts` — generates formatted HTML for print output matching the PDF layout exactly
+- [x] Added `buildEmailHtml(narrative, displayFormat, vehicleInfo, senderName)` function to `src/lib/exportUtils.ts` — generates table-based inline-CSS HTML for email matching the PDF layout
+- [x] Added `buildPlainTextEmail(narrative, displayFormat, vehicleInfo, senderName)` function to `src/lib/exportUtils.ts` — plain-text fallback with same info structure
+- [x] Added shared `escapeHtml()` utility in `exportUtils.ts`
+- [x] All three formats (PDF, Email, Print) now share the same document structure:
+  - Two-column header: "Vehicle Information:" (bold underlined) with YEAR/MAKE/MODEL as separate label:value lines (left), "Repair Order #:" (bold underlined) with large R.O. number (right)
+  - "REPAIR NARRATIVE" centered title (18pt bold underlined)
+  - C/C/C sections: headers (CONCERN:/CAUSE:/CORRECTION:) at 13pt bold italic underlined, body at 11pt/14px
+  - Block format: flowing paragraph body
+  - Footer with ServiceDraft.AI logo (bottom-right)
+
+### S3-3.2 — Update Email Export to Match PDF
+- [x] Refactored `src/app/api/send-email/route.ts` to import and use `buildEmailHtml` and `buildPlainTextEmail` from `exportUtils.ts`
+- [x] Removed duplicate `buildHtmlEmail`, `buildPlainTextEmail`, and `escapeHtml` functions from the route
+- [x] Email vehicle info now shows separate YEAR/MAKE/MODEL labeled lines (previously was a single combined line)
+- [x] Email header labels changed from "VEHICLE INFORMATION" / "REPAIR ORDER #" to "Vehicle Information:" / "Repair Order #:" to match PDF
+- [x] Removed centered logo from email header — logo now in footer (bottom-right) matching PDF placement
+- [x] C/C/C section header colors changed from `#333333` to `#000000` to match PDF
+
+### S3-3.3 — Update Print Export to Match PDF
+- [x] Updated `handlePrint()` in `src/components/narrative/ShareExportModal.tsx` to use `buildPrintHtml(buildPayload())` instead of basic HTML
+- [x] Updated `handlePrint()` in `src/components/dashboard/NarrativeDetailModal.tsx` to use `buildPrintHtml(buildPayload())` instead of basic HTML
+- [x] Removed unused `getVehicleHeader()` function from `ShareExportModal.tsx`
+- [x] Print output now shows: two-column header with labeled vehicle fields, centered "REPAIR NARRATIVE" title, properly formatted C/C/C sections with bold italic underlined headers, footer logo
+- [x] Print uses `@page` CSS for proper US Letter margins and `position: fixed` footer logo
+- **Completed:** 2026-03-05
+- **Notes:** Previously email showed vehicle info as a single combined line and had the logo at the top; print was extremely basic with just `<h2>`, `<hr>`, and `<pre>` tags. Both now match the PDF gold standard exactly: two-column header with separate YEAR/MAKE/MODEL label:value lines, large R.O.# on the right, centered "REPAIR NARRATIVE" title, properly formatted C/C/C sections, and footer logo. All formatting logic is centralized in `src/lib/exportUtils.ts` to prevent drift.
+
+### SESSION S3-3 — Export Formatting Consistency — COMPLETE
+- **Scope:** S3-3.1, S3-3.2, S3-3.3
+- **Completed:** 2026-03-05
+- **Notes:** Unified email and print exports to match the PDF format. Created shared `buildPrintHtml`, `buildEmailHtml`, and `buildPlainTextEmail` functions in exportUtils.ts. Email route refactored to use shared builders. Print handlers in both ShareExportModal and NarrativeDetailModal now use the shared `buildPrintHtml` function. All three export channels (PDF, Email, Print) now produce visually identical professional documents.
 
 ---
 
