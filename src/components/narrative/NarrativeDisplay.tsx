@@ -16,7 +16,7 @@ interface NarrativeDisplayProps {
 
 /**
  * Render text with highlighted spans. Splits the text at highlight boundaries
- * and wraps matched segments in <mark> elements with pulsing animation.
+ * and wraps matched segments in <mark> elements with hover tooltips.
  */
 function HighlightedText({
   text,
@@ -57,7 +57,6 @@ function HighlightedText({
           borderRadius: '2px',
           padding: '0 1px',
           color: 'inherit',
-          animation: active ? 'highlightPulse 2s ease-in-out infinite' : 'none',
           transition: 'opacity 1s ease-out',
           opacity: active ? 1 : 0,
         }}
@@ -69,10 +68,11 @@ function HighlightedText({
           <span
             className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-xs whitespace-normal max-w-[280px] pointer-events-none"
             style={{
-              background: '#0a0414',
+              background: '#111827',
               border: '1px solid var(--accent-primary)',
               color: 'var(--text-primary)',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.8), var(--shadow-glow-sm)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.9)',
+              opacity: 1,
             }}
           >
             {tooltip}

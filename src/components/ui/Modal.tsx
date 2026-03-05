@@ -60,36 +60,37 @@ export default function Modal({
             onClick={onClose}
           />
 
-          {/* Modal */}
-          <motion.div
-            className={`fixed z-50 top-1/2 left-1/2 w-[90vw] ${width} max-h-[85vh] overflow-y-auto
-              bg-[var(--bg-modal)] border-2 border-[var(--modal-border)] rounded-[23px]
-              backdrop-blur-xl shadow-[var(--shadow-glow-lg)]`}
-            style={{ x: '-50%', y: '-50%' }}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-          >
-            <div className="p-6 md:p-8">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                {title && (
-                  <h2 className="text-xl font-semibold text-[var(--text-primary)]">{title}</h2>
-                )}
-                <button
-                  onClick={onClose}
-                  className="ml-auto text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer p-1"
-                  aria-label="Close modal"
-                >
-                  <X size={20} />
-                </button>
-              </div>
+          {/* Modal container — centers modal below nav */}
+          <div className="fixed inset-0 z-50 pt-20 pb-4 flex items-center justify-center pointer-events-none">
+            <motion.div
+              className={`w-[90vw] ${width} pointer-events-auto
+                bg-[var(--bg-modal)] border-2 border-[var(--modal-border)] rounded-[23px]
+                backdrop-blur-xl shadow-[var(--shadow-glow-lg)]`}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+            >
+              <div className="p-6 md:p-8 max-h-[calc(100vh-8rem)] overflow-y-auto rounded-[23px]">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-5">
+                  {title && (
+                    <h2 className="text-xl font-semibold text-[var(--text-primary)]">{title}</h2>
+                  )}
+                  <button
+                    onClick={onClose}
+                    className="ml-auto text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer p-1"
+                    aria-label="Close modal"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
 
-              {/* Content */}
-              {children}
-            </div>
-          </motion.div>
+                {/* Content */}
+                {children}
+              </div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>,

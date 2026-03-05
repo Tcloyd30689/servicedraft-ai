@@ -139,7 +139,7 @@ export default function NarrativeDetailModal({
   const isExporting = isGeneratingPdf || isGeneratingDocx;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Saved Narrative" width="max-w-[700px]">
+    <Modal isOpen={isOpen} onClose={onClose} title="Saved Narrative" width="max-w-5xl">
       {/* Meta Info */}
       <div className="flex flex-wrap gap-4 text-sm text-[var(--text-muted)] mb-4">
         <span><span className="text-[var(--text-secondary)]">R.O. #:</span> {narrative.ro_number || 'N/A'}</span>

@@ -23,10 +23,10 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-03-04
-**Current Phase:** Phase 10 — Deployment
-**Next Task:** Phase 10, Task 10.1
-**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete)
+**Last Updated:** 2026-03-05
+**Current Phase:** Stage 3 — UI Polish
+**Next Task:** Stage 3, Sprint 2
+**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
@@ -34,6 +34,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 2 Sprint S2-6A:** COMPLETE — Admin dashboard with activity logging, route protection, and restriction check
 **Stage 2 Sprint S2-6B:** COMPLETE — Admin user management: list, restrict, delete, password reset, subscription change
 **Stage 2 Sprint S2-6C:** COMPLETE — Admin analytics dashboard with stat cards, charts, and auto-refresh
+**Stage 3 Sprint 1:** COMPLETE — Saved story modal positioning/sizing fix + audit tooltip animation/opacity fix
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -1960,6 +1961,36 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] Updated `src/app/(protected)/narrative/page.tsx` — replaced client-side Supabase upsert in `saveToDatabase` with `fetch('/api/narratives/save')`, removed `createClient` and `withTimeout` imports, simplified `handleSave` error handling
 - **Completed:** 2026-03-04
 - **Notes:** The client-side Supabase browser client had unreliable auth state for standalone SELECT/INSERT queries, causing dashboard narrative fetch to timeout every time. All other working features (generate, proofread, admin) already used server-side API routes where Supabase authenticates via HTTP cookies. This fix eliminates client-side Supabase queries from the entire narrative workflow.
+
+---
+
+## Stage 3 Sprint 1 — Modal & Tooltip UI Fixes — COMPLETE
+
+### S3-1.1 — Saved Story Modal Positioning, Sizing & Scroll
+- [x] Restructured `src/components/ui/Modal.tsx` — replaced `top-1/2 left-1/2` with `y: -50%` transform positioning with flexbox-centered container
+- [x] Modal container uses `fixed inset-0 z-50 pt-20 pb-4 flex items-center justify-center pointer-events-none` — centers modal in viewport space below the nav bar
+- [x] Modal panel uses `pointer-events-auto` to capture clicks, outer container passes clicks through to backdrop via `pointer-events-none`
+- [x] Content area uses `max-h-[calc(100vh-8rem)] overflow-y-auto rounded-[23px]` — scrolls internally for long content, modal never extends off-screen
+- [x] Removed `style={{ x: '-50%', y: '-50%' }}` transform — horizontal and vertical centering now handled by flexbox
+- [x] `NarrativeDetailModal.tsx` — changed width prop from `max-w-[700px]` to `max-w-5xl` for significantly wider narrative display
+- [x] All other modals using the shared `Modal` component inherit the improved positioning automatically
+- **Completed:** 2026-03-05
+- **Notes:** The `pt-20` (5rem) provides clearance below the hero area + nav bar. Small modals are vertically centered in the remaining space; tall modals scroll internally via `overflow-y-auto` on the content div. The `rounded-[23px]` on the content div ensures scrollbar corners match the card radius.
+
+### S3-1.2 — Audit Tooltip Animation & Transparency Fix
+- [x] Removed `highlightPulse` animation from `<mark>` elements in `src/components/narrative/NarrativeDisplay.tsx` — highlights now appear solid and static (no pulsing opacity)
+- [x] Removed `@keyframes highlightPulse` from `src/app/globals.css` — animation keyframes cleaned up
+- [x] Changed tooltip background from semi-dark `#0a0414` to fully opaque `#111827` (gray-900)
+- [x] Removed `var(--shadow-glow-sm)` from tooltip boxShadow — replaced with solid dark shadow `0 4px 20px rgba(0,0,0,0.9)` only
+- [x] Added explicit `opacity: 1` on tooltip to prevent any inherited opacity effects from parent elements
+- [x] Updated `HighlightedText` JSDoc comment to reflect new behavior (hover tooltips, not pulsing animation)
+- **Completed:** 2026-03-05
+- **Notes:** The pulsing effect came from `highlightPulse` keyframes on the `<mark>` parent element, which caused child tooltip elements to inherit the opacity animation. Fix removes the animation entirely — highlights still appear/disappear via the `opacity: active ? 1 : 0` transition but remain solid while visible. Tooltip is now fully opaque with no background bleed-through.
+
+### SESSION S3-1 — Modal & Tooltip UI Fixes — COMPLETE
+- **Scope:** S3-1.1, S3-1.2
+- **Completed:** 2026-03-05
+- **Notes:** Two UI polish fixes: (1) Saved story popup modal on dashboard now renders below the navbar with proper scrolling and wider layout (max-w-5xl). Modal component restructured to use flexbox centering within viewport space below nav, benefiting all modals app-wide. (2) Audit/proofread tooltip no longer pulses or has transparent background — appears instantly with solid opaque dark background on hover.
 
 ---
 
