@@ -109,8 +109,8 @@ export default function NarrativePage() {
   }, [state.compiledDataBlock, state.storyType, setNarrative]);
 
   useEffect(() => {
-    // Redirect if no data to work with
-    if (!state.compiledDataBlock || !state.storyType) {
+    // Redirect if no data to work with — allow through if narrative already exists (repair update flow)
+    if (!state.storyType || (!state.compiledDataBlock && !state.narrative)) {
       router.replace('/input');
       return;
     }
@@ -118,7 +118,7 @@ export default function NarrativePage() {
     // Generate when generationId changes (new input submitted) or on first load with no narrative
     if (lastGenerationId.current !== state.generationId) {
       lastGenerationId.current = state.generationId;
-      if (!state.narrative) {
+      if (!state.narrative && state.compiledDataBlock) {
         generateNarrative();
       }
     }
@@ -352,9 +352,11 @@ export default function NarrativePage() {
     }
   };
 
-  // Save to server-side API route — UPSERT: overwrites if same user + RO# exists
+  // Save to server-side API route — always INSERTs a new row (preserves audit trail)
   const saveToDatabase = useCallback(async (): Promise<string | null> => {
     if (!state.narrative || !user) return null;
+    // Skip if already saved in this session (prevents duplicate rows from auto-save)
+    if (state.savedNarrativeId) return state.savedNarrativeId;
 
     const res = await fetch('/api/narratives/save', {
       method: 'POST',
@@ -382,7 +384,7 @@ export default function NarrativePage() {
     const { id } = await res.json();
     if (id) markSaved(id);
     return id;
-  }, [state.narrative, state.roNumber, state.fieldValues, state.storyType, user, markSaved]);
+  }, [state.narrative, state.roNumber, state.fieldValues, state.storyType, state.savedNarrativeId, user, markSaved]);
 
   // Manual save handler
   const handleSave = async () => {

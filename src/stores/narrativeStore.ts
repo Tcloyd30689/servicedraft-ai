@@ -174,6 +174,40 @@ export function useNarrativeStore() {
     notifyListeners();
   }, []);
 
+  /** Set up state for a diagnostic→repair-complete update flow.
+   *  Sets the narrative from the API response, storyType to repair_complete,
+   *  and carries forward vehicle info + RO# from the original diagnostic entry. */
+  const setForRepairUpdate = useCallback((data: {
+    narrative: NarrativeData;
+    roNumber: string;
+    year: string;
+    make: string;
+    model: string;
+  }) => {
+    globalState = {
+      ...globalState,
+      narrative: data.narrative,
+      storyType: 'repair_complete',
+      roNumber: data.roNumber,
+      fieldValues: {
+        ...globalState.fieldValues,
+        year: data.year,
+        make: data.make,
+        model: data.model,
+      },
+      compiledDataBlock: '', // Not needed — narrative already generated
+      displayFormat: 'block',
+      lengthSlider: 'standard',
+      toneSlider: 'standard',
+      detailSlider: 'standard',
+      customInstructions: '',
+      generationId: globalState.generationId + 1,
+      isSaved: false,
+      savedNarrativeId: null,
+    };
+    notifyListeners();
+  }, []);
+
   return {
     state,
     setStoryType,
@@ -191,5 +225,6 @@ export function useNarrativeStore() {
     clearForNewGeneration,
     resetAll,
     markSaved,
+    setForRepairUpdate,
   };
 }

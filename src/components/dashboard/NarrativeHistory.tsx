@@ -263,6 +263,7 @@ export default function NarrativeHistory({ userId, senderName }: NarrativeHistor
                 <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Year</th>
                 <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Make</th>
                 <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Model</th>
+                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Type</th>
                 <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Saved Story</th>
               </tr>
             </thead>
@@ -288,6 +289,18 @@ export default function NarrativeHistory({ userId, senderName }: NarrativeHistor
                       <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{n.vehicle_year || '—'}</td>
                       <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{n.vehicle_make || '—'}</td>
                       <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{n.vehicle_model || '—'}</td>
+                      <td className="py-2.5 px-2">
+                        <span
+                          className="inline-block text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full whitespace-nowrap"
+                          style={{
+                            backgroundColor: n.story_type === 'diagnostic_only' ? 'rgba(234, 179, 8, 0.15)' : 'rgba(34, 197, 94, 0.15)',
+                            color: n.story_type === 'diagnostic_only' ? '#eab308' : '#22c55e',
+                            border: `1px solid ${n.story_type === 'diagnostic_only' ? 'rgba(234, 179, 8, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
+                          }}
+                        >
+                          {n.story_type === 'diagnostic_only' ? 'DIAGNOSTIC' : 'REPAIR COMPLETE'}
+                        </span>
+                      </td>
                       <td className="py-2.5 px-2 font-data text-[var(--text-muted)] truncate max-w-[150px]">
                         {preview}{preview.length >= 30 ? '...' : ''}
                       </td>

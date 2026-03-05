@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('narratives')
-      .upsert(narrativeData, { onConflict: 'user_id,ro_number' })
+      .insert(narrativeData)
       .select('id')
       .single();
 

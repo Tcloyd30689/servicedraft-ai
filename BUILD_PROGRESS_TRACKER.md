@@ -24,14 +24,15 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-05
-**Current Phase:** Stage 3 — My Repairs System
-**Next Task:** Stage 3, Sprint 9 (TBD)
+**Current Phase:** Stage 3 — Diagnostic to Repair Complete Update System
+**Next Task:** Stage 3, Sprint 10 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
 **Stage 3 Sprint 7:** COMPLETE — My Repairs database table and API routes
 **Stage 3 Sprint 8:** COMPLETE — My Repairs UI panel with load, save, edit, and delete functionality
-**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete, + 1 Stage 3 S5 task complete, + 1 Stage 3 S6 task complete, + 4 Stage 3 S7 tasks complete, + 7 Stage 3 S8 tasks complete)
+**Stage 3 Sprint 9:** COMPLETE — Diagnostic to Repair Complete update system with separate entry preservation
+**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete, + 1 Stage 3 S5 task complete, + 1 Stage 3 S6 task complete, + 4 Stage 3 S7 tasks complete, + 7 Stage 3 S8 tasks complete, + 8 Stage 3 S9 tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
@@ -2253,6 +2254,77 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** S3-8.1, S3-8.2, S3-8.3, S3-8.4, S3-8.5, S3-8.6, S3-8.7
 - **Completed:** 2026-03-05
 - **Notes:** Built the complete My Repairs template management UI. Users can save the current input form as a named template, browse/search saved templates in a slide-out panel, load a template to prefill the entire form (including story type, all fields, and dropdown states), edit template details, and delete templates with confirmation. All components use the app's CSS variable theming system, glassmorphism card styling, and Framer Motion animations. The template system maps between store format (diagnostic_only/repair_complete, dont_include) and API format (diagnostic/repair, exclude) seamlessly.
+
+---
+
+## STAGE 3 — SPRINT 9: DIAGNOSTIC → REPAIR COMPLETE UPDATE SYSTEM
+
+### S3-9.1 — Save API Changed from UPSERT to INSERT
+- [x] Modified `src/app/api/narratives/save/route.ts` — replaced `.upsert()` with `.insert()` so every save creates a new row
+- [x] Created migration `supabase/migrations/006_drop_narrative_unique_constraint.sql` — drops the `UNIQUE(user_id, ro_number)` constraint that was blocking multiple entries with the same RO#
+- [x] Updated `saveToDatabase()` in narrative page — added `savedNarrativeId` check to prevent duplicate rows from auto-save within the same session
+- **Completed:** 2026-03-05
+- **Notes:** Each narrative save is now a plain INSERT. Diagnostic-only and repair-complete entries with the same RO# coexist as separate rows. The original diagnostic entry is never modified or deleted. User must run migration 006 in Supabase SQL Editor.
+
+### S3-9.2 — Convert Recommendation API Route
+- [x] Created `src/app/api/convert-recommendation/route.ts` — POST endpoint that takes a diagnostic recommendation/correction text and uses Gemini to reword it from future/recommended tense to past/completed tense
+- [x] Short, targeted system prompt for tense conversion only
+- [x] Used by the "COMPLETED RECOMMEND REPAIR" button in the update modal
+- **Completed:** 2026-03-05
+
+### S3-9.3 — Update Narrative API Route
+- [x] Created `src/app/api/update-narrative/route.ts` — POST endpoint that takes original diagnostic narrative + completed repair info and generates a full repair-complete narrative via Gemini
+- [x] Preserves all original diagnostic detail (concern, cause, root cause identification)
+- [x] Incorporates repair performed, verification steps, and additional notes
+- [x] Dropdown logic: Include → use text, Don't Include → skip, Generate → use AI inference instruction
+- [x] Same restriction check and auth as the generate route
+- **Completed:** 2026-03-05
+
+### S3-9.4 — UpdateWithRepairModal Component
+- [x] Created `src/components/dashboard/UpdateWithRepairModal.tsx` — full-featured modal for the diagnostic-to-repair update flow
+- [x] Vehicle info badges at top (Year, Make, Model, RO#) displayed as read-only accent-colored pills
+- [x] Field 1: Repair Performed textarea with dropdown (Include/Don't Include/Generate) and "COMPLETED RECOMMEND REPAIR" convenience button
+- [x] Field 2: Repair Verification Steps textarea with same dropdown
+- [x] Field 3: Additional Notes textarea (optional, no dropdown)
+- [x] "GENERATE NARRATIVE" button at bottom — disabled until repair info is provided
+- [x] Auto-expanding textareas with same styling as input page fields
+- [x] Loading spinner on "COMPLETED RECOMMEND REPAIR" button during API call
+- [x] Calls `/api/update-narrative` and uses `setForRepairUpdate()` to pass result to narrative page
+- [x] Navigates to `/narrative` on success
+- **Completed:** 2026-03-05
+
+### S3-9.5 — "UPDATE NARRATIVE WITH REPAIR" Button in Saved Story Modal
+- [x] Added prominent "UPDATE NARRATIVE WITH REPAIR" button at top of `NarrativeDetailModal.tsx`
+- [x] Uses `ArrowUpCircle` icon from lucide-react
+- [x] Only visible when `narrative.story_type === 'diagnostic_only'` — hidden for repair-complete entries
+- [x] Opens the UpdateWithRepairModal on click
+- [x] Closing the update modal also closes the saved story modal (clean navigation)
+- **Completed:** 2026-03-05
+
+### S3-9.6 — Narrative Store: setForRepairUpdate Method
+- [x] Added `setForRepairUpdate()` method to `src/stores/narrativeStore.ts`
+- [x] Sets narrative data from the update API response, storyType to 'repair_complete', roNumber and vehicle info from the original diagnostic entry
+- [x] Clears compiledDataBlock (not needed — narrative already generated), resets customization state
+- [x] Sets `isSaved: false` and `savedNarrativeId: null` for proper navigation guard behavior
+- **Completed:** 2026-03-05
+
+### S3-9.7 — Narrative Page: Support Repair Update Flow
+- [x] Updated redirect logic in `src/app/(protected)/narrative/page.tsx` to allow entry when `narrative` exists but `compiledDataBlock` is empty (repair update flow)
+- [x] Auto-generate only fires when `compiledDataBlock` exists (normal flow), not in repair update flow (narrative already provided)
+- **Completed:** 2026-03-05
+
+### S3-9.8 — Dashboard Story Type Badges
+- [x] Added "Type" column to the NarrativeHistory table header in `src/components/dashboard/NarrativeHistory.tsx`
+- [x] Each row displays a colored badge: "DIAGNOSTIC" (amber/yellow) for diagnostic_only entries, "REPAIR COMPLETE" (green) for repair_complete entries
+- [x] Badges styled as small rounded pills with semi-transparent background and colored border
+- **Completed:** 2026-03-05
+
+### SESSION S3-9 — Diagnostic → Repair Complete Update System — COMPLETE
+- **Scope:** S3-9.1 through S3-9.8
+- **Completed:** 2026-03-05
+- **Notes:** Complete flow for updating diagnostic-only narratives with repair information. Users open a saved diagnostic story from the dashboard, click "UPDATE NARRATIVE WITH REPAIR", fill in repair details (with optional AI-assisted tense conversion), and generate a new repair-complete narrative. Both entries coexist in the database as separate rows. Dashboard shows story type badges for quick identification. Migration 006 must be run to drop the old unique constraint.
+
+⚠️ **USER ACTION REQUIRED:** Run `supabase/migrations/006_drop_narrative_unique_constraint.sql` in the Supabase SQL Editor to drop the `UNIQUE(user_id, ro_number)` constraint. Without this, saving multiple narratives with the same RO# will fail.
 
 ---
 

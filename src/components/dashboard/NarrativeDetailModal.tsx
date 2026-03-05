@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Copy, Printer, FileDown, FileText, Mail } from 'lucide-react';
+import { Copy, Printer, FileDown, FileText, Mail, ArrowUpCircle } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { downloadExport, buildPrintHtml } from '@/lib/exportUtils';
 import type { ExportPayload } from '@/lib/exportUtils';
 import EmailExportModal from '@/components/narrative/EmailExportModal';
+import UpdateWithRepairModal from '@/components/dashboard/UpdateWithRepairModal';
 import type { Narrative } from '@/types/database';
 
 interface NarrativeDetailModalProps {
@@ -26,6 +27,7 @@ export default function NarrativeDetailModal({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   if (!narrative) return null;
 
@@ -116,6 +118,20 @@ export default function NarrativeDetailModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Saved Narrative" width="max-w-5xl">
+      {/* Update with Repair button — only for diagnostic_only narratives */}
+      {narrative.story_type === 'diagnostic_only' && (
+        <div className="mb-4">
+          <Button
+            size="fullWidth"
+            onClick={() => setShowUpdateModal(true)}
+            className="flex items-center justify-center gap-2"
+          >
+            <ArrowUpCircle size={16} />
+            UPDATE NARRATIVE WITH REPAIR
+          </Button>
+        </div>
+      )}
+
       {/* Meta Info */}
       <div className="font-data flex flex-wrap gap-4 text-sm text-[var(--text-muted)] mb-4">
         <span><span className="text-[var(--text-secondary)]">R.O. #:</span> {narrative.ro_number || 'N/A'}</span>
@@ -218,6 +234,15 @@ export default function NarrativeDetailModal({
           roNumber: narrative.ro_number || '',
         }}
         senderName={senderName || ''}
+      />
+
+      <UpdateWithRepairModal
+        isOpen={showUpdateModal}
+        onClose={() => {
+          setShowUpdateModal(false);
+          onClose();
+        }}
+        narrative={narrative}
       />
     </Modal>
   );
