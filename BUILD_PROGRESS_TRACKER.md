@@ -24,12 +24,13 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-05
-**Current Phase:** Stage 3 — UI Polish
-**Next Task:** Stage 3, Sprint 7 (TBD)
+**Current Phase:** Stage 3 — My Repairs System
+**Next Task:** Stage 3, Sprint 8 — My Repairs UI
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
-**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete, + 1 Stage 3 S5 task complete, + 1 Stage 3 S6 task complete)
+**Stage 3 Sprint 7:** COMPLETE — My Repairs database table and API routes
+**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete, + 1 Stage 3 S5 task complete, + 1 Stage 3 S6 task complete, + 4 Stage 3 S7 tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
@@ -2145,6 +2146,44 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] `next build` compiles successfully with zero TypeScript errors
 - **Completed:** 2026-03-05
 - **Notes:** Replaced the `Textarea` UI component import with native `<textarea>` elements styled to match the theme. This was necessary to have direct ref access and full control over the auto-resize behavior (height, overflow toggling). The auto-resize pattern: collapse to `height: auto`, measure `scrollHeight`, compare against `60vh` max, set final height and overflow mode. The modal's existing `overflow-y-auto` on the content container handles cases where expanded textareas push total content beyond the viewport.
+
+---
+
+## Stage 3 Sprint 7 — My Repairs Database & API Backend — COMPLETE
+
+### S3-7.1 — Create saved_repairs Migration
+- [x] Created `supabase/migrations/005_saved_repairs.sql` with full table schema
+- [x] Table columns: id (uuid PK), user_id (FK to auth.users), template_name, story_type, year, make, model, customer_concern, codes_present, codes_present_option, diagnostics_performed, diagnostics_option, root_cause, root_cause_option, repair_performed, repair_option, repair_verification, verification_option, recommended_action, recommended_option, created_at, updated_at
+- [x] Added indexes on user_id and updated_at for fast lookups
+- **Completed:** 2026-03-05
+
+### S3-7.2 — Row Level Security Policies
+- [x] Enabled RLS on saved_repairs table
+- [x] SELECT policy: users can only read their own templates (auth.uid() = user_id)
+- [x] INSERT policy: users can only insert templates for themselves (auth.uid() = user_id)
+- [x] UPDATE policy: users can only update their own templates (auth.uid() = user_id)
+- [x] DELETE policy: users can only delete their own templates (auth.uid() = user_id)
+- **Completed:** 2026-03-05
+
+### S3-7.3 — API Routes
+- [x] Created `src/app/api/saved-repairs/route.ts` with GET (fetch all user templates, ordered by updated_at desc) and POST (create new template with validation)
+- [x] Created `src/app/api/saved-repairs/[id]/route.ts` with PUT (update template with ownership check) and DELETE (delete template with ownership check)
+- [x] All routes check for authenticated user (401 if not authenticated)
+- [x] POST validates required fields (template_name, story_type) and valid story_type values
+- [x] PUT/DELETE verify template ownership before modifying (404 if not found/not owned)
+- [x] PUT uses allowlist of updatable fields to prevent arbitrary field injection
+- [x] All routes use try/catch with proper HTTP status codes (200, 201, 400, 401, 404, 500)
+- **Completed:** 2026-03-05
+
+### S3-7.4 — Verified Build
+- [x] `npx tsc --noEmit` compiles successfully with zero TypeScript errors
+- **Completed:** 2026-03-05
+- **Notes:** Migration file must be run manually in the Supabase SQL Editor before the API routes will function. The UI for the My Repairs system will be built in Sprint 8.
+
+### SESSION S3-7 — My Repairs Database & Backend — COMPLETE
+- **Scope:** S3-7.1, S3-7.2, S3-7.3, S3-7.4
+- **Completed:** 2026-03-05
+- **Notes:** Created the saved_repairs table with full schema for storing repair scenario templates, RLS policies for user-scoped access, and four CRUD API endpoints (GET list, POST create, PUT update, DELETE remove). The table stores all input field values plus their dropdown option states so templates can fully prefill the input form. Sprint 8 will build the UI components for managing and loading templates.
 
 ---
 
