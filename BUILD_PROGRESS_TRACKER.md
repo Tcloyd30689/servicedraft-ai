@@ -25,12 +25,13 @@ This file is a living document that Claude Code reads at the start of every sess
 
 **Last Updated:** 2026-03-05
 **Current Phase:** Stage 3 — My Repairs System
-**Next Task:** Stage 3, Sprint 8 — My Repairs UI
+**Next Task:** Stage 3, Sprint 9 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
 **Stage 3 Sprint 7:** COMPLETE — My Repairs database table and API routes
-**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete, + 1 Stage 3 S5 task complete, + 1 Stage 3 S6 task complete, + 4 Stage 3 S7 tasks complete)
+**Stage 3 Sprint 8:** COMPLETE — My Repairs UI panel with load, save, edit, and delete functionality
+**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete, + 1 Stage 3 S5 task complete, + 1 Stage 3 S6 task complete, + 4 Stage 3 S7 tasks complete, + 7 Stage 3 S8 tasks complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
@@ -2184,6 +2185,74 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** S3-7.1, S3-7.2, S3-7.3, S3-7.4
 - **Completed:** 2026-03-05
 - **Notes:** Created the saved_repairs table with full schema for storing repair scenario templates, RLS policies for user-scoped access, and four CRUD API endpoints (GET list, POST create, PUT update, DELETE remove). The table stores all input field values plus their dropdown option states so templates can fully prefill the input form. Sprint 8 will build the UI components for managing and loading templates.
+
+---
+
+## Stage 3 Sprint 8 — My Repairs UI Panel with Load, Save, Edit, Delete — COMPLETE
+
+### S3-8.1 — MY REPAIRS Button on Input Page
+- [x] Added prominent "MY REPAIRS" button at the top of the Input Page, centered above the story type selector
+- [x] Styled as secondary variant with Wrench icon, matching app's accent color theme
+- [x] Opens the MyRepairsPanel slide-out panel when clicked
+- **Completed:** 2026-03-05
+
+### S3-8.2 — MyRepairsPanel Slide-Out Component
+- [x] Created `src/components/input/MyRepairsPanel.tsx` — slide-out panel from right side
+- [x] Fetches user's saved repair templates from GET /api/saved-repairs on open
+- [x] Displays each template as a glassmorphism card with: template name (bold), story type badge (purple for Repair Complete, blue for Diagnostic Only), vehicle info ("Year Make Model" or "Any Vehicle"), customer concern preview (first 50 chars)
+- [x] Three action buttons per card: Load (primary, fills form), Edit (secondary, opens edit modal), Delete (ghost red, shows confirmation)
+- [x] Search/filter bar at top to filter templates by name or vehicle info
+- [x] Loading state with spinner while fetching
+- [x] Empty state with helpful message for first-time users
+- [x] Slide-in/out animation using Framer Motion spring transition
+- [x] Portaled to document.body to escape parent overflow constraints
+- **Completed:** 2026-03-05
+
+### S3-8.3 — Load Template into Form
+- [x] Clicking "Load" on a template card: sets story type selector to template's story_type (diagnostic_only or repair_complete), prefills all text fields, sets all dropdown states
+- [x] Maps API option values back to store format: 'exclude' → 'dont_include', 'generate' → 'generate', default → 'include'
+- [x] For 'exclude'/'generate' options: clears text field and sets dropdown state; for 'include': fills in saved text value
+- [x] Closes the My Repairs panel after loading
+- [x] Shows toast: "Template loaded: [template name]"
+- [x] Uses setTimeout(50ms) to allow story type state change to propagate before setting field values
+- **Completed:** 2026-03-05
+
+### S3-8.4 — SAVE AS MY REPAIR Button & Modal
+- [x] Added "SAVE AS MY REPAIR" ghost button below the Generate Story button with BookmarkPlus icon
+- [x] Created `src/components/input/SaveRepairModal.tsx` — modal with template name input
+- [x] Captures all current form state: story_type, all field values, all dropdown option states
+- [x] Maps store dropdown options to API format: 'dont_include' → 'exclude'
+- [x] POSTs to /api/saved-repairs with complete form data
+- [x] Shows summary preview of what will be saved (story type, vehicle info)
+- [x] Toast on success: "Repair template saved!", error toast on failure
+- **Completed:** 2026-03-05
+
+### S3-8.5 — Edit Template Modal
+- [x] Created `src/components/input/EditRepairModal.tsx` — modal for editing saved templates
+- [x] Editable fields: template name, year, make, model, and all conditional field text values
+- [x] Shows only fields relevant to the template's story type (diagnostic vs repair)
+- [x] Displays current dropdown option status next to each field label
+- [x] PUTs to /api/saved-repairs/[id] on save, refreshes template list after saving
+- [x] Toast on success: "Template updated"
+- **Completed:** 2026-03-05
+
+### S3-8.6 — Delete Template with Confirmation
+- [x] Clicking "Delete" shows inline confirmation: "Delete '[name]'? This cannot be undone."
+- [x] Confirm button sends DELETE to /api/saved-repairs/[id]
+- [x] Template removed from list with Framer Motion exit animation (slide right + fade out)
+- [x] Toast: "Template deleted"
+- [x] Cancel button dismisses confirmation inline
+- **Completed:** 2026-03-05
+
+### S3-8.7 — Verified Build
+- [x] `npx tsc --noEmit` compiles with zero TypeScript errors
+- [x] `npx next build` completes successfully — all pages and API routes compile
+- **Completed:** 2026-03-05
+
+### SESSION S3-8 — My Repairs UI Panel — COMPLETE
+- **Scope:** S3-8.1, S3-8.2, S3-8.3, S3-8.4, S3-8.5, S3-8.6, S3-8.7
+- **Completed:** 2026-03-05
+- **Notes:** Built the complete My Repairs template management UI. Users can save the current input form as a named template, browse/search saved templates in a slide-out panel, load a template to prefill the entire form (including story type, all fields, and dropdown states), edit template details, and delete templates with confirmation. All components use the app's CSS variable theming system, glassmorphism card styling, and Framer Motion animations. The template system maps between store format (diagnostic_only/repair_complete, dont_include) and API format (diagnostic/repair, exclude) seamlessly.
 
 ---
 

@@ -1,10 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { Wrench, BookmarkPlus } from 'lucide-react';
 import { getFieldsForStoryType } from '@/constants/fieldConfig';
+import type { StoryType, DropdownOption } from '@/constants/fieldConfig';
 import { compileDataBlock } from '@/lib/compileDataBlock';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import LiquidCard from '@/components/ui/LiquidCard';
@@ -14,6 +16,9 @@ import AutoTextarea from '@/components/ui/AutoTextarea';
 import StoryTypeSelector from '@/components/input/StoryTypeSelector';
 import ConditionalField from '@/components/input/ConditionalField';
 import PreGenCustomization from '@/components/input/PreGenCustomization';
+import MyRepairsPanel from '@/components/input/MyRepairsPanel';
+import SaveRepairModal from '@/components/input/SaveRepairModal';
+import type { SavedRepairTemplate } from '@/components/input/MyRepairsPanel';
 
 export default function InputPage() {
   const router = useRouter();
@@ -26,6 +31,9 @@ export default function InputPage() {
     setCompiledDataBlock,
     clearForNewGeneration,
   } = useNarrativeStore();
+
+  const [isRepairsPanelOpen, setIsRepairsPanelOpen] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
   const fields = useMemo(
     () => (state.storyType ? getFieldsForStoryType(state.storyType) : []),
@@ -73,6 +81,59 @@ export default function InputPage() {
     router.push('/narrative');
   };
 
+  // Load a saved template into the form
+  const handleLoadTemplate = useCallback((template: SavedRepairTemplate) => {
+    // Map API story_type to store StoryType
+    const storeStoryType: StoryType = template.story_type === 'diagnostic'
+      ? 'diagnostic_only'
+      : 'repair_complete';
+
+    // Set story type first — this clears fieldValues and dropdownSelections
+    setStoryType(storeStoryType);
+
+    // Map API option values back to store DropdownOption
+    const mapOption = (opt: string | null): DropdownOption => {
+      if (opt === 'exclude') return 'dont_include';
+      if (opt === 'generate') return 'generate';
+      return 'include';
+    };
+
+    // Use setTimeout to allow the story type state change to propagate and re-render fields
+    setTimeout(() => {
+      // Set vehicle and concern fields
+      if (template.year) setFieldValue('year', template.year);
+      if (template.make) setFieldValue('make', template.make);
+      if (template.model) setFieldValue('model', template.model);
+      if (template.customer_concern) setFieldValue('customer_concern', template.customer_concern);
+
+      // Set conditional field values and dropdown options
+      const conditionalFields: Array<{
+        fieldId: string;
+        value: string | null;
+        option: string | null;
+      }> = [
+        { fieldId: 'codes_present', value: template.codes_present, option: template.codes_present_option },
+        { fieldId: 'diagnostics_performed', value: template.diagnostics_performed, option: template.diagnostics_option },
+        { fieldId: 'root_cause', value: template.root_cause, option: template.root_cause_option },
+        { fieldId: 'repair_performed', value: template.repair_performed, option: template.repair_option },
+        { fieldId: 'repair_verification', value: template.repair_verification, option: template.verification_option },
+        { fieldId: 'recommended_action', value: template.recommended_action, option: template.recommended_option },
+      ];
+
+      for (const { fieldId, value, option } of conditionalFields) {
+        const mappedOption = mapOption(option);
+        setDropdownSelection(fieldId, mappedOption);
+
+        if (mappedOption === 'include' && value) {
+          setFieldValue(fieldId, value);
+        } else if (mappedOption === 'dont_include' || mappedOption === 'generate') {
+          // Clear text for excluded/generated fields
+          setFieldValue(fieldId, '');
+        }
+      }
+    }, 50);
+  }, [setStoryType, setFieldValue, setDropdownSelection]);
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <motion.div
@@ -80,6 +141,19 @@ export default function InputPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
+        {/* MY REPAIRS Button */}
+        <div className="mb-4 flex justify-center">
+          <Button
+            variant="secondary"
+            size="large"
+            onClick={() => setIsRepairsPanelOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Wrench size={18} />
+            MY REPAIRS
+          </Button>
+        </div>
+
         {/* Story Type Selection */}
         <LiquidCard size="standard" className="mb-6">
           <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
@@ -167,8 +241,8 @@ export default function InputPage() {
 
             <PreGenCustomization />
 
-            {/* Generate Button */}
-            <div className="flex justify-center">
+            {/* Bottom action buttons */}
+            <div className="flex flex-col items-center gap-3">
               <Button
                 size="fullWidth"
                 disabled={!isFormValid}
@@ -176,6 +250,17 @@ export default function InputPage() {
                 className="max-w-md"
               >
                 GENERATE STORY
+              </Button>
+
+              {/* Save as My Repair button */}
+              <Button
+                variant="ghost"
+                size="medium"
+                onClick={() => setIsSaveModalOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <BookmarkPlus size={16} />
+                SAVE AS MY REPAIR
               </Button>
             </div>
           </motion.div>
@@ -188,6 +273,25 @@ export default function InputPage() {
           </div>
         )}
       </motion.div>
+
+      {/* My Repairs Panel */}
+      <MyRepairsPanel
+        isOpen={isRepairsPanelOpen}
+        onClose={() => setIsRepairsPanelOpen(false)}
+        onLoadTemplate={handleLoadTemplate}
+      />
+
+      {/* Save Repair Modal */}
+      {state.storyType && (
+        <SaveRepairModal
+          isOpen={isSaveModalOpen}
+          onClose={() => setIsSaveModalOpen(false)}
+          storyType={state.storyType}
+          fieldValues={state.fieldValues}
+          dropdownSelections={state.dropdownSelections}
+          roNumber={state.roNumber}
+        />
+      )}
     </div>
   );
 }
