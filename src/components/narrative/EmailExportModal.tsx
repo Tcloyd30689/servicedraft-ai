@@ -157,7 +157,7 @@ export default function EmailExportModal({
                       onChange={(e) => handleEmailChange(index, e.target.value)}
                       placeholder={index === 0 ? 'recipient@example.com' : 'Additional recipient'}
                       disabled={isSending}
-                      className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm
+                      className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm font-data
                         bg-[var(--bg-input)] border-[var(--accent-border)] text-[var(--text-primary)]
                         placeholder:text-[var(--text-muted)]
                         focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]
@@ -204,7 +204,7 @@ export default function EmailExportModal({
           <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] mb-1">
             SUBJECT LINE
           </p>
-          <p className="text-sm text-[var(--text-secondary)] break-words">{subjectPreview}</p>
+          <p className="text-sm font-data text-[var(--text-secondary)] break-words">{subjectPreview}</p>
         </div>
 
         {/* Actions */}

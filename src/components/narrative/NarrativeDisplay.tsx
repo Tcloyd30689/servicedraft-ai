@@ -171,7 +171,7 @@ export default function NarrativeDisplay({
           Block Narrative
         </h3>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4 min-h-[200px]">
-          <p className="text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
+          <p className="font-data text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
             {isAnimating ? (
               blockText.displayText
             ) : hasHighlights ? (
@@ -211,7 +211,7 @@ export default function NarrativeDisplay({
           Concern
         </h3>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4">
-          <p className="text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
+          <p className="font-data text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
             {animate && concernText.isAnimating ? (
               concernText.displayText
             ) : concernHighlights.length > 0 ? (
@@ -237,7 +237,7 @@ export default function NarrativeDisplay({
           Cause
         </h3>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4">
-          <p className="text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
+          <p className="font-data text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
             {animate && causeText.isAnimating ? (
               causeText.displayText
             ) : causeHighlights.length > 0 ? (
@@ -263,7 +263,7 @@ export default function NarrativeDisplay({
           Correction
         </h3>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4">
-          <p className="text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
+          <p className="font-data text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
             {animate && correctionText.isAnimating ? (
               correctionText.displayText
             ) : correctionHighlights.length > 0 ? (

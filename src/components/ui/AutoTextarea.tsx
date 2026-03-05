@@ -50,7 +50,7 @@ const AutoTextarea = forwardRef<HTMLTextAreaElement, AutoTextareaProps>(
           value={value}
           onChange={handleChange}
           className={cn(
-            'w-full p-3 leading-relaxed resize-none overflow-hidden',
+            'w-full p-3 leading-relaxed resize-none overflow-hidden font-data',
             'bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg',
             'text-[var(--text-primary)] placeholder-[var(--text-muted)]',
             'focus:outline-none focus:border-[var(--accent-hover)] focus:shadow-[0_0_0_3px_var(--accent-20)]',

@@ -117,7 +117,7 @@ export default function NarrativeDetailModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Saved Narrative" width="max-w-5xl">
       {/* Meta Info */}
-      <div className="flex flex-wrap gap-4 text-sm text-[var(--text-muted)] mb-4">
+      <div className="font-data flex flex-wrap gap-4 text-sm text-[var(--text-muted)] mb-4">
         <span><span className="text-[var(--text-secondary)]">R.O. #:</span> {narrative.ro_number || 'N/A'}</span>
         <span><span className="text-[var(--text-secondary)]">Vehicle:</span> {narrative.vehicle_year || ''} {narrative.vehicle_make || ''} {narrative.vehicle_model || ''}</span>
         <span><span className="text-[var(--text-secondary)]">Created:</span> {createdDate}</span>
@@ -129,7 +129,7 @@ export default function NarrativeDetailModal({
       <div className="mb-4">
         <h4 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-1">Concern</h4>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3">
-          <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">{narrative.concern || '—'}</p>
+          <p className="font-data text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">{narrative.concern || '—'}</p>
         </div>
       </div>
 
@@ -137,7 +137,7 @@ export default function NarrativeDetailModal({
       <div className="mb-4">
         <h4 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-1">Cause</h4>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3">
-          <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">{narrative.cause || '—'}</p>
+          <p className="font-data text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">{narrative.cause || '—'}</p>
         </div>
       </div>
 
@@ -145,7 +145,7 @@ export default function NarrativeDetailModal({
       <div className="mb-4">
         <h4 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-1">Correction</h4>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3">
-          <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">{narrative.correction || '—'}</p>
+          <p className="font-data text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">{narrative.correction || '—'}</p>
         </div>
       </div>
 

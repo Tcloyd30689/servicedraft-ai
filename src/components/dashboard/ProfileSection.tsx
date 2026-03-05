@@ -39,20 +39,20 @@ export default function ProfileSection({ profile, onUpdate }: ProfileSectionProp
 
           <div className="mt-2 space-y-1 text-sm">
             <p className="text-[var(--text-muted)]">
-              <span className="text-[var(--text-secondary)]">Email:</span> {profile.email}
+              <span className="text-[var(--text-secondary)]">Email:</span> <span className="font-data">{profile.email}</span>
             </p>
             <p className="text-[var(--text-muted)]">
               <span className="text-[var(--text-secondary)]">ID:</span>{' '}
-              <span className="font-mono text-xs">{profile.id.slice(0, 8)}...</span>
+              <span className="font-data text-xs">{profile.id.slice(0, 8)}...</span>
             </p>
             {profile.location && (
               <p className="text-[var(--text-muted)]">
-                <span className="text-[var(--text-secondary)]">Location:</span> {profile.location}
+                <span className="text-[var(--text-secondary)]">Location:</span> <span className="font-data">{profile.location}</span>
               </p>
             )}
             {profile.position && (
               <p className="text-[var(--text-muted)]">
-                <span className="text-[var(--text-secondary)]">Position:</span> {profile.position}
+                <span className="text-[var(--text-secondary)]">Position:</span> <span className="font-data">{profile.position}</span>
               </p>
             )}
           </div>

@@ -27,7 +27,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={id}
             className={cn(
-              'w-full p-3 pr-10',
+              'w-full p-3 pr-10 font-data',
               'bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg',
               'text-[var(--text-primary)] cursor-pointer',
               'appearance-none',

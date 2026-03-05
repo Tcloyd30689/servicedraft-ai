@@ -88,7 +88,7 @@ export default function ProofreadResults({
         <span className={`${rating.color} text-white text-xs font-bold px-3 py-1 rounded-full`}>
           {rating.label}
         </span>
-        <span className="text-[var(--text-secondary)] text-sm">{data.summary}</span>
+        <span className="font-data text-[var(--text-secondary)] text-sm">{data.summary}</span>
       </div>
 
       {/* Flagged Issues */}
@@ -97,7 +97,7 @@ export default function ProofreadResults({
           Flagged Issues
         </h4>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3 min-h-[60px]">
-          <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">
+          <p className="font-data text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">
             {animate ? issuesText.displayText : (
               data.flagged_issues.length > 0
                 ? data.flagged_issues.map((item, i) => `${i + 1}. ${item.issue}`).join('\n')
@@ -143,7 +143,7 @@ export default function ProofreadResults({
                       accentColor: 'var(--accent-hover)',
                     }}
                   />
-                  <span className="text-[var(--text-primary)] text-sm leading-relaxed">
+                  <span className="font-data text-[var(--text-primary)] text-sm leading-relaxed">
                     {i + 1}. {edit}
                   </span>
                 </label>

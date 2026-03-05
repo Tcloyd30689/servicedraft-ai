@@ -152,7 +152,7 @@ export default function NarrativeHistory({ userId, senderName }: NarrativeHistor
               placeholder="Search narratives..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-9 pr-8 py-2 text-sm bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
+              className="w-full pl-9 pr-8 py-2 text-sm font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
             />
             {searchInput && (
               <button
@@ -282,13 +282,13 @@ export default function NarrativeHistory({ userId, senderName }: NarrativeHistor
                       onClick={() => setSelectedNarrative(n)}
                       className="border-b border-[var(--accent-8)] hover:bg-[var(--accent-5)] cursor-pointer transition-colors"
                     >
-                      <td className="py-2.5 px-2 text-[var(--text-muted)]">{date.toLocaleDateString()}</td>
-                      <td className="py-2.5 px-2 text-[var(--text-muted)]">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                      <td className="py-2.5 px-2 text-[var(--text-primary)]">{n.ro_number || '—'}</td>
-                      <td className="py-2.5 px-2 text-[var(--text-muted)]">{n.vehicle_year || '—'}</td>
-                      <td className="py-2.5 px-2 text-[var(--text-muted)]">{n.vehicle_make || '—'}</td>
-                      <td className="py-2.5 px-2 text-[var(--text-muted)]">{n.vehicle_model || '—'}</td>
-                      <td className="py-2.5 px-2 text-[var(--text-muted)] truncate max-w-[150px]">
+                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{date.toLocaleDateString()}</td>
+                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                      <td className="py-2.5 px-2 font-data text-[var(--text-primary)]">{n.ro_number || '—'}</td>
+                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{n.vehicle_year || '—'}</td>
+                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{n.vehicle_make || '—'}</td>
+                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{n.vehicle_model || '—'}</td>
+                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)] truncate max-w-[150px]">
                         {preview}{preview.length >= 30 ? '...' : ''}
                       </td>
                     </motion.tr>

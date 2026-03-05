@@ -25,10 +25,11 @@ This file is a living document that Claude Code reads at the start of every sess
 
 **Last Updated:** 2026-03-05
 **Current Phase:** Stage 3 — UI Polish
-**Next Task:** Stage 3, Sprint 6
+**Next Task:** Stage 3, Sprint 7 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
-**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete, + 1 Stage 3 S5 task complete)
+**Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
+**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete, + 1 Stage 3 S5 task complete, + 1 Stage 3 S6 task complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
@@ -2046,6 +2047,38 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** S3-5.1
 - **Completed:** 2026-03-05
 - **Notes:** Strengthened rule #5 in both DIAGNOSTIC_ONLY_SYSTEM_PROMPT and REPAIR_COMPLETE_SYSTEM_PROMPT. The AI is now explicitly instructed to identify the vehicle's OEM, use manufacturer-specific diagnostic procedures, proprietary system names, and technical terminology with concrete examples for major manufacturers. This aligns with the Sprint 4 fix that stopped the proofread prompt from flagging OEM terms — now generation produces richer OEM-specific content and proofread accepts it.
+
+---
+
+## Stage 3 Sprint 6 — Add Inter Font for Data/Input Text Readability — COMPLETE
+
+### S3-6.1 — Import Inter Font and Create CSS Utility
+- [x] Imported `Inter` from `next/font/google` in `src/app/layout.tsx` with weights 300-600 and CSS variable `--font-data`
+- [x] Added `${inter.variable}` class to `<body>` element alongside existing Orbitron variable
+- [x] Created `.font-data` utility class in `src/app/globals.css` with `font-family: var(--font-data), system-ui, sans-serif`, `font-weight: 400`, `letter-spacing: 0.01em`
+- **Completed:** 2026-03-05
+
+### S3-6.2 — Apply font-data to All Data Text Components
+- [x] `NarrativeDisplay.tsx` — Applied `font-data` to block narrative `<p>` and all three C/C/C section `<p>` elements
+- [x] `NarrativeDetailModal.tsx` — Applied `font-data` to meta info row (R.O.#, Vehicle, dates) and concern/cause/correction display text
+- [x] `ProofreadResults.tsx` — Applied `font-data` to summary text, flagged issues text, and each suggested edit span
+- [x] `EditStoryModal.tsx` — Changed textarea base class from `font-mono text-xs` to `font-data text-sm` for all edit textareas
+- [x] `NarrativeHistory.tsx` — Applied `font-data` to all 7 table data `<td>` cells (date, time, R.O.#, year, make, model, preview) and search input
+- [x] `ProfileSection.tsx` — Applied `font-data` to data value spans (email, ID, location, position) while keeping labels unchanged
+- [x] `Input.tsx` — Added `font-data` to base input element class
+- [x] `Textarea.tsx` — Added `font-data` to base textarea element class
+- [x] `AutoTextarea.tsx` — Added `font-data` to auto-sizing textarea element class
+- [x] `ConditionalField.tsx` — Added `font-data` to conditional textarea class
+- [x] `Select.tsx` — Added `font-data` to select element class
+- [x] `EmailExportModal.tsx` — Added `font-data` to email input fields and subject preview text
+- [x] Verified build compiles successfully with no errors
+- **Completed:** 2026-03-05
+- **Notes:** Inter font is applied only to data/content text — generated narratives, user input fields, table data cells, audit results, and profile data values. UI elements (titles, buttons, navigation, section headers, column headers, labels, toast messages) all keep the existing Orbitron font. The `.font-data` class sets `font-weight: 400` and `letter-spacing: 0.01em` for maximum readability on dark backgrounds, contrasting with Orbitron's `font-weight: 600` and `letter-spacing: 0.04em`.
+
+### SESSION S3-6 — Data/Input Font Typography Update — COMPLETE
+- **Scope:** S3-6.1, S3-6.2
+- **Completed:** 2026-03-05
+- **Notes:** Added Inter as a secondary data font while keeping Orbitron as the primary UI font. Inter is clean, highly legible, and optimized for body/data text readability. Applied surgically to 12 component files across narrative display, input controls, dashboard tables, profile data, audit results, and export modals. The visual contrast between the tech-styled Orbitron UI text and the clean Inter data text creates a professional, intentional typography hierarchy.
 
 ---
 

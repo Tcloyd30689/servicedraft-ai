@@ -79,7 +79,7 @@ export default function ConditionalField({
             resize();
           }}
           placeholder={field.placeholder}
-          className="w-full p-3 leading-relaxed resize-none overflow-hidden bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] focus:shadow-[0_0_0_3px_var(--accent-20)] hover:border-[var(--accent-primary)] transition-all duration-200"
+          className="w-full p-3 leading-relaxed resize-none overflow-hidden font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] focus:shadow-[0_0_0_3px_var(--accent-20)] hover:border-[var(--accent-primary)] transition-all duration-200"
         />
       )}
 

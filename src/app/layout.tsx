@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Orbitron } from "next/font/google";
+import { Orbitron, Inter } from "next/font/google";
 import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
 import ToastProvider from "@/components/ui/ToastProvider";
@@ -8,6 +8,12 @@ const orbitron = Orbitron({
   variable: "--font-orbitron",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
+});
+
+const inter = Inter({
+  variable: "--font-data",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -22,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body className={`${orbitron.variable} antialiased`}>
+      <body className={`${orbitron.variable} ${inter.variable} antialiased`}>
         <ThemeProvider>
           {children}
           <ToastProvider />
