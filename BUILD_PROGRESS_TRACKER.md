@@ -25,6 +25,7 @@ This file is a living document that Claude Code reads at the start of every sess
 
 **Last Updated:** 2026-03-05
 **Current Phase:** Stage 3 — Diagnostic to Repair Complete Update System
+**Post-Sprint 9 Adjustment:** COMPLETE — Reworked Completed Recommended Repair button (removed API call, enlarged, repositioned, removed dropdown)
 **Next Task:** Stage 3, Sprint 10 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
@@ -2325,6 +2326,44 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Notes:** Complete flow for updating diagnostic-only narratives with repair information. Users open a saved diagnostic story from the dashboard, click "UPDATE NARRATIVE WITH REPAIR", fill in repair details (with optional AI-assisted tense conversion), and generate a new repair-complete narrative. Both entries coexist in the database as separate rows. Dashboard shows story type badges for quick identification. Migration 006 must be run to drop the old unique constraint.
 
 ⚠️ **USER ACTION REQUIRED:** Run `supabase/migrations/006_drop_narrative_unique_constraint.sql` in the Supabase SQL Editor to drop the `UNIQUE(user_id, ro_number)` constraint. Without this, saving multiple narratives with the same RO# will fail.
+
+---
+
+## POST-SPRINT 9 ADJUSTMENT — COMPLETED RECOMMENDED REPAIR BUTTON REWORK
+
+### PS9-A.1 — Remove API Call from "Completed Recommended Repair" Button
+- [x] Removed the `/api/convert-recommendation` API call from the button handler — button no longer triggers any network request
+- [x] Button now toggles a `useRecommendedRepair` boolean state instead of calling the AI for tense conversion
+- [x] When toggled ON: Repair Performed text field collapses and displays a pre-filled instruction box (dashed border, accent-colored italic text with CheckCircle icon) explaining that the AI will convert the diagnostic recommendation to past tense during main generation
+- [x] When toggled OFF: text field reappears empty, user can type their own repair info
+- [x] The instruction text (`COMPLETED_REPAIR_INSTRUCTION` constant) is compiled into the data sent to `/api/update-narrative` when the user clicks "Generate Narrative" — the main API call handles the full conversion in one shot
+- [x] Removed `isConverting` state, `handleConvertRecommendation()` function, and Loader2 spinner from the button
+- [x] `canGenerate` logic updated: enabled if `useRecommendedRepair` is true OR if the user typed text in the Repair Performed field
+- **Completed:** 2026-03-05
+- **Notes:** The convert-recommendation API route (`src/app/api/convert-recommendation/route.ts`) still exists in the codebase but is no longer called by any frontend code. The update-narrative API already handles the full diagnostic-to-repair conversion, making the separate tense-conversion call redundant.
+
+### PS9-A.2 — Enlarge "Completed Recommended Repair" Button
+- [x] Width increased to 75% of the container (`w-3/4`)
+- [x] Height roughly doubled with `py-4` padding (was `py-1`)
+- [x] Font size increased from `text-[10px]` to `text-sm` with `font-bold` and `tracking-wider`
+- [x] Styled as a prominent action button with `rounded-xl` and `border-2`
+- [x] Two visual states: inactive (accent tint bg, accent border) and active (solid accent primary bg with glow shadow)
+- [x] Icon: Sparkles when inactive, CheckCircle when active — communicates toggle state
+- [x] Button centered horizontally via `flex justify-center` wrapper
+- **Completed:** 2026-03-05
+
+### PS9-A.3 — Reposition Button and Remove Repair Performed Dropdown
+- [x] Moved "COMPLETED RECOMMENDED REPAIR" button from inside the Repair Performed header row to its own block directly below the Repair Performed text field and above Repair Verification Steps
+- [x] Removed the dropdown menu (Include/Don't Include/Generate) from the Repair Performed field entirely — user either types their own text or clicks the button
+- [x] Removed `repairPerformedDropdown` state — the field always sends as 'include' to the API
+- [x] Repair Verification Steps field retains its dropdown (Include/Don't Include/Generate) as before
+- [x] Layout order in modal: Vehicle badges → Repair Performed label + text field → COMPLETED RECOMMENDED REPAIR button → Repair Verification Steps + dropdown → Additional Notes → GENERATE NARRATIVE button
+- **Completed:** 2026-03-05
+
+### SESSION PS9-A — Post-Sprint 9 Adjustment — COMPLETE
+- **Scope:** PS9-A.1, PS9-A.2, PS9-A.3
+- **Completed:** 2026-03-05
+- **Notes:** Reworked the "Completed Recommended Repair" button in the UpdateWithRepairModal to eliminate the wasteful separate API call for tense conversion. The button now acts as a toggle that collapses the Repair Performed text field and pre-fills it with an instruction for the main Generate Narrative API call. The button has been significantly enlarged (75% width, double height, prominent styling) and repositioned directly below the Repair Performed field. The Repair Performed dropdown was removed since the two user paths (type manually or click the button) make a three-option dropdown unnecessary. No changes to the update-narrative API route, save logic, dashboard badges, or conditional visibility of the "UPDATE NARRATIVE WITH REPAIR" button.
 
 ---
 
