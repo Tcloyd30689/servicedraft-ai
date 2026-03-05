@@ -25,8 +25,8 @@ This file is a living document that Claude Code reads at the start of every sess
 
 **Last Updated:** 2026-03-05
 **Current Phase:** Stage 3 — UI Polish
-**Next Task:** Stage 3, Sprint 5
-**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete)
+**Next Task:** Stage 3, Sprint 6
+**Overall Progress:** 73 / 78 tasks complete (+ 87 post-build fixes applied, + 5 Stage 2 tasks complete, + 6 S2-4 tasks complete, + 5 S2-5 tasks complete, + 7 S2-6A tasks complete, + 4 S2-6B tasks complete, + 6 S2-6C tasks complete, + 2 Stage 3 S1 tasks complete, + 2 Stage 3 S4 tasks complete, + 1 Stage 3 S5 task complete)
 **Stage 1 Status:** COMPLETE — All core features built, Gemini 3.0 Flash upgraded, documentation synced
 **Stage 2 Sprint S2-1:** COMPLETE — Dashboard search enhanced with multi-column search, sort controls, filter pills, results count
 **Stage 2 Sprint S2-4:** COMPLETE — Proofread highlighting with 30-second fade on narrative display (PB.84)
@@ -36,6 +36,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 2 Sprint S2-6C:** COMPLETE — Admin analytics dashboard with stat cards, charts, and auto-refresh
 **Stage 3 Sprint 1:** COMPLETE — Saved story modal positioning/sizing fix + audit tooltip animation/opacity fix
 **Stage 3 Sprint 4:** COMPLETE — Fixed OEM terminology audit flagging + added selective apply for suggested edits
+**Stage 3 Sprint 5:** COMPLETE — Enhanced OEM terminology instructions in generation prompts
 **Session 5A:** COMPLETE — CSS Variable System + Accent Color Infrastructure (PB.26–PB.28)
 **Session 6A:** COMPLETE — Reactive Hero Animation Area + Nav Bar Overhaul (PB.29–PB.31)
 **Post-5B Fixes:** COMPLETE — Hero enlargement, fixed positioning, background wave restore, nav consolidation (PB.32–PB.35)
@@ -2025,6 +2026,24 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** S3-4.1, S3-4.2
 - **Completed:** 2026-03-05
 - **Notes:** Two changes to the Review & Proofread system: (1) Removed criterion #10 that incorrectly flagged OEM/manufacturer terminology as issues, added explicit instruction that OEM terms are expected and correct. (2) Added checkbox selection system to suggested edits — users can pick and choose which edits to apply, with Select All/Deselect All toggle and purple-themed checkboxes.
+
+---
+
+## Stage 3 Sprint 5 — Enhanced OEM Terminology in Generation Prompts — COMPLETE
+
+### S3-5.1 — Strengthen OEM Terminology Instructions in Both Generation System Prompts
+- [x] Replaced rule #5 in `DIAGNOSTIC_ONLY_SYSTEM_PROMPT` (`src/constants/prompts.ts`) with detailed multi-part OEM terminology instruction
+- [x] Replaced rule #5 in `REPAIR_COMPLETE_SYSTEM_PROMPT` (`src/constants/prompts.ts`) with identical enhanced instruction
+- [x] New rule #5 includes sub-rules (a-e): identify manufacturer/OEM, identify and use OEM service practices and terminology, explicit examples for GM/Ford/Toyota/Honda/Stellantis/Hyundai-Kia/BMW and more, explanation of why OEM terms matter for auditors, instruction to write as if certified on that manufacturer
+- [x] All other rules (1-4, 6-9 in diagnostic / 6-10 in repair complete) remain unchanged
+- [x] JSON response format instructions remain unchanged
+- **Completed:** 2026-03-05
+- **Notes:** The previous rule #5 was a single sentence saying OEM terminology is "allowed and encouraged." The enhanced version is a structured 5-part instruction with specific manufacturer terminology examples (Active Fuel Management, StabiliTrak, AdvanceTrac, EcoBoost, Toyota Safety Sense, VTEC, Uconnect, SmartSense, iDrive, VANOS, etc.) that explicitly tells the AI to identify the OEM and use their certified terminology. This should produce narratives that read as if written by a manufacturer-certified technician.
+
+### SESSION S3-5 — Enhanced OEM Terminology in Generation Prompts — COMPLETE
+- **Scope:** S3-5.1
+- **Completed:** 2026-03-05
+- **Notes:** Strengthened rule #5 in both DIAGNOSTIC_ONLY_SYSTEM_PROMPT and REPAIR_COMPLETE_SYSTEM_PROMPT. The AI is now explicitly instructed to identify the vehicle's OEM, use manufacturer-specific diagnostic procedures, proprietary system names, and technical terminology with concrete examples for major manufacturers. This aligns with the Sprint 4 fix that stopped the proofread prompt from flagging OEM terms — now generation produces richer OEM-specific content and proofread accepts it.
 
 ---
 
