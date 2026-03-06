@@ -31,7 +31,8 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 4 Sprint 4:** COMPLETE — Navigation overhaul: increased nav height (56px to 64px), clickable hero logo, MAIN MENU styled button, centered vector logo with theme-aware color inversion
 **Stage 4 Sprint 5:** COMPLETE — Terms of Use content component, signup terms enforcement, main menu terms link, expanded FAQ content
 **Hotfix 19A:** COMPLETE — Fix delete account API: removed stray "you" prefix from SUPABASE_SERVICE_ROLE_KEY in .env.local, hardened service client with trim() and auth options, added per-step error logging
-**Next Task:** Stage 4, Sprint 6 (TBD)
+**Stage 4 Sprint 6:** COMPLETE — Admin dashboard core rebuild: Overview tab with 8 metric cards, expanded analytics API (generations/exports/proofreads/customizations/templates/subscriptionBreakdown/activityByDay), top 10 users, activity logging audit verified
+**Next Task:** Stage 4, Sprint 7 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
@@ -2473,6 +2474,16 @@ This file is a living document that Claude Code reads at the start of every sess
   - S4-5.2: Updated signup page (`src/app/(auth)/signup/page.tsx`) — added `termsAccepted` and `showTerms` state. Added checkbox with "I agree to the Terms of Use" label where "Terms of Use" is a clickable link opening a modal. Signup CONTINUE button disabled until terms accepted. Added Modal with TermsOfUse component.
   - S4-5.3: Updated main menu page (`src/app/(protected)/main-menu/page.tsx`) — added "TERMS OF USE" to bottomItems array with FileText icon. Added `showTerms` state and Modal with TermsOfUse component. Imported TermsOfUse and FileText icon.
   - S4-5.4: Expanded FAQ content (`src/components/layout/FAQContent.tsx`) — added 8 new Q&As: Repair Templates, AI Customization, audit rating explanation, export options, data security, Generate Applicable Info, contact support, mobile usage.
+
+### SESSION S4-SPRINT-6 — Stage 4 Sprint 6: Admin Dashboard Core Rebuild — COMPLETE
+- **Scope:** S4-6.1 through S4-6.5
+- **Completed:** 2026-03-06
+- **Notes:** Complete admin dashboard overhaul with expanded metrics and new Overview tab.
+  - S4-6.1: Activity logging audit — verified all 10 required action types are logged (generate, regenerate, save, export_copy/print/pdf/docx, login, customize, proofread). RLS policies confirmed working for admin reads via is_admin() helper function.
+  - S4-6.2: Rebuilt analytics API (`src/app/api/admin/analytics/route.ts`) — added newUsersMonth, totalGenerations (generate+regenerate), totalExports (all export types), totalProofreads, totalCustomizations, totalSavedTemplates (from saved_repairs table), activityByDay (30-day activity chart), subscriptionBreakdown (active/trial/expired/bypass counts). Expanded topUsers from top 5 to top 10.
+  - S4-6.3: Rebuilt admin page with 4 tabs — added Overview as default tab (was 3 tabs: activity/users/analytics, now 4: overview/activity/users/analytics). Overview tab contains 8 metric cards in 2x4 grid (Users, Subscriptions, Narratives, Today, Generations, Exports, Proofreads, Templates), subscription breakdown section, and 30-day activity trend chart. Refresh button + last-updated timestamp on overview.
+  - S4-6.4: Activity Log tab polish — enhanced action type badges to pill-style with color-coded backgrounds and borders. All existing features confirmed working: pagination, action_type filtering, user search, expandable metadata rows.
+  - S4-6.5: User Management tab verified — all features functional: sortable columns, search, user detail expansion, restrict/unrestrict with confirmation modal, delete with multi-step confirmation, subscription status change dropdown, password reset.
 
 ---
 

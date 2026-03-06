@@ -3,7 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Activity, Users, BarChart3, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Search, Mail, Lock, Unlock, Trash2, TrendingUp, CreditCard, FileText, RefreshCw } from 'lucide-react';
+import {
+  Shield, Activity, Users, BarChart3, LayoutDashboard,
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  Search, Mail, Lock, Unlock, Trash2, TrendingUp,
+  CreditCard, FileText, RefreshCw, Zap, Printer,
+  CheckCircle, BookOpen,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
@@ -12,7 +18,7 @@ import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
 
-type TabKey = 'activity' | 'users' | 'analytics';
+type TabKey = 'overview' | 'activity' | 'users' | 'analytics';
 
 const ACTION_FILTERS = [
   { value: 'all', label: 'All Actions' },
@@ -79,14 +85,22 @@ interface UserDetailData {
 interface AnalyticsData {
   totalUsers: number;
   newUsersWeek: number;
+  newUsersMonth: number;
   activeSubscriptions: number;
   totalNarratives: number;
   narrativesWeek: number;
   narrativesToday: number;
+  totalGenerations: number;
+  totalExports: number;
+  totalProofreads: number;
+  totalCustomizations: number;
+  totalSavedTemplates: number;
+  activityByDay: Array<{ date: string; count: number }>;
   activityByType: Record<string, number>;
   dailyNarratives: Array<{ date: string; count: number }>;
   topUsers: Array<{ rank: number; name: string; position: string; count: number }>;
   storyTypes: Record<string, number>;
+  subscriptionBreakdown: Record<string, number>;
 }
 
 const SUB_BADGE: Record<string, { bg: string; text: string }> = {
@@ -101,11 +115,11 @@ type UserSortColumn = 'name' | 'email' | 'position' | 'created_at' | 'subscripti
 export default function AdminPage() {
   const router = useRouter();
   const { profile, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabKey>('activity');
+  const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
   // Activity log state
   const [logs, setLogs] = useState<ActivityRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [sortAsc, setSortAsc] = useState(false);
@@ -125,10 +139,10 @@ export default function AdminPage() {
   const [restrictTarget, setRestrictTarget] = useState<{ id: string; name: string; restricted: boolean } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Analytics state
+  // Analytics / Overview state
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [analyticsRange, setAnalyticsRange] = useState<'7' | '14' | '30' | 'all'>('14');
+  const [analyticsRange, setAnalyticsRange] = useState<'7' | '14' | '30' | 'all'>('30');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [secondsAgo, setSecondsAgo] = useState(0);
 
@@ -139,6 +153,7 @@ export default function AdminPage() {
     }
   }, [authLoading, profile, router]);
 
+  // ─── Activity Log ──────────────────────────────────────────
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
@@ -146,9 +161,6 @@ export default function AdminPage() {
       const from = (page - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      // Build query — we use a service-role-powered RPC or direct join
-      // Since RLS may block cross-user reads, we use the admin's own session
-      // The admin should have a policy allowing full read on activity_log
       let query = supabase
         .from('activity_log')
         .select(`
@@ -172,7 +184,6 @@ export default function AdminPage() {
       }
 
       if (searchQuery.trim()) {
-        // Search by user email or name — filter on the joined users table
         query = query.or(
           `users.email.ilike.%${searchQuery.trim()}%,users.first_name.ilike.%${searchQuery.trim()}%,users.last_name.ilike.%${searchQuery.trim()}%`
         );
@@ -220,10 +231,10 @@ export default function AdminPage() {
   }, [page, sortAsc, filterAction, searchQuery]);
 
   useEffect(() => {
-    if (profile?.role === 'admin') {
+    if (activeTab === 'activity' && profile?.role === 'admin') {
       fetchLogs();
     }
-  }, [profile, fetchLogs]);
+  }, [activeTab, profile, fetchLogs]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -444,7 +455,7 @@ export default function AdminPage() {
     }
   };
 
-  // ─── Analytics ──────────────────────────────────────────────
+  // ─── Analytics / Overview Data ──────────────────────────────
   const fetchAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
     try {
@@ -465,23 +476,23 @@ export default function AdminPage() {
     }
   }, [analyticsRange]);
 
-  // Fetch when tab is active
+  // Fetch analytics on overview or analytics tab
   useEffect(() => {
-    if (activeTab === 'analytics' && profile?.role === 'admin') {
+    if ((activeTab === 'analytics' || activeTab === 'overview') && profile?.role === 'admin' && !analyticsData) {
       fetchAnalytics();
     }
-  }, [activeTab, profile, fetchAnalytics]);
+  }, [activeTab, profile, analyticsData, fetchAnalytics]);
 
-  // Auto-refresh every 60s while analytics tab is active
+  // Auto-refresh every 60s while analytics or overview tab is active
   useEffect(() => {
-    if (activeTab !== 'analytics') return;
+    if (activeTab !== 'analytics' && activeTab !== 'overview') return;
     const interval = setInterval(fetchAnalytics, 60000);
     return () => clearInterval(interval);
   }, [activeTab, fetchAnalytics]);
 
   // Seconds-ago ticker
   useEffect(() => {
-    if (activeTab !== 'analytics' || !lastUpdated) return;
+    if ((activeTab !== 'analytics' && activeTab !== 'overview') || !lastUpdated) return;
     const ticker = setInterval(() => {
       setSecondsAgo(Math.floor((Date.now() - lastUpdated.getTime()) / 1000));
     }, 1000);
@@ -502,6 +513,20 @@ export default function AdminPage() {
     return null;
   }
 
+  // ─── Overview Tab Metric Cards ─────────────────────────────
+  const overviewCards = analyticsData ? [
+    // Row 1
+    { label: 'Total Users', value: analyticsData.totalUsers, icon: Users, color: 'var(--accent-bright)', sub: `+${analyticsData.newUsersWeek} this week` },
+    { label: 'Active Subscriptions', value: analyticsData.activeSubscriptions, icon: CreditCard, color: '#3b82f6', sub: `${analyticsData.totalUsers > 0 ? Math.round((analyticsData.activeSubscriptions / analyticsData.totalUsers) * 100) : 0}% of users` },
+    { label: 'Total Narratives', value: analyticsData.totalNarratives, icon: FileText, color: 'var(--accent-primary)', sub: `+${analyticsData.narrativesWeek} this week` },
+    { label: 'Narratives Today', value: analyticsData.narrativesToday, icon: Activity, color: '#ef4444', sub: 'today' },
+    // Row 2
+    { label: 'Total Generations', value: analyticsData.totalGenerations, icon: Zap, color: '#f59e0b', sub: 'generate + regenerate' },
+    { label: 'Total Exports', value: analyticsData.totalExports, icon: Printer, color: '#3b82f6', sub: 'copy / print / pdf / docx' },
+    { label: 'Total Proofreads', value: analyticsData.totalProofreads, icon: CheckCircle, color: '#16a34a', sub: 'all time' },
+    { label: 'Saved Templates', value: analyticsData.totalSavedTemplates, icon: BookOpen, color: 'var(--accent-hover)', sub: 'My Repairs' },
+  ] : [];
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <motion.div
@@ -516,8 +541,9 @@ export default function AdminPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
           {([
+            { key: 'overview' as TabKey, label: 'Overview', icon: LayoutDashboard },
             { key: 'activity' as TabKey, label: 'Activity Log', icon: Activity },
             { key: 'users' as TabKey, label: 'User Management', icon: Users },
             { key: 'analytics' as TabKey, label: 'Analytics', icon: BarChart3 },
@@ -537,7 +563,116 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* Tab Content */}
+        {/* ═══════════════════════════════════════════════════════════
+            OVERVIEW TAB
+           ═══════════════════════════════════════════════════════════ */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Header Row: Last Updated + Refresh */}
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-[var(--text-muted)]">
+                {lastUpdated
+                  ? `Last updated: ${secondsAgo < 5 ? 'just now' : `${secondsAgo}s ago`}`
+                  : 'Loading...'}
+              </p>
+              <button
+                onClick={fetchAnalytics}
+                disabled={analyticsLoading}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--text-muted)] hover:text-[var(--accent-bright)] hover:bg-[var(--accent-10)] transition-all cursor-pointer disabled:opacity-50"
+                title="Refresh metrics"
+              >
+                <RefreshCw size={14} className={analyticsLoading ? 'animate-spin' : ''} />
+                Refresh
+              </button>
+            </div>
+
+            {analyticsLoading && !analyticsData ? (
+              <LiquidCard size="standard">
+                <div className="py-12">
+                  <LoadingSpinner size="medium" message="Loading overview metrics..." />
+                </div>
+              </LiquidCard>
+            ) : analyticsData ? (
+              <>
+                {/* Metric Cards Grid — 4 columns on lg, 2 on sm */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {overviewCards.map(({ label, value, icon: Icon, color, sub }) => (
+                    <LiquidCard key={label} size="compact" className="!rounded-[16px] relative overflow-hidden">
+                      <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">{label}</p>
+                          <Icon size={18} style={{ color, opacity: 0.6 }} />
+                        </div>
+                        <p className="text-3xl font-bold" style={{ color }}>{value.toLocaleString()}</p>
+                        <p className="text-[var(--text-muted)] text-xs mt-1">{sub}</p>
+                      </div>
+                    </LiquidCard>
+                  ))}
+                </div>
+
+                {/* Subscription Breakdown */}
+                <LiquidCard size="standard" className="!rounded-[16px]">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Subscription Breakdown</h3>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {Object.entries(analyticsData.subscriptionBreakdown).map(([status, count]) => {
+                      const badge = SUB_BADGE[status] || SUB_BADGE.trial;
+                      return (
+                        <div key={status} className="flex items-center gap-3 p-3 rounded-lg bg-[var(--accent-5)]">
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ background: badge.text }}
+                          />
+                          <div>
+                            <p className="text-lg font-bold" style={{ color: badge.text }}>{count}</p>
+                            <p className="text-xs text-[var(--text-muted)] capitalize">{status}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </LiquidCard>
+
+                {/* Activity by Day (30 days) */}
+                <LiquidCard size="standard" className="!rounded-[16px]">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Activity Trend (Last 30 Days)</h3>
+                  {analyticsData.activityByDay.length > 0 ? (() => {
+                    const maxCount = Math.max(...analyticsData.activityByDay.map((d) => d.count), 1);
+                    return (
+                      <div className="flex items-end gap-[2px] h-[140px]">
+                        {analyticsData.activityByDay.map(({ date, count }) => {
+                          const pct = (count / maxCount) * 100;
+                          const d = new Date(date + 'T12:00:00');
+                          const dayLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                          return (
+                            <div key={date} className="flex-1 flex flex-col items-center justify-end h-full group relative">
+                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[var(--bg-elevated)] border border-[var(--accent-30)] text-[var(--text-primary)] text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                                {count} action{count !== 1 ? 's' : ''} &middot; {dayLabel}
+                              </div>
+                              <div
+                                className="w-full rounded-t-sm transition-all duration-300 min-h-[2px]"
+                                style={{
+                                  height: `${Math.max(pct, 1.5)}%`,
+                                  background: 'var(--accent-primary)',
+                                  opacity: count > 0 ? 1 : 0.25,
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })() : (
+                    <p className="text-[var(--text-muted)] text-sm text-center py-8">No activity data.</p>
+                  )}
+                </LiquidCard>
+              </>
+            ) : null}
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════
+            ACTIVITY LOG TAB
+           ═══════════════════════════════════════════════════════════ */}
         {activeTab === 'activity' && (
           <LiquidCard size="standard" className="!rounded-[16px]">
             {/* Filters Row */}
@@ -622,7 +757,14 @@ export default function AdminPage() {
                             {log.user_email}
                           </td>
                           <td className="py-3 pr-4">
-                            <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-[var(--accent-10)] text-[var(--accent-bright)]">
+                            <span
+                              className="inline-block px-2.5 py-1 rounded-full text-xs font-medium"
+                              style={{
+                                background: `${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}20`,
+                                color: ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-bright)',
+                                border: `1px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}40`,
+                              }}
+                            >
                               {formatActionLabel(log.action_type)}
                             </span>
                           </td>
@@ -716,6 +858,9 @@ export default function AdminPage() {
           </LiquidCard>
         )}
 
+        {/* ═══════════════════════════════════════════════════════════
+            USER MANAGEMENT TAB
+           ═══════════════════════════════════════════════════════════ */}
         {activeTab === 'users' && (
           <LiquidCard size="standard" className="!rounded-[16px]">
             {/* Search + Refresh */}
@@ -731,6 +876,7 @@ export default function AdminPage() {
                 />
               </div>
               <Button variant="ghost" size="small" onClick={fetchUsers} disabled={usersLoading}>
+                <RefreshCw size={14} className={usersLoading ? 'animate-spin' : ''} />
                 Refresh
               </Button>
             </div>
@@ -1006,6 +1152,9 @@ export default function AdminPage() {
           </LiquidCard>
         )}
 
+        {/* ═══════════════════════════════════════════════════════════
+            ANALYTICS TAB
+           ═══════════════════════════════════════════════════════════ */}
         {activeTab === 'analytics' && (
           <div className="space-y-6">
             {/* Header Row: Last Updated + Range Selector + Refresh */}
@@ -1048,7 +1197,7 @@ export default function AdminPage() {
               </LiquidCard>
             ) : analyticsData ? (
               <>
-                {/* ── Stat Cards (2x3 grid) ── */}
+                {/* Stat Cards (2x3 grid) */}
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                   {([
                     { label: 'Total Users', value: analyticsData.totalUsers, icon: Users, color: 'var(--accent-bright)' },
@@ -1072,7 +1221,7 @@ export default function AdminPage() {
                   ))}
                 </div>
 
-                {/* ── 14-Day Generation Trend ── */}
+                {/* Narrative Generation Trend Chart */}
                 <LiquidCard size="standard" className="!rounded-[16px]">
                   <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
                     Narrative Generation Trend ({analyticsRange === 'all' ? 'All Time' : `Last ${analyticsRange} Days`})
@@ -1087,11 +1236,9 @@ export default function AdminPage() {
                           const dayLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                           return (
                             <div key={date} className="flex-1 flex flex-col items-center justify-end h-full group relative">
-                              {/* Tooltip */}
                               <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[var(--bg-elevated)] border border-[var(--accent-30)] text-[var(--text-primary)] text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
                                 {count} narrative{count !== 1 ? 's' : ''}
                               </div>
-                              {/* Bar */}
                               <div
                                 className="w-full rounded-t-sm transition-all duration-300 min-h-[2px]"
                                 style={{
@@ -1100,7 +1247,6 @@ export default function AdminPage() {
                                   opacity: count > 0 ? 1 : 0.25,
                                 }}
                               />
-                              {/* Date label — show every other on small sets, every 3rd on larger */}
                               <p className="text-[9px] text-[var(--text-muted)] mt-1.5 rotate-[-45deg] origin-top-left whitespace-nowrap">
                                 {dayLabel}
                               </p>
@@ -1114,7 +1260,7 @@ export default function AdminPage() {
                   )}
                 </LiquidCard>
 
-                {/* ── Two-Column: Story Type Breakdown + Activity Type Breakdown ── */}
+                {/* Two-Column: Story Type + Activity Type */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Story Type Breakdown */}
                   <LiquidCard size="standard" className="!rounded-[16px]">
@@ -1129,7 +1275,6 @@ export default function AdminPage() {
                         <p className="text-[var(--text-muted)] text-sm text-center py-8">No narratives generated yet.</p>
                       ) : (
                         <div className="space-y-4">
-                          {/* Horizontal stacked bar */}
                           <div className="h-8 rounded-full overflow-hidden flex">
                             <div
                               className="h-full transition-all duration-500"
@@ -1140,7 +1285,6 @@ export default function AdminPage() {
                               style={{ width: `${repairPct}%`, background: '#16a34a' }}
                             />
                           </div>
-                          {/* Legend */}
                           <div className="flex justify-between text-sm">
                             <div className="flex items-center gap-2">
                               <div className="w-3 h-3 rounded-full" style={{ background: 'var(--accent-primary)' }} />
@@ -1160,7 +1304,7 @@ export default function AdminPage() {
 
                   {/* Activity Type Breakdown */}
                   <LiquidCard size="standard" className="!rounded-[16px]">
-                    <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Activity by Type (Last 30 Days)</h3>
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Activity by Type (All Time)</h3>
                     {Object.keys(analyticsData.activityByType).length === 0 ? (
                       <p className="text-[var(--text-muted)] text-sm text-center py-8">No activity recorded.</p>
                     ) : (() => {
@@ -1194,7 +1338,26 @@ export default function AdminPage() {
                   </LiquidCard>
                 </div>
 
-                {/* ── Top 5 Users Table ── */}
+                {/* Subscription Breakdown */}
+                <LiquidCard size="standard" className="!rounded-[16px]">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Subscription Distribution</h3>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {Object.entries(analyticsData.subscriptionBreakdown).map(([status, count]) => {
+                      const badge = SUB_BADGE[status] || SUB_BADGE.trial;
+                      return (
+                        <div key={status} className="flex items-center gap-3 p-3 rounded-lg bg-[var(--accent-5)]">
+                          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: badge.text }} />
+                          <div>
+                            <p className="text-lg font-bold" style={{ color: badge.text }}>{count}</p>
+                            <p className="text-xs text-[var(--text-muted)] capitalize">{status}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </LiquidCard>
+
+                {/* Top 10 Users Table */}
                 <LiquidCard size="standard" className="!rounded-[16px]">
                   <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Top Users by Narratives Generated</h3>
                   {analyticsData.topUsers.length === 0 ? (
@@ -1213,9 +1376,9 @@ export default function AdminPage() {
                         <tbody>
                           {analyticsData.topUsers.map((user) => {
                             const rankColors: Record<number, string> = {
-                              1: '#fbbf24', // gold
-                              2: '#9ca3af', // silver
-                              3: '#cd7f32', // bronze
+                              1: '#fbbf24',
+                              2: '#9ca3af',
+                              3: '#cd7f32',
                             };
                             const rankColor = rankColors[user.rank];
                             return (
@@ -1251,6 +1414,7 @@ export default function AdminPage() {
             ) : null}
           </div>
         )}
+
         {/* Restrict Confirmation Modal */}
         <Modal
           isOpen={!!restrictTarget}
