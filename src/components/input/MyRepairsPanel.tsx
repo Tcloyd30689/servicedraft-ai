@@ -100,11 +100,7 @@ export default function MyRepairsPanel({ isOpen, onClose, onLoadTemplate }: MyRe
   const filteredTemplates = templates.filter((t) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
-    const vehicleStr = [t.year, t.make, t.model].filter(Boolean).join(' ').toLowerCase();
-    return (
-      t.template_name.toLowerCase().includes(q) ||
-      vehicleStr.includes(q)
-    );
+    return t.template_name.toLowerCase().includes(q);
   });
 
   const handleKeyDown = useCallback(
@@ -174,7 +170,7 @@ export default function MyRepairsPanel({ isOpen, onClose, onLoadTemplate }: MyRe
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                 <input
                   type="text"
-                  placeholder="Search by name or vehicle..."
+                  placeholder="Search by template name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-4 py-2.5 font-data text-sm
@@ -198,7 +194,7 @@ export default function MyRepairsPanel({ isOpen, onClose, onLoadTemplate }: MyRe
                   <Wrench size={40} className="mx-auto mb-4 text-[var(--accent-30)]" />
                   <p className="text-[var(--text-muted)] text-sm leading-relaxed">
                     No saved repairs yet — fill out the input form and click
-                    &ldquo;Save as Repair Template&rdquo; to create your first template!
+                    &ldquo;Save as Repair Template&rdquo; to save your diagnostic and repair data for reuse!
                   </p>
                 </div>
               ) : filteredTemplates.length === 0 ? (
@@ -233,19 +229,6 @@ export default function MyRepairsPanel({ isOpen, onClose, onLoadTemplate }: MyRe
                           {template.story_type === 'repair' ? 'Repair Complete' : 'Diagnostic Only'}
                         </span>
                       </div>
-
-                      {/* Vehicle info */}
-                      <p className="text-xs text-[var(--text-muted)] mb-1">
-                        {[template.year, template.make, template.model].filter(Boolean).join(' ') || 'Any Vehicle'}
-                      </p>
-
-                      {/* Concern preview */}
-                      {template.customer_concern && (
-                        <p className="text-xs text-[var(--text-muted)] italic truncate mb-3">
-                          {template.customer_concern.substring(0, 50)}
-                          {template.customer_concern.length > 50 ? '...' : ''}
-                        </p>
-                      )}
 
                       {/* Action buttons */}
                       {deleteConfirmId === template.id ? (

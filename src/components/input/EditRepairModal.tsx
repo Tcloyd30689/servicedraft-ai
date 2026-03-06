@@ -22,20 +22,15 @@ interface EditableField {
 }
 
 const EDITABLE_FIELDS: EditableField[] = [
-  { key: 'customer_concern', label: 'Customer Concern' },
   { key: 'codes_present', label: 'Codes Present', optionKey: 'codes_present_option' },
   { key: 'diagnostics_performed', label: 'Diagnostics Performed', optionKey: 'diagnostics_option' },
   { key: 'root_cause', label: 'Root Cause/Failure', optionKey: 'root_cause_option' },
   { key: 'repair_performed', label: 'Repair Performed', optionKey: 'repair_option' },
   { key: 'repair_verification', label: 'Repair Verification', optionKey: 'verification_option' },
-  { key: 'recommended_action', label: 'Recommended Action', optionKey: 'recommended_option' },
 ];
 
 export default function EditRepairModal({ isOpen, onClose, template, onSaved }: EditRepairModalProps) {
   const [templateName, setTemplateName] = useState(template.template_name);
-  const [year, setYear] = useState(template.year || '');
-  const [make, setMake] = useState(template.make || '');
-  const [model, setModel] = useState(template.model || '');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() => {
     const values: Record<string, string> = {};
     for (const f of EDITABLE_FIELDS) {
@@ -55,9 +50,9 @@ export default function EditRepairModal({ isOpen, onClose, template, onSaved }: 
     try {
       const body: Record<string, unknown> = {
         template_name: templateName.trim(),
-        year: year || null,
-        make: make || null,
-        model: model || null,
+        year: null,
+        make: null,
+        model: null,
       };
 
       for (const f of EDITABLE_FIELDS) {
@@ -86,15 +81,6 @@ export default function EditRepairModal({ isOpen, onClose, template, onSaved }: 
     }
   };
 
-  // Only show fields relevant to this template's story type
-  const relevantFields = EDITABLE_FIELDS.filter((f) => {
-    if (template.story_type === 'diagnostic') {
-      return f.key !== 'repair_performed' && f.key !== 'repair_verification';
-    } else {
-      return f.key !== 'recommended_action';
-    }
-  });
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Template" width="max-w-lg">
       <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
@@ -105,32 +91,11 @@ export default function EditRepairModal({ isOpen, onClose, template, onSaved }: 
           onChange={(e) => setTemplateName(e.target.value)}
         />
 
-        <div className="grid grid-cols-3 gap-3">
-          <Input
-            id="edit-year"
-            label="Year"
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-          />
-          <Input
-            id="edit-make"
-            label="Make"
-            value={make}
-            onChange={(e) => setMake(e.target.value)}
-          />
-          <Input
-            id="edit-model"
-            label="Model"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-          />
-        </div>
-
         <div className="border-t border-[var(--accent-15)] pt-3">
           <p className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide mb-3">
             Saved Field Values
           </p>
-          {relevantFields.map((f) => (
+          {EDITABLE_FIELDS.map((f) => (
             <div key={f.key} className="mb-3">
               <label className="block text-[var(--text-secondary)] text-xs font-medium mb-1.5">
                 {f.label}

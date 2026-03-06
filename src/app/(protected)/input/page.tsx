@@ -101,13 +101,7 @@ export default function InputPage() {
 
     // Use setTimeout to allow the story type state change to propagate and re-render fields
     setTimeout(() => {
-      // Set vehicle and concern fields
-      if (template.year) setFieldValue('year', template.year);
-      if (template.make) setFieldValue('make', template.make);
-      if (template.model) setFieldValue('model', template.model);
-      if (template.customer_concern) setFieldValue('customer_concern', template.customer_concern);
-
-      // Set conditional field values and dropdown options
+      // Set conditional field values and dropdown options (5 core repair fields only)
       const conditionalFields: Array<{
         fieldId: string;
         value: string | null;
@@ -118,7 +112,6 @@ export default function InputPage() {
         { fieldId: 'root_cause', value: template.root_cause, option: template.root_cause_option },
         { fieldId: 'repair_performed', value: template.repair_performed, option: template.repair_option },
         { fieldId: 'repair_verification', value: template.repair_verification, option: template.verification_option },
-        { fieldId: 'recommended_action', value: template.recommended_action, option: template.recommended_option },
       ];
 
       for (const { fieldId, value, option } of conditionalFields) {

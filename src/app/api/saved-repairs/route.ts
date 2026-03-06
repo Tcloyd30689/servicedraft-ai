@@ -57,10 +57,10 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       template_name: body.template_name,
       story_type: body.story_type,
-      year: body.year || null,
-      make: body.make || null,
-      model: body.model || null,
-      customer_concern: body.customer_concern || null,
+      year: null,
+      make: null,
+      model: null,
+      customer_concern: null,
       codes_present: body.codes_present || null,
       codes_present_option: body.codes_present_option || 'include',
       diagnostics_performed: body.diagnostics_performed || null,
@@ -71,8 +71,8 @@ export async function POST(request: NextRequest) {
       repair_option: body.repair_option || null,
       repair_verification: body.repair_verification || null,
       verification_option: body.verification_option || null,
-      recommended_action: body.recommended_action || null,
-      recommended_option: body.recommended_option || null,
+      recommended_action: null,
+      recommended_option: null,
     };
 
     const { data, error } = await supabase

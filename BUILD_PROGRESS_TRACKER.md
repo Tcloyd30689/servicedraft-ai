@@ -27,7 +27,8 @@ This file is a living document that Claude Code reads at the start of every sess
 **Current Phase:** Stage 4 — UI Quick Fixes & Polish
 **Stage 4 Sprint 1:** COMPLETE — Font rendering fix, sidebar positioning, button relocation, template rename, access code update
 **Stage 4 Sprint 2:** COMPLETE — Clear form button, story type switching preservation, ProofreadResults render bug fix
-**Next Task:** Stage 4, Sprint 3 (TBD)
+**Stage 4 Sprint 3:** COMPLETE — Refactored repair templates to save only 5 core repair fields (codes_present, diagnostics_performed, root_cause, repair_performed, repair_verification), removing vehicle info and non-core fields from save/display/edit flows
+**Next Task:** Stage 4, Sprint 4 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
@@ -2437,6 +2438,17 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** S4-2.1, S4-2.2, S4-2.3
 - **Completed:** 2026-03-06
 - **Notes:** Three changes: (1) Clear Form button added to Repair Order Information card header with RotateCcw icon and ghost styling, (2) Story type switching now preserves shared field values (year, make, model, customer_concern, codes_present, diagnostics_performed, root_cause) instead of wiping all fields, (3) ProofreadResults render bug fixed by deferring parent notification to next tick with setTimeout.
+
+### SESSION S4-SPRINT-3 — Stage 4 Sprint 3: My Repairs Template Refactor — COMPLETE
+- **Scope:** S4-3.1 through S4-3.6
+- **Completed:** 2026-03-06
+- **Notes:** Refactored repair templates to only save 5 core repair fields (codes_present, diagnostics_performed, root_cause, repair_performed, repair_verification) with their dropdown options. Removed year, make, model, customer_concern, and recommended_action from save/display/edit flows so templates can be reused across different vehicles. DB columns remain unchanged. Changes applied to:
+  - S4-3.1: SaveRepairModal — nulled out vehicle/concern/recommended fields in save body, updated summary box and description text
+  - S4-3.2: MyRepairsPanel — removed vehicle info line and concern preview from template cards, search by template_name only, updated empty state text
+  - S4-3.3: EditRepairModal — removed year/make/model inputs, removed customer_concern and recommended_action from editable fields, removed relevantFields filter to show all 5 fields always, nulled year/make/model in save
+  - S4-3.4: handleLoadTemplate (input/page.tsx) — removed lines setting year/make/model/customer_concern, removed recommended_action from conditionalFields
+  - S4-3.5: saved-repairs POST API — forced year/make/model/customer_concern/recommended_action/recommended_option to null
+  - S4-3.6: saved-repairs PUT API — forced year/make/model to null, removed customer_concern and recommended_action from allowed fields
 
 ---
 

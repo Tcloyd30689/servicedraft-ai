@@ -49,10 +49,10 @@ export default function SaveRepairModal({
       const body = {
         template_name: templateName.trim(),
         story_type: apiStoryType,
-        year: fieldValues['year'] || null,
-        make: fieldValues['make'] || null,
-        model: fieldValues['model'] || null,
-        customer_concern: fieldValues['customer_concern'] || null,
+        year: null,
+        make: null,
+        model: null,
+        customer_concern: null,
         codes_present: fieldValues['codes_present'] || null,
         codes_present_option: mapOption(dropdownSelections['codes_present']),
         diagnostics_performed: fieldValues['diagnostics_performed'] || null,
@@ -63,8 +63,8 @@ export default function SaveRepairModal({
         repair_option: mapOption(dropdownSelections['repair_performed']),
         repair_verification: fieldValues['repair_verification'] || null,
         verification_option: mapOption(dropdownSelections['repair_verification']),
-        recommended_action: fieldValues['recommended_action'] || null,
-        recommended_option: mapOption(dropdownSelections['recommended_action']),
+        recommended_action: null,
+        recommended_option: null,
       };
 
       const res = await fetch('/api/saved-repairs', {
@@ -93,7 +93,7 @@ export default function SaveRepairModal({
     <Modal isOpen={isOpen} onClose={onClose} title="Save as Repair Template" width="max-w-md">
       <div className="space-y-4">
         <p className="text-sm text-[var(--text-muted)]">
-          Save the current form as a reusable template. You can load it later to quickly fill in common repair scenarios.
+          Save the current repair data as a reusable template. Templates store your diagnostic and repair information so they can be applied to any vehicle.
         </p>
 
         <Input
@@ -111,10 +111,11 @@ export default function SaveRepairModal({
         <div className="bg-[var(--bg-input)] rounded-lg p-3 text-xs text-[var(--text-muted)] space-y-1">
           <p className="font-medium text-[var(--text-secondary)] mb-1">Will save:</p>
           <p>Story type: {storyType === 'diagnostic_only' ? 'Diagnostic Only' : 'Repair Complete'}</p>
-          {(fieldValues['year'] || fieldValues['make'] || fieldValues['model']) && (
-            <p>Vehicle: {[fieldValues['year'], fieldValues['make'], fieldValues['model']].filter(Boolean).join(' ')}</p>
-          )}
-          <p>All field values and dropdown selections</p>
+          {fieldValues['codes_present'] && <p>Codes Present</p>}
+          {fieldValues['diagnostics_performed'] && <p>Diagnostics Performed</p>}
+          {fieldValues['root_cause'] && <p>Root Cause / Failure</p>}
+          {fieldValues['repair_performed'] && <p>Repair Performed</p>}
+          {fieldValues['repair_verification'] && <p>Repair Verification</p>}
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

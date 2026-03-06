@@ -30,16 +30,18 @@ export async function PUT(
 
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
+      year: null,
+      make: null,
+      model: null,
     };
 
     const allowedFields = [
-      'template_name', 'story_type', 'year', 'make', 'model',
-      'customer_concern', 'codes_present', 'codes_present_option',
+      'template_name', 'story_type',
+      'codes_present', 'codes_present_option',
       'diagnostics_performed', 'diagnostics_option',
       'root_cause', 'root_cause_option',
       'repair_performed', 'repair_option',
       'repair_verification', 'verification_option',
-      'recommended_action', 'recommended_option',
     ];
 
     for (const field of allowedFields) {
