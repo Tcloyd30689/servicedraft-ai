@@ -206,15 +206,17 @@ export default function InputPage() {
               {fields.filter((f) => f.hasDropdown).length > 0 && (
                 <>
                   <div className="border-t border-[var(--accent-15)] my-6" />
-                  <Button
-                    variant="secondary"
-                    size="medium"
-                    className="flex items-center gap-2 w-[30%] min-w-[160px] justify-center"
-                    onClick={() => setIsRepairsPanelOpen(true)}
-                  >
-                    <Wrench size={16} />
-                    REPAIR TEMPLATES
-                  </Button>
+                  <div className="flex justify-center mb-10 mt-4">
+                    <Button
+                      variant="secondary"
+                      size="medium"
+                      className="flex items-center gap-2 whitespace-nowrap justify-center"
+                      onClick={() => setIsRepairsPanelOpen(true)}
+                    >
+                      <Wrench size={18} />
+                      IMPORT FROM MY REPAIRS
+                    </Button>
+                  </div>
 
                   {fields
                     .filter((f) => f.hasDropdown)
