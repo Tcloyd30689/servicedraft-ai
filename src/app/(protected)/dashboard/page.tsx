@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Settings } from 'lucide-react';
+import { Settings, Trash2, AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ProfileSection from '@/components/dashboard/ProfileSection';
 import EditProfileModal from '@/components/dashboard/EditProfileModal';
@@ -17,6 +19,8 @@ export default function DashboardPage() {
   const { user, profile, loading, refreshProfile } = useAuth();
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   if (loading) {
     return (
@@ -83,6 +87,17 @@ export default function DashboardPage() {
 
         {/* Narrative History */}
         <NarrativeHistory userId={user.id} senderName={[profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username || ''} />
+
+        {/* Delete Account */}
+        <div className="flex justify-center pt-4 pb-2">
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="flex items-center gap-1.5 text-[var(--text-muted)] text-sm hover:text-red-400 transition-colors cursor-pointer"
+          >
+            <Trash2 size={14} />
+            Delete Account
+          </button>
+        </div>
       </motion.div>
 
       {/* Edit Profile Modal */}
@@ -102,6 +117,74 @@ export default function DashboardPage() {
         isOpen={showPreferences}
         onClose={() => setShowPreferences(false)}
       />
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={() => !deleting && setShowDeleteConfirm(false)}
+        title="Delete Account"
+        width="max-w-[480px]"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+            <AlertTriangle size={20} className="text-red-400 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-red-300 leading-relaxed">
+              <p className="font-semibold mb-1">This action is permanent and cannot be undone.</p>
+              <p>Deleting your account will permanently remove:</p>
+              <ul className="list-disc list-inside mt-1 space-y-0.5 text-red-300/80">
+                <li>Your profile and account credentials</li>
+                <li>All saved narratives and repair history</li>
+                <li>All saved repair templates</li>
+                <li>Your subscription and access</li>
+              </ul>
+            </div>
+          </div>
+
+          <p className="text-[var(--text-secondary)] text-sm">
+            Are you sure you want to permanently delete your account?
+          </p>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="secondary"
+              size="fullWidth"
+              onClick={() => setShowDeleteConfirm(false)}
+              disabled={deleting}
+            >
+              CANCEL
+            </Button>
+            <button
+              onClick={async () => {
+                setDeleting(true);
+                try {
+                  const res = await fetch('/api/delete-account', { method: 'POST' });
+                  const data = await res.json();
+                  if (!res.ok) {
+                    toast.error(data.error || 'Failed to delete account');
+                    setDeleting(false);
+                    return;
+                  }
+                  // Clear local storage and redirect
+                  localStorage.removeItem('sd-login-timestamp');
+                  localStorage.removeItem('sd-accent-color');
+                  localStorage.removeItem('sd-color-mode');
+                  localStorage.removeItem('sd-bg-animation');
+                  toast.success('Account deleted successfully');
+                  window.location.href = '/';
+                } catch {
+                  toast.error('An error occurred. Please try again.');
+                  setDeleting(false);
+                }
+              }}
+              disabled={deleting}
+              className="w-full py-2.5 px-4 rounded-lg text-sm font-semibold transition-colors cursor-pointer
+                bg-red-600 hover:bg-red-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {deleting ? 'DELETING...' : 'DELETE MY ACCOUNT'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
