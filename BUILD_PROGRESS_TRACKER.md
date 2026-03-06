@@ -28,7 +28,8 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 4 Sprint 1:** COMPLETE — Font rendering fix, sidebar positioning, button relocation, template rename, access code update
 **Stage 4 Sprint 2:** COMPLETE — Clear form button, story type switching preservation, ProofreadResults render bug fix
 **Stage 4 Sprint 3:** COMPLETE — Refactored repair templates to save only 5 core repair fields (codes_present, diagnostics_performed, root_cause, repair_performed, repair_verification), removing vehicle info and non-core fields from save/display/edit flows
-**Next Task:** Stage 4, Sprint 4 (TBD)
+**Stage 4 Sprint 4:** COMPLETE — Navigation overhaul: increased nav height (56px to 64px), clickable hero logo, MAIN MENU styled button, centered vector logo with theme-aware color inversion
+**Next Task:** Stage 4, Sprint 5 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
@@ -2449,6 +2450,18 @@ This file is a living document that Claude Code reads at the start of every sess
   - S4-3.4: handleLoadTemplate (input/page.tsx) — removed lines setting year/make/model/customer_concern, removed recommended_action from conditionalFields
   - S4-3.5: saved-repairs POST API — forced year/make/model/customer_concern/recommended_action/recommended_option to null
   - S4-3.6: saved-repairs PUT API — forced year/make/model to null, removed customer_concern and recommended_action from allowed fields
+
+### SESSION S4-SPRINT-4 — Stage 4 Sprint 4: Navigation & Header Overhaul — COMPLETE
+- **Scope:** S4-4.1 through S4-4.4
+- **Completed:** 2026-03-06
+- **Notes:** Complete navigation bar and hero area redesign.
+  - S4-4.1: Increased nav bar height from h-14 (56px) to h-16 (64px). Updated NAV_HEIGHT constant in HeroArea.tsx, paddingTop/min-h-calc in layout.tsx (156px to 164px), sidebar top in MyRepairsPanel.tsx, mobile dropdown top-14 to top-16, and min-h-calc in main-menu/page.tsx.
+  - S4-4.2: Made hero logo clickable by wrapping img in Next.js Link to /main-menu with pointer-events-auto, cursor-pointer, and hover:scale-[1.03] transition.
+  - S4-4.3: Redesigned NavBar into 3-section layout:
+    - LEFT: Styled "MAIN MENU" button with bg-[var(--accent-10)], border, rounded-lg, hover glow
+    - CENTER: ServiceDraft-Ai Vector Logo.png centered absolutely with theme-aware CSS filter (brightness(0) invert(1) for dark mode, brightness(0) for light mode)
+    - RIGHT: Unchanged — theme toggle, UserPopup, mobile menu toggle
+  - S4-4.4: Removed old SD icon image from nav bar. Mobile hamburger menu and responsive breakpoints verified working. Build compiles cleanly.
 
 ---
 

@@ -143,7 +143,7 @@ export default function MyRepairsPanel({ isOpen, onClose, onLoadTemplate }: MyRe
               bg-[var(--bg-modal)] border-l-2 border-[var(--modal-border)]
               backdrop-blur-xl shadow-[var(--shadow-glow-lg)]
               flex flex-col"
-            style={{ top: '156px' }}
+            style={{ top: '164px' }}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}

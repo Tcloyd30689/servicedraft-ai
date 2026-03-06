@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useTheme } from '@/components/ThemeProvider';
 import { useActivityPulse } from '@/hooks/useActivityPulse';
 import { DEFAULT_ACCENT } from '@/lib/constants/themeColors';
 
 const HERO_HEIGHT = 100; // px
-const NAV_HEIGHT = 56;   // px (h-14 in NavBar)
+const NAV_HEIGHT = 64;   // px (h-16 in NavBar)
 const LOGO_HEIGHT = Math.round((HERO_HEIGHT + NAV_HEIGHT) * 2.622); // 262% of combined hero+nav
 
 interface HeroWave {
@@ -75,7 +76,7 @@ export default function HeroArea() {
 
       const activity = amplitudeRef.current; // 0–1
       // Align wave baseline with logo vertical center: logo is centered in
-      // hero (100px) + nav (56px) = 156px, so logo center is at 78px from top.
+      // hero (100px) + nav (64px) = 164px, so logo center is at 82px from top.
       // Canvas covers the 100px hero area, so 78/100 = 0.78.
       const centerY = h * 0.78;
 
@@ -161,13 +162,18 @@ export default function HeroArea() {
         className="fixed top-0 left-0 right-0 flex items-center justify-center z-[110] pointer-events-none px-4"
         style={{ height: `${HERO_HEIGHT + NAV_HEIGHT}px` }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={mounted ? accent.logoFile : DEFAULT_ACCENT.logoFile}
-          alt="ServiceDraft.AI"
-          className="drop-shadow-[0_0_20px_var(--accent-30)]"
-          style={{ height: `${LOGO_HEIGHT}px`, width: 'auto', objectFit: 'contain' }}
-        />
+        <Link
+          href="/main-menu"
+          className="pointer-events-auto cursor-pointer transition-transform duration-200 hover:scale-[1.03]"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={mounted ? accent.logoFile : DEFAULT_ACCENT.logoFile}
+            alt="ServiceDraft.AI"
+            className="drop-shadow-[0_0_20px_var(--accent-30)]"
+            style={{ height: `${LOGO_HEIGHT}px`, width: 'auto', objectFit: 'contain' }}
+          />
+        </Link>
       </div>
     </>
   );

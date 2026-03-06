@@ -26,8 +26,8 @@ export default function ProtectedLayout({
       {/* Navigation bar — fixed below hero */}
       <NavBar />
 
-      {/* Page content — pushed below fixed hero (100px) + fixed nav (56px) */}
-      <main className="relative z-30 min-h-[calc(100vh-156px)]" style={{ paddingTop: '156px' }}>
+      {/* Page content — pushed below fixed hero (100px) + fixed nav (64px) */}
+      <main className="relative z-30 min-h-[calc(100vh-164px)]" style={{ paddingTop: '164px' }}>
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
     </>

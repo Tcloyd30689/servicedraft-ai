@@ -19,45 +19,52 @@ export default function NavBar() {
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => { setIsMounted(true); }, []);
   const displayMode = isMounted ? colorMode : 'dark';
+  const isDark = displayMode === 'dark';
 
   return (
-    <nav className="fixed left-0 right-0 h-14 flex items-center justify-between px-6 bg-[var(--bg-nav)] backdrop-blur-[8px] border-b border-[var(--accent-20)] z-[100]" style={{ top: '100px' }}>
-      {/* Left: SD icon + "Main Menu" label */}
-      <Link
-        href="/main-menu"
-        className={cn(
-          'flex items-center gap-2 flex-shrink-0 rounded-md px-2 py-1.5 transition-all duration-200',
-          'hover:bg-[var(--accent-10)]',
-          pathname === '/main-menu' && 'bg-[var(--accent-20)]',
-        )}
-      >
+    <nav className="fixed left-0 right-0 h-16 flex items-center px-6 bg-[var(--bg-nav)] backdrop-blur-[8px] border-b border-[var(--accent-20)] z-[100]" style={{ top: '100px' }}>
+      {/* LEFT SECTION: Main Menu button */}
+      <div className="flex-shrink-0">
+        <Link
+          href="/main-menu"
+          className={cn(
+            'inline-flex items-center justify-center rounded-lg px-4 py-1.5 text-sm font-semibold tracking-wide uppercase transition-all duration-200 border',
+            'bg-[var(--accent-10)] border-[var(--accent-border)] text-[var(--text-primary)]',
+            'hover:bg-[var(--accent-20)] hover:shadow-[var(--shadow-glow-sm)]',
+            pathname === '/main-menu' && 'bg-[var(--accent-20)] shadow-[var(--shadow-glow-sm)]',
+          )}
+        >
+          Main Menu
+        </Link>
+      </div>
+
+      {/* CENTER SECTION: Vector logo (decorative, not clickable) */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
         <Image
-          src="/ServiceDraft-ai-tight logo.PNG"
-          alt="ServiceDraft.AI"
-          width={32}
-          height={32}
+          src="/ServiceDraft-Ai Vector Logo.png"
+          alt=""
+          width={160}
+          height={30}
           priority
           className="object-contain"
+          style={{
+            height: '30px',
+            width: 'auto',
+            filter: isDark ? 'brightness(0) invert(1)' : 'brightness(0)',
+          }}
+          aria-hidden="true"
         />
-        <span className={cn(
-          'hidden sm:inline text-sm font-medium transition-colors duration-200',
-          pathname === '/main-menu'
-            ? 'text-[var(--text-primary)]'
-            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
-        )}>
-          Main Menu
-        </span>
-      </Link>
+      </div>
 
-      {/* Right: Theme toggle, Combined user button, Mobile toggle */}
-      <div className="flex items-center gap-2">
+      {/* RIGHT SECTION: Theme toggle, User popup, Mobile menu toggle */}
+      <div className="flex items-center gap-2 ml-auto">
         {/* Light/Dark mode toggle */}
         <button
           onClick={toggleColorMode}
           className="p-1.5 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-10)] transition-all duration-200 cursor-pointer"
-          aria-label={displayMode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         >
-          {displayMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          {isDark ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
         {/* Combined user button (T.Cloyd format) with dropdown */}
@@ -75,7 +82,7 @@ export default function NavBar() {
 
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
-        <div className="absolute top-14 left-0 right-0 bg-[var(--bg-nav)] backdrop-blur-[8px] border-b border-[var(--accent-20)] sm:hidden">
+        <div className="absolute top-16 left-0 right-0 bg-[var(--bg-nav)] backdrop-blur-[8px] border-b border-[var(--accent-20)] sm:hidden">
           <div className="flex flex-col p-4 gap-2">
             <Link
               href="/main-menu"
