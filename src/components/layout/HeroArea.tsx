@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useTheme } from '@/components/ThemeProvider';
 import { useActivityPulse } from '@/hooks/useActivityPulse';
 import { DEFAULT_ACCENT } from '@/lib/constants/themeColors';
@@ -162,18 +161,13 @@ export default function HeroArea() {
         className="fixed top-0 left-0 right-0 flex items-center justify-center z-[110] pointer-events-none px-4"
         style={{ height: `${HERO_HEIGHT + NAV_HEIGHT}px` }}
       >
-        <Link
-          href="/main-menu"
-          className="pointer-events-auto cursor-pointer transition-transform duration-200 hover:scale-[1.03]"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={mounted ? accent.logoFile : DEFAULT_ACCENT.logoFile}
-            alt="ServiceDraft.AI"
-            className="drop-shadow-[0_0_20px_var(--accent-30)]"
-            style={{ height: `${LOGO_HEIGHT}px`, width: 'auto', objectFit: 'contain' }}
-          />
-        </Link>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={mounted ? accent.logoFile : DEFAULT_ACCENT.logoFile}
+          alt="ServiceDraft.AI"
+          className="drop-shadow-[0_0_20px_var(--accent-30)]"
+          style={{ height: `${LOGO_HEIGHT}px`, width: 'auto', objectFit: 'contain' }}
+        />
       </div>
     </>
   );
