@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Sparkles, LayoutDashboard, LogOut, HelpCircle, MessageSquare } from 'lucide-react';
+import { Sparkles, LayoutDashboard, LogOut, HelpCircle, MessageSquare, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import LiquidCard from '@/components/ui/LiquidCard';
@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import FAQContent from '@/components/layout/FAQContent';
 import SupportForm from '@/components/layout/SupportForm';
+import TermsOfUse from '@/components/layout/TermsOfUse';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function MainMenuPage() {
@@ -19,6 +20,7 @@ export default function MainMenuPage() {
   const { resetAll } = useNarrativeStore();
   const [showFAQ, setShowFAQ] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   // Guard: redirect to onboarding if profile is incomplete
   useEffect(() => {
@@ -87,6 +89,11 @@ export default function MainMenuPage() {
       label: 'SUPPORT',
       icon: <MessageSquare size={16} />,
       onClick: () => setShowSupport(true),
+    },
+    {
+      label: 'TERMS OF USE',
+      icon: <FileText size={16} />,
+      onClick: () => setShowTerms(true),
     },
   ];
 
@@ -166,6 +173,11 @@ export default function MainMenuPage() {
       {/* Support Modal */}
       <Modal isOpen={showSupport} onClose={() => setShowSupport(false)} title="Contact Support">
         <SupportForm onClose={() => setShowSupport(false)} />
+      </Modal>
+
+      {/* Terms of Use Modal */}
+      <Modal isOpen={showTerms} onClose={() => setShowTerms(false)} title="Terms of Use">
+        <TermsOfUse />
       </Modal>
     </div>
   );

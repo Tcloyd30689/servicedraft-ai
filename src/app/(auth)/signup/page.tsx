@@ -12,7 +12,9 @@ import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
+import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import TermsOfUse from '@/components/layout/TermsOfUse';
 import { setLoginTimestamp } from '@/hooks/useSessionExpiry';
 import { POSITION_OPTIONS } from '@/constants/positions';
 
@@ -31,6 +33,8 @@ function SignupContent() {
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [emailSent, setEmailSent] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   // Step 1: Account
   const [email, setEmail] = useState('');
@@ -353,7 +357,26 @@ function SignupContent() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                   />
-                  <Button type="submit" size="fullWidth">
+                  <div className="flex items-start gap-2 pt-2 pb-1">
+                    <input
+                      type="checkbox"
+                      id="termsCheckbox"
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-[var(--accent-border)] accent-[var(--accent-primary)] cursor-pointer"
+                    />
+                    <label htmlFor="termsCheckbox" className="text-sm text-[var(--text-secondary)] cursor-pointer">
+                      I agree to the{' '}
+                      <button
+                        type="button"
+                        onClick={() => setShowTerms(true)}
+                        className="text-[var(--accent-hover)] hover:text-[var(--accent-bright)] underline transition-colors cursor-pointer"
+                      >
+                        Terms of Use
+                      </button>
+                    </label>
+                  </div>
+                  <Button type="submit" size="fullWidth" disabled={!termsAccepted}>
                     CONTINUE
                   </Button>
                 </form>
@@ -438,6 +461,11 @@ function SignupContent() {
           </p>
         </LiquidCard>
       </motion.div>
+
+      {/* Terms of Use Modal */}
+      <Modal isOpen={showTerms} onClose={() => setShowTerms(false)} title="Terms of Use">
+        <TermsOfUse />
+      </Modal>
     </div>
   );
 }

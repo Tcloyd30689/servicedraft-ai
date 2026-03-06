@@ -29,7 +29,8 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 4 Sprint 2:** COMPLETE — Clear form button, story type switching preservation, ProofreadResults render bug fix
 **Stage 4 Sprint 3:** COMPLETE — Refactored repair templates to save only 5 core repair fields (codes_present, diagnostics_performed, root_cause, repair_performed, repair_verification), removing vehicle info and non-core fields from save/display/edit flows
 **Stage 4 Sprint 4:** COMPLETE — Navigation overhaul: increased nav height (56px to 64px), clickable hero logo, MAIN MENU styled button, centered vector logo with theme-aware color inversion
-**Next Task:** Stage 4, Sprint 5 (TBD)
+**Stage 4 Sprint 5:** COMPLETE — Terms of Use content component, signup terms enforcement, main menu terms link, expanded FAQ content
+**Next Task:** Stage 4, Sprint 6 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
@@ -2462,6 +2463,15 @@ This file is a living document that Claude Code reads at the start of every sess
     - CENTER: ServiceDraft-Ai Vector Logo.png centered absolutely with theme-aware CSS filter (brightness(0) invert(1) for dark mode, brightness(0) for light mode)
     - RIGHT: Unchanged — theme toggle, UserPopup, mobile menu toggle
   - S4-4.4: Removed old SD icon image from nav bar. Mobile hamburger menu and responsive breakpoints verified working. Build compiles cleanly.
+
+### SESSION S4-SPRINT-5 — Stage 4 Sprint 5: Terms of Use & FAQ Expansion — COMPLETE
+- **Scope:** S4-5.1 through S4-5.4
+- **Completed:** 2026-03-06
+- **Notes:** Added Terms of Use and expanded FAQ content across the application.
+  - S4-5.1: Created `src/components/layout/TermsOfUse.tsx` — scrollable content component with 11 sections covering acceptance, service description, user responsibilities, AI disclaimer, account terms, subscription/billing, intellectual property, data privacy, limitation of liability, modifications, and termination. Styled with app theme variables, "Last Updated: March 2026", scrollable `max-h-[70vh]`.
+  - S4-5.2: Updated signup page (`src/app/(auth)/signup/page.tsx`) — added `termsAccepted` and `showTerms` state. Added checkbox with "I agree to the Terms of Use" label where "Terms of Use" is a clickable link opening a modal. Signup CONTINUE button disabled until terms accepted. Added Modal with TermsOfUse component.
+  - S4-5.3: Updated main menu page (`src/app/(protected)/main-menu/page.tsx`) — added "TERMS OF USE" to bottomItems array with FileText icon. Added `showTerms` state and Modal with TermsOfUse component. Imported TermsOfUse and FileText icon.
+  - S4-5.4: Expanded FAQ content (`src/components/layout/FAQContent.tsx`) — added 8 new Q&As: Repair Templates, AI Customization, audit rating explanation, export options, data security, Generate Applicable Info, contact support, mobile usage.
 
 ---
 
