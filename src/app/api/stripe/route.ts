@@ -6,7 +6,7 @@ export async function POST(request: Request) {
 
   // Access code bypass for prototype
   if (accessCode) {
-    const validCode = process.env.ACCESS_CODE || 'SERVICEDRAFT2026';
+    const validCode = process.env.ACCESS_CODE || 'SDRAFT-BETA-2026';
 
     if (accessCode === validCode) {
       return NextResponse.json({ success: true, method: 'access_code' });

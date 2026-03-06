@@ -139,8 +139,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Data/content font — Inter for readability on user-entered & generated text */
 .font-data {
-  font-family: var(--font-data), system-ui, sans-serif;
-  font-weight: 400;
+  font-family: var(--font-data), system-ui, sans-serif !important;
+  font-weight: 400 !important;
   letter-spacing: 0.01em;
 }
 

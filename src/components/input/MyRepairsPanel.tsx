@@ -143,10 +143,11 @@ export default function MyRepairsPanel({ isOpen, onClose, onLoadTemplate }: MyRe
 
           {/* Slide-out panel */}
           <motion.div
-            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-lg
+            className="fixed right-0 bottom-0 z-50 w-full max-w-lg
               bg-[var(--bg-modal)] border-l-2 border-[var(--modal-border)]
               backdrop-blur-xl shadow-[var(--shadow-glow-lg)]
               flex flex-col"
+            style={{ top: '156px' }}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -197,7 +198,7 @@ export default function MyRepairsPanel({ isOpen, onClose, onLoadTemplate }: MyRe
                   <Wrench size={40} className="mx-auto mb-4 text-[var(--accent-30)]" />
                   <p className="text-[var(--text-muted)] text-sm leading-relaxed">
                     No saved repairs yet — fill out the input form and click
-                    &ldquo;Save as My Repair&rdquo; to create your first template!
+                    &ldquo;Save as Repair Template&rdquo; to create your first template!
                   </p>
                 </div>
               ) : filteredTemplates.length === 0 ? (

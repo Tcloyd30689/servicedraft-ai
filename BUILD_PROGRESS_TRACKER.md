@@ -23,10 +23,10 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-03-05
-**Current Phase:** Stage 3 — Diagnostic to Repair Complete Update System
-**Post-Sprint 9 Adjustment:** COMPLETE — Reworked Completed Recommended Repair button (removed API call, enlarged, repositioned, removed dropdown)
-**Next Task:** Stage 3, Sprint 10 (TBD)
+**Last Updated:** 2026-03-06
+**Current Phase:** Stage 4 — UI Quick Fixes & Polish
+**Stage 4 Sprint 1:** COMPLETE — Font rendering fix, sidebar positioning, button relocation, template rename, access code update
+**Next Task:** Stage 4, Sprint 2 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
@@ -2364,6 +2364,46 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** PS9-A.1, PS9-A.2, PS9-A.3
 - **Completed:** 2026-03-05
 - **Notes:** Reworked the "Completed Recommended Repair" button in the UpdateWithRepairModal to eliminate the wasteful separate API call for tense conversion. The button now acts as a toggle that collapses the Repair Performed text field and pre-fills it with an instruction for the main Generate Narrative API call. The button has been significantly enlarged (75% width, double height, prominent styling) and repositioned directly below the Repair Performed field. The Repair Performed dropdown was removed since the two user paths (type manually or click the button) make a three-option dropdown unnecessary. No changes to the update-narrative API route, save logic, dashboard badges, or conditional visibility of the "UPDATE NARRATIVE WITH REPAIR" button.
+
+---
+
+## STAGE 4 — UI QUICK FIXES & POLISH
+
+### STAGE 4 SPRINT 1 — UI Quick Fixes & Font Fix
+
+### S4-1.1 — Fix Inter Font Rendering (CSS Specificity)
+- [x] Updated `.font-data` class in `globals.css` to use `!important` on `font-family` and `font-weight` to override the body Orbitron font
+- [x] Verified `font-data` class is applied in `Input.tsx`, `AutoTextarea.tsx`, `MyRepairsPanel.tsx` search input, and `EditRepairModal.tsx` textareas
+- **Completed:** 2026-03-06
+- **Notes:** The body sets `font-family: var(--font-orbitron)` with `font-weight: 600`, which was overriding child `.font-data` elements. Adding `!important` ensures Inter renders on all data/input fields.
+
+### S4-1.2 — Fix My Repairs Sidebar Positioning
+- [x] Changed slide-out panel from `fixed right-0 top-0 bottom-0` to `fixed right-0 bottom-0` with `style={{ top: '156px' }}`
+- [x] Panel now starts below the hero area (100px) + nav bar (56px) = 156px offset
+- **Completed:** 2026-03-06
+- **Notes:** Previously the sidebar extended behind the hero and nav bar, hiding the top portion of its content.
+
+### S4-1.3 — Move "My Repairs" Button Inside Container Card
+- [x] Removed the standalone "MY REPAIRS" button div above the input cards
+- [x] Replaced the "Additional Information" h3 subtitle inside the Repair Order Information card with a "REPAIR TEMPLATES" button
+- [x] Button uses `variant="secondary"`, `size="medium"`, `w-[30%] min-w-[160px]`, with Wrench icon
+- **Completed:** 2026-03-06
+- **Notes:** Button now sits inside the card, below the divider line, where "Additional Information" used to be.
+
+### S4-1.4 — Rename "Save as My Repair" to "Save as Repair Template"
+- [x] Updated button text in `input/page.tsx` from "SAVE AS MY REPAIR" to "SAVE AS REPAIR TEMPLATE"
+- [x] Updated modal title in `SaveRepairModal.tsx` from "Save as My Repair" to "Save as Repair Template"
+- [x] Updated empty state text in `MyRepairsPanel.tsx` from "Save as My Repair" to "Save as Repair Template"
+- **Completed:** 2026-03-06
+
+### S4-1.5 — Generate New Stripe Access Code
+- [x] Changed fallback access code in `src/app/api/stripe/route.ts` from `'SERVICEDRAFT2026'` to `'SDRAFT-BETA-2026'`
+- **Completed:** 2026-03-06
+
+### SESSION S4-SPRINT-1 — Stage 4 Sprint 1 — COMPLETE
+- **Scope:** S4-1.1, S4-1.2, S4-1.3, S4-1.4, S4-1.5
+- **Completed:** 2026-03-06
+- **Notes:** Five UI quick fixes: (1) Inter font now renders correctly on all input/data fields via `!important` override on `.font-data` class, (2) My Repairs sidebar panel positioned below hero+nav at 156px top offset, (3) "MY REPAIRS" button moved inside the Repair Order Information card as "REPAIR TEMPLATES" replacing the "Additional Information" subtitle, (4) All "Save as My Repair" references renamed to "Save as Repair Template", (5) Stripe fallback access code changed to `SDRAFT-BETA-2026`.
 
 ---
 

@@ -141,19 +141,6 @@ export default function InputPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        {/* MY REPAIRS Button */}
-        <div className="mb-4 flex justify-center">
-          <Button
-            variant="secondary"
-            size="large"
-            onClick={() => setIsRepairsPanelOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Wrench size={18} />
-            MY REPAIRS
-          </Button>
-        </div>
-
         {/* Story Type Selection */}
         <LiquidCard size="standard" className="mb-6">
           <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
@@ -219,9 +206,15 @@ export default function InputPage() {
               {fields.filter((f) => f.hasDropdown).length > 0 && (
                 <>
                   <div className="border-t border-[var(--accent-15)] my-6" />
-                  <h3 className="text-sm font-medium text-[var(--text-muted)] mb-4 uppercase tracking-wide">
-                    Additional Information
-                  </h3>
+                  <Button
+                    variant="secondary"
+                    size="medium"
+                    className="flex items-center gap-2 w-[30%] min-w-[160px] justify-center"
+                    onClick={() => setIsRepairsPanelOpen(true)}
+                  >
+                    <Wrench size={16} />
+                    REPAIR TEMPLATES
+                  </Button>
 
                   {fields
                     .filter((f) => f.hasDropdown)
@@ -260,7 +253,7 @@ export default function InputPage() {
                 className="flex items-center gap-2"
               >
                 <BookmarkPlus size={16} />
-                SAVE AS MY REPAIR
+                SAVE AS REPAIR TEMPLATE
               </Button>
             </div>
           </motion.div>

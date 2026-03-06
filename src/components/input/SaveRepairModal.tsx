@@ -90,7 +90,7 @@ export default function SaveRepairModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Save as My Repair" width="max-w-md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Save as Repair Template" width="max-w-md">
       <div className="space-y-4">
         <p className="text-sm text-[var(--text-muted)]">
           Save the current form as a reusable template. You can load it later to quickly fill in common repair scenarios.
