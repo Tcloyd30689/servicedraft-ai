@@ -8,7 +8,7 @@ import {
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   Search, Mail, Lock, Unlock, Trash2, TrendingUp,
   CreditCard, FileText, RefreshCw, Zap, Printer,
-  CheckCircle, BookOpen,
+  CheckCircle, BookOpen, ShieldCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,6 +17,9 @@ import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
+
+// ─── Protected user — cannot be deleted or restricted ────────
+const PROTECTED_EMAIL = 'hvcadip@gmail.com';
 
 type TabKey = 'overview' | 'activity' | 'users' | 'analytics';
 
@@ -110,7 +113,45 @@ const SUB_BADGE: Record<string, { bg: string; text: string }> = {
   bypass: { bg: 'rgba(59,130,246,0.15)', text: '#3b82f6' },
 };
 
-type UserSortColumn = 'name' | 'email' | 'position' | 'created_at' | 'subscription_status' | 'narrative_count' | 'last_active';
+type UserSortColumn = 'first_name' | 'last_name' | 'email' | 'position' | 'role' | 'created_at' | 'subscription_status' | 'narrative_count' | 'last_active';
+
+// ─── Date formatting helpers ─────────────────────────────────
+/** MM-DD-YYYY */
+function formatDateShort(iso: string): string {
+  const d = new Date(iso);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${mm}-${dd}-${yyyy}`;
+}
+
+/** MM-DD-YYYY HH:MM AM/PM */
+function formatDateTimeFull(iso: string): string {
+  const d = new Date(iso);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return `${mm}-${dd}-${yyyy} ${hours}:${minutes} ${ampm}`;
+}
+
+/** Short readable format for activity log */
+function formatDateReadable(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+const springTransition = { type: 'spring' as const, stiffness: 400, damping: 25 };
 
 export default function AdminPage() {
   const router = useRouter();
@@ -236,24 +277,11 @@ export default function AdminPage() {
     }
   }, [activeTab, profile, fetchLogs]);
 
-  // Reset page when filters change
   useEffect(() => {
     setPage(1);
   }, [filterAction, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
 
   const formatActionLabel = (action: string) => {
     return action
@@ -410,7 +438,6 @@ export default function AdminPage() {
     }
   };
 
-  // Filtered and sorted users
   const filteredUsers = users.filter((u) => {
     if (!userSearch.trim()) return true;
     const q = userSearch.toLowerCase();
@@ -421,15 +448,16 @@ export default function AdminPage() {
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     const dir = userSortAsc ? 1 : -1;
     switch (userSortCol) {
-      case 'name': {
-        const aName = [a.first_name, a.last_name].filter(Boolean).join(' ');
-        const bName = [b.first_name, b.last_name].filter(Boolean).join(' ');
-        return aName.localeCompare(bName) * dir;
-      }
+      case 'first_name':
+        return (a.first_name || '').localeCompare(b.first_name || '') * dir;
+      case 'last_name':
+        return (a.last_name || '').localeCompare(b.last_name || '') * dir;
       case 'email':
         return a.email.localeCompare(b.email) * dir;
       case 'position':
         return (a.position || '').localeCompare(b.position || '') * dir;
+      case 'role':
+        return a.role.localeCompare(b.role) * dir;
       case 'created_at':
         return (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * dir;
       case 'subscription_status':
@@ -476,21 +504,18 @@ export default function AdminPage() {
     }
   }, [analyticsRange]);
 
-  // Fetch analytics on overview or analytics tab
   useEffect(() => {
     if ((activeTab === 'analytics' || activeTab === 'overview') && profile?.role === 'admin' && !analyticsData) {
       fetchAnalytics();
     }
   }, [activeTab, profile, analyticsData, fetchAnalytics]);
 
-  // Auto-refresh every 60s while analytics or overview tab is active
   useEffect(() => {
     if (activeTab !== 'analytics' && activeTab !== 'overview') return;
     const interval = setInterval(fetchAnalytics, 60000);
     return () => clearInterval(interval);
   }, [activeTab, fetchAnalytics]);
 
-  // Seconds-ago ticker
   useEffect(() => {
     if ((activeTab !== 'analytics' && activeTab !== 'overview') || !lastUpdated) return;
     const ticker = setInterval(() => {
@@ -499,7 +524,6 @@ export default function AdminPage() {
     return () => clearInterval(ticker);
   }, [activeTab, lastUpdated]);
 
-  // Show loading while auth resolves
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -508,58 +532,61 @@ export default function AdminPage() {
     );
   }
 
-  // Non-admin guard (will redirect via useEffect)
   if (!profile || profile.role !== 'admin') {
     return null;
   }
 
   // ─── Overview Tab Metric Cards ─────────────────────────────
   const overviewCards = analyticsData ? [
-    // Row 1
     { label: 'Total Users', value: analyticsData.totalUsers, icon: Users, color: 'var(--accent-bright)', sub: `+${analyticsData.newUsersWeek} this week` },
     { label: 'Active Subscriptions', value: analyticsData.activeSubscriptions, icon: CreditCard, color: '#3b82f6', sub: `${analyticsData.totalUsers > 0 ? Math.round((analyticsData.activeSubscriptions / analyticsData.totalUsers) * 100) : 0}% of users` },
     { label: 'Total Narratives', value: analyticsData.totalNarratives, icon: FileText, color: 'var(--accent-primary)', sub: `+${analyticsData.narrativesWeek} this week` },
     { label: 'Narratives Today', value: analyticsData.narrativesToday, icon: Activity, color: '#ef4444', sub: 'today' },
-    // Row 2
     { label: 'Total Generations', value: analyticsData.totalGenerations, icon: Zap, color: '#f59e0b', sub: 'generate + regenerate' },
     { label: 'Total Exports', value: analyticsData.totalExports, icon: Printer, color: '#3b82f6', sub: 'copy / print / pdf / docx' },
     { label: 'Total Proofreads', value: analyticsData.totalProofreads, icon: CheckCircle, color: '#16a34a', sub: 'all time' },
     { label: 'Saved Templates', value: analyticsData.totalSavedTemplates, icon: BookOpen, color: 'var(--accent-hover)', sub: 'My Repairs' },
   ] : [];
 
+  // ─── Tab definitions ───────────────────────────────────────
+  const tabs: { key: TabKey; label: string; icon: typeof LayoutDashboard }[] = [
+    { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { key: 'activity', label: 'Activity Log', icon: Activity },
+    { key: 'users', label: 'User Management', icon: Users },
+    { key: 'analytics', label: 'Analytics', icon: BarChart3 },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="max-w-[1400px] mx-auto px-6 py-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <Shield size={28} className="text-[var(--accent-primary)]" />
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Admin Dashboard</h1>
+        {/* Header — centered */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <Shield size={32} className="text-[var(--accent-primary)]" />
+          <h1 className="text-3xl font-bold text-[var(--text-primary)]">Admin Dashboard</h1>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {([
-            { key: 'overview' as TabKey, label: 'Overview', icon: LayoutDashboard },
-            { key: 'activity' as TabKey, label: 'Activity Log', icon: Activity },
-            { key: 'users' as TabKey, label: 'User Management', icon: Users },
-            { key: 'analytics' as TabKey, label: 'Analytics', icon: BarChart3 },
-          ]).map(({ key, label, icon: Icon }) => (
-            <button
+        {/* Tab Navigation — centered, large styled buttons */}
+        <div className="flex justify-center gap-4 mb-8 flex-wrap">
+          {tabs.map(({ key, label, icon: Icon }) => (
+            <motion.button
               key={key}
               onClick={() => setActiveTab(key)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              transition={springTransition}
+              className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-base font-semibold transition-all duration-200 cursor-pointer ${
                 activeTab === key
-                  ? 'bg-[var(--accent-20)] text-[var(--accent-bright)] border border-[var(--accent-50)]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--accent-10)] border border-transparent'
+                  ? 'bg-[var(--accent-primary)] text-white border border-[var(--accent-primary)] shadow-[var(--shadow-glow-sm)]'
+                  : 'bg-[var(--accent-10)] text-[var(--text-secondary)] border border-[var(--accent-border)] hover:bg-[var(--accent-20)] hover:text-[var(--accent-bright)]'
               }`}
             >
-              <Icon size={16} />
+              <Icon size={20} />
               {label}
-            </button>
+            </motion.button>
           ))}
         </div>
 
@@ -568,9 +595,8 @@ export default function AdminPage() {
            ═══════════════════════════════════════════════════════════ */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Header Row: Last Updated + Refresh */}
             <div className="flex items-center justify-between">
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className="text-sm text-[var(--text-muted)]">
                 {lastUpdated
                   ? `Last updated: ${secondsAgo < 5 ? 'just now' : `${secondsAgo}s ago`}`
                   : 'Loading...'}
@@ -578,10 +604,10 @@ export default function AdminPage() {
               <button
                 onClick={fetchAnalytics}
                 disabled={analyticsLoading}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-[var(--text-muted)] hover:text-[var(--accent-bright)] hover:bg-[var(--accent-10)] transition-all cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:text-[var(--accent-bright)] hover:bg-[var(--accent-10)] transition-all cursor-pointer disabled:opacity-50"
                 title="Refresh metrics"
               >
-                <RefreshCw size={14} className={analyticsLoading ? 'animate-spin' : ''} />
+                <RefreshCw size={16} className={analyticsLoading ? 'animate-spin' : ''} />
                 Refresh
               </button>
             </div>
@@ -594,17 +620,17 @@ export default function AdminPage() {
               </LiquidCard>
             ) : analyticsData ? (
               <>
-                {/* Metric Cards Grid — 4 columns on lg, 2 on sm */}
+                {/* Metric Cards Grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {overviewCards.map(({ label, value, icon: Icon, color, sub }) => (
                     <LiquidCard key={label} size="compact" className="!rounded-[16px] relative overflow-hidden">
                       <div className="relative z-10">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">{label}</p>
-                          <Icon size={18} style={{ color, opacity: 0.6 }} />
+                          <p className="text-sm text-[var(--text-muted)] uppercase tracking-wider font-medium">{label}</p>
+                          <Icon size={22} style={{ color, opacity: 0.6 }} />
                         </div>
-                        <p className="text-3xl font-bold" style={{ color }}>{value.toLocaleString()}</p>
-                        <p className="text-[var(--text-muted)] text-xs mt-1">{sub}</p>
+                        <p className="text-4xl font-bold" style={{ color }}>{value.toLocaleString()}</p>
+                        <p className="text-[var(--text-muted)] text-sm mt-1">{sub}</p>
                       </div>
                     </LiquidCard>
                   ))}
@@ -612,19 +638,16 @@ export default function AdminPage() {
 
                 {/* Subscription Breakdown */}
                 <LiquidCard size="standard" className="!rounded-[16px]">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Subscription Breakdown</h3>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Subscription Breakdown</h3>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {Object.entries(analyticsData.subscriptionBreakdown).map(([status, count]) => {
                       const badge = SUB_BADGE[status] || SUB_BADGE.trial;
                       return (
-                        <div key={status} className="flex items-center gap-3 p-3 rounded-lg bg-[var(--accent-5)]">
-                          <div
-                            className="w-3 h-3 rounded-full flex-shrink-0"
-                            style={{ background: badge.text }}
-                          />
+                        <div key={status} className="flex items-center gap-3 p-4 rounded-lg bg-[var(--accent-5)]">
+                          <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: badge.text }} />
                           <div>
-                            <p className="text-lg font-bold" style={{ color: badge.text }}>{count}</p>
-                            <p className="text-xs text-[var(--text-muted)] capitalize">{status}</p>
+                            <p className="text-xl font-bold" style={{ color: badge.text }}>{count}</p>
+                            <p className="text-sm text-[var(--text-muted)] capitalize">{status}</p>
                           </div>
                         </div>
                       );
@@ -634,18 +657,18 @@ export default function AdminPage() {
 
                 {/* Activity by Day (30 days) */}
                 <LiquidCard size="standard" className="!rounded-[16px]">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Activity Trend (Last 30 Days)</h3>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Activity Trend (Last 30 Days)</h3>
                   {analyticsData.activityByDay.length > 0 ? (() => {
                     const maxCount = Math.max(...analyticsData.activityByDay.map((d) => d.count), 1);
                     return (
-                      <div className="flex items-end gap-[2px] h-[140px]">
+                      <div className="flex items-end gap-[2px] h-[160px]">
                         {analyticsData.activityByDay.map(({ date, count }) => {
                           const pct = (count / maxCount) * 100;
                           const d = new Date(date + 'T12:00:00');
                           const dayLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                           return (
                             <div key={date} className="flex-1 flex flex-col items-center justify-end h-full group relative">
-                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[var(--bg-elevated)] border border-[var(--accent-30)] text-[var(--text-primary)] text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[var(--bg-elevated)] border border-[var(--accent-30)] text-[var(--text-primary)] text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
                                 {count} action{count !== 1 ? 's' : ''} &middot; {dayLabel}
                               </div>
                               <div
@@ -662,7 +685,7 @@ export default function AdminPage() {
                       </div>
                     );
                   })() : (
-                    <p className="text-[var(--text-muted)] text-sm text-center py-8">No activity data.</p>
+                    <p className="text-[var(--text-muted)] text-base text-center py-8">No activity data.</p>
                   )}
                 </LiquidCard>
               </>
@@ -675,11 +698,9 @@ export default function AdminPage() {
            ═══════════════════════════════════════════════════════════ */}
         {activeTab === 'activity' && (
           <LiquidCard size="standard" className="!rounded-[16px]">
-            {/* Filters Row */}
             <div className="flex flex-col sm:flex-row gap-3 mb-5">
-              {/* Search */}
               <div className="relative flex-1">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                 <input
                   type="text"
                   placeholder="Search by name or email..."
@@ -688,8 +709,6 @@ export default function AdminPage() {
                   className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
                 />
               </div>
-
-              {/* Action filter */}
               <select
                 value={filterAction}
                 onChange={(e) => setFilterAction(e.target.value)}
@@ -699,34 +718,30 @@ export default function AdminPage() {
                   <option key={f.value} value={f.value}>{f.label}</option>
                 ))}
               </select>
-
-              {/* Sort toggle */}
               <button
                 onClick={() => setSortAsc(!sortAsc)}
                 className="flex items-center gap-1.5 px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-secondary)] text-sm hover:border-[var(--accent-hover)] transition-all cursor-pointer whitespace-nowrap"
               >
-                {sortAsc ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                {sortAsc ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 {sortAsc ? 'Oldest First' : 'Newest First'}
               </button>
             </div>
 
-            {/* Results count */}
-            <p className="text-xs text-[var(--text-muted)] mb-3">
+            <p className="text-sm text-[var(--text-muted)] mb-3">
               {totalCount} {totalCount === 1 ? 'entry' : 'entries'} found
             </p>
 
-            {/* Table */}
             {loading ? (
               <div className="py-12">
                 <LoadingSpinner size="medium" message="Loading activity logs..." />
               </div>
             ) : logs.length === 0 ? (
-              <p className="text-center text-[var(--text-muted)] py-12">No activity logs found.</p>
+              <p className="text-center text-[var(--text-muted)] py-12 text-base">No activity logs found.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full">
                   <thead>
-                    <tr className="text-left text-[var(--text-muted)] text-xs uppercase tracking-wider border-b border-[var(--accent-15)]">
+                    <tr className="text-left text-[var(--text-muted)] text-sm uppercase tracking-wider border-b border-[var(--accent-15)]">
                       <th className="pb-3 pr-4">Date/Time</th>
                       <th className="pb-3 pr-4">User</th>
                       <th className="pb-3 pr-4">Email</th>
@@ -741,14 +756,14 @@ export default function AdminPage() {
                         <motion.tr
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className="border-b border-[var(--accent-10)] hover:bg-[var(--accent-10)] transition-colors cursor-pointer"
+                          className="border-b border-[var(--accent-10)] hover:bg-[var(--accent-10)] transition-colors cursor-pointer text-sm"
                           onClick={() => setExpandedRow(expandedRow === log.id ? null : log.id)}
                           style={{
                             borderLeft: `3px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}`,
                           }}
                         >
                           <td className="py-3 pr-4 text-[var(--text-secondary)] whitespace-nowrap">
-                            {formatDate(log.created_at)}
+                            {formatDateReadable(log.created_at)}
                           </td>
                           <td className="py-3 pr-4 text-[var(--text-primary)] font-medium">
                             {log.user_name}
@@ -758,7 +773,7 @@ export default function AdminPage() {
                           </td>
                           <td className="py-3 pr-4">
                             <span
-                              className="inline-block px-2.5 py-1 rounded-full text-xs font-medium"
+                              className="inline-block px-2.5 py-1 rounded-full text-sm font-medium"
                               style={{
                                 background: `${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}20`,
                                 color: ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-bright)',
@@ -776,7 +791,6 @@ export default function AdminPage() {
                           </td>
                         </motion.tr>
 
-                        {/* Expanded detail row */}
                         {expandedRow === log.id && (
                           <motion.tr
                             key={`${log.id}-detail`}
@@ -787,31 +801,31 @@ export default function AdminPage() {
                             <td colSpan={6} className="p-4 bg-[var(--bg-elevated)]">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                 <div>
-                                  <p className="text-[var(--text-muted)] text-xs uppercase mb-1">User ID</p>
-                                  <p className="text-[var(--text-secondary)] font-mono text-xs break-all">{log.user_id}</p>
+                                  <p className="text-[var(--text-muted)] text-sm uppercase mb-1">User ID</p>
+                                  <p className="text-[var(--text-secondary)] font-mono text-sm break-all">{log.user_id}</p>
                                 </div>
                                 <div>
-                                  <p className="text-[var(--text-muted)] text-xs uppercase mb-1">Timestamp</p>
+                                  <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Timestamp</p>
                                   <p className="text-[var(--text-secondary)]">{new Date(log.created_at).toISOString()}</p>
                                 </div>
                                 {log.output_preview && (
                                   <div className="md:col-span-2">
-                                    <p className="text-[var(--text-muted)] text-xs uppercase mb-1">Output Preview</p>
+                                    <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Output Preview</p>
                                     <p className="text-[var(--text-secondary)] whitespace-pre-wrap">{log.output_preview}</p>
                                   </div>
                                 )}
                                 {log.input_data && Object.keys(log.input_data).length > 0 && (
                                   <div className="md:col-span-2">
-                                    <p className="text-[var(--text-muted)] text-xs uppercase mb-1">Input Data</p>
-                                    <pre className="text-[var(--text-secondary)] text-xs bg-[var(--bg-input)] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
+                                    <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Input Data</p>
+                                    <pre className="text-[var(--text-secondary)] text-sm bg-[var(--bg-input)] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
                                       {JSON.stringify(log.input_data, null, 2)}
                                     </pre>
                                   </div>
                                 )}
                                 {log.metadata && Object.keys(log.metadata).length > 0 && (
                                   <div className="md:col-span-2">
-                                    <p className="text-[var(--text-muted)] text-xs uppercase mb-1">Metadata</p>
-                                    <pre className="text-[var(--text-secondary)] text-xs bg-[var(--bg-input)] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
+                                    <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Metadata</p>
+                                    <pre className="text-[var(--text-secondary)] text-sm bg-[var(--bg-input)] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
                                       {JSON.stringify(log.metadata, null, 2)}
                                     </pre>
                                   </div>
@@ -827,7 +841,6 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-5 pt-4 border-t border-[var(--accent-15)]">
                 <Button
@@ -837,7 +850,7 @@ export default function AdminPage() {
                   disabled={page <= 1}
                   className="flex items-center gap-1"
                 >
-                  <ChevronLeft size={14} />
+                  <ChevronLeft size={16} />
                   Previous
                 </Button>
                 <span className="text-sm text-[var(--text-muted)]">
@@ -851,7 +864,7 @@ export default function AdminPage() {
                   className="flex items-center gap-1"
                 >
                   Next
-                  <ChevronRight size={14} />
+                  <ChevronRight size={16} />
                 </Button>
               </div>
             )}
@@ -863,10 +876,9 @@ export default function AdminPage() {
            ═══════════════════════════════════════════════════════════ */}
         {activeTab === 'users' && (
           <LiquidCard size="standard" className="!rounded-[16px]">
-            {/* Search + Refresh */}
             <div className="flex flex-col sm:flex-row gap-3 mb-5">
               <div className="relative flex-1">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                 <input
                   type="text"
                   placeholder="Search by name or email..."
@@ -876,41 +888,41 @@ export default function AdminPage() {
                 />
               </div>
               <Button variant="ghost" size="small" onClick={fetchUsers} disabled={usersLoading}>
-                <RefreshCw size={14} className={usersLoading ? 'animate-spin' : ''} />
+                <RefreshCw size={16} className={usersLoading ? 'animate-spin' : ''} />
                 Refresh
               </Button>
             </div>
 
-            {/* Results count */}
-            <p className="text-xs text-[var(--text-muted)] mb-3">
+            <p className="text-sm text-[var(--text-muted)] mb-3">
               {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
               {userSearch.trim() ? ' matching' : ' total'}
             </p>
 
-            {/* Table */}
             {usersLoading ? (
               <div className="py-12">
                 <LoadingSpinner size="medium" message="Loading users..." />
               </div>
             ) : sortedUsers.length === 0 ? (
-              <p className="text-center text-[var(--text-muted)] py-12">No users found.</p>
+              <p className="text-center text-[var(--text-muted)] py-12 text-base">No users found.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full">
                   <thead>
-                    <tr className="text-left text-[var(--text-muted)] text-xs uppercase tracking-wider border-b border-[var(--accent-15)]">
+                    <tr className="text-left text-[var(--text-muted)] text-sm uppercase tracking-wider border-b border-[var(--accent-15)]">
                       {([
-                        ['name', 'Name'],
+                        ['first_name', 'First Name'],
+                        ['last_name', 'Last Name'],
                         ['email', 'Email'],
                         ['position', 'Position'],
-                        ['created_at', 'Signed Up'],
-                        ['subscription_status', 'Status'],
+                        ['role', 'Role'],
+                        ['subscription_status', 'Subscription'],
                         ['narrative_count', 'Narratives'],
-                        ['last_active', 'Last Active'],
+                        ['created_at', 'Sign Up'],
+                        ['last_active', 'Last Activity'],
                       ] as [UserSortColumn, string][]).map(([col, label]) => (
                         <th
                           key={col}
-                          className="pb-3 pr-4 cursor-pointer hover:text-[var(--text-secondary)] transition-colors select-none"
+                          className="pb-3 pr-3 cursor-pointer hover:text-[var(--text-secondary)] transition-colors select-none whitespace-nowrap"
                           onClick={() => toggleUserSort(col)}
                         >
                           <span className="inline-flex items-center gap-1">
@@ -921,8 +933,7 @@ export default function AdminPage() {
                           </span>
                         </th>
                       ))}
-                      <th className="pb-3 pr-4">Flags</th>
-                      <th className="pb-3">Actions</th>
+                      <th className="pb-3 text-center whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -930,108 +941,114 @@ export default function AdminPage() {
                       const userName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'No name';
                       const subBadge = SUB_BADGE[user.subscription_status] || SUB_BADGE.trial;
                       const details = userDetails[user.id];
+                      const isProtected = user.email.toLowerCase() === PROTECTED_EMAIL;
 
                       return (
                         <AnimatePresence key={user.id}>
                           <motion.tr
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="border-b border-[var(--accent-10)] hover:bg-[var(--accent-10)] transition-colors cursor-pointer"
+                            className="border-b border-[var(--accent-10)] hover:bg-[var(--accent-10)] transition-colors cursor-pointer text-sm"
                             onClick={() => handleExpandUser(user.id)}
                           >
-                            <td className="py-3 pr-4 text-[var(--text-primary)] font-medium">{userName}</td>
-                            <td className="py-3 pr-4 text-[var(--text-muted)]">{user.email}</td>
-                            <td className="py-3 pr-4 text-[var(--text-muted)]">{user.position || '—'}</td>
-                            <td className="py-3 pr-4 text-[var(--text-secondary)] whitespace-nowrap">
-                              {formatDate(user.created_at)}
+                            <td className="py-3 pr-3 text-[var(--text-primary)] font-medium whitespace-nowrap">
+                              {user.first_name || '—'}
                             </td>
-                            <td className="py-3 pr-4">
+                            <td className="py-3 pr-3 text-[var(--text-primary)] font-medium whitespace-nowrap">
+                              {user.last_name || '—'}
+                            </td>
+                            <td className="py-3 pr-3 text-[var(--text-muted)] whitespace-nowrap">{user.email}</td>
+                            <td className="py-3 pr-3 text-[var(--text-muted)] whitespace-nowrap">{user.position || '—'}</td>
+                            <td className="py-3 pr-3 text-[var(--text-muted)] whitespace-nowrap capitalize">{user.role}</td>
+                            <td className="py-3 pr-3 whitespace-nowrap">
                               <span
-                                className="inline-block px-2 py-0.5 rounded text-xs font-medium capitalize"
+                                className="inline-block px-2.5 py-0.5 rounded text-sm font-medium capitalize"
                                 style={{ background: subBadge.bg, color: subBadge.text }}
                               >
                                 {user.subscription_status}
                               </span>
                             </td>
-                            <td className="py-3 pr-4 text-[var(--text-secondary)] text-center">
+                            <td className="py-3 pr-3 text-[var(--text-secondary)] text-center whitespace-nowrap">
                               {user.narrative_count}
                             </td>
-                            <td className="py-3 pr-4 text-[var(--text-muted)] whitespace-nowrap">
-                              {user.last_active ? formatDate(user.last_active) : '—'}
+                            <td className="py-3 pr-3 text-[var(--text-secondary)] whitespace-nowrap">
+                              {formatDateShort(user.created_at)}
                             </td>
-                            <td className="py-3 pr-4">
-                              {user.is_restricted && (
-                                <span
-                                  className="inline-block px-2 py-0.5 rounded text-xs font-medium"
-                                  style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444' }}
-                                >
-                                  RESTRICTED
-                                </span>
-                              )}
+                            <td className="py-3 pr-3 text-[var(--text-muted)] whitespace-nowrap">
+                              {user.last_active ? formatDateTimeFull(user.last_active) : '—'}
                             </td>
                             <td className="py-3" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-1.5">
-                                {/* Password Reset */}
-                                <button
-                                  onClick={() => handlePasswordReset(user.email)}
-                                  disabled={actionLoading === `reset-${user.email}`}
-                                  className="p-1.5 rounded hover:bg-[var(--accent-15)] text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-all cursor-pointer disabled:opacity-50"
-                                  title="Send password reset"
-                                >
-                                  <Mail size={14} />
-                                </button>
+                              <div className="flex items-center justify-center gap-2">
+                                {isProtected ? (
+                                  /* Protected user — show badge instead of destructive actions */
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium bg-[var(--accent-20)] text-[var(--accent-bright)]">
+                                    <ShieldCheck size={14} />
+                                    Protected
+                                  </span>
+                                ) : (
+                                  <>
+                                    {/* Password Reset */}
+                                    <button
+                                      onClick={() => handlePasswordReset(user.email)}
+                                      disabled={actionLoading === `reset-${user.email}`}
+                                      className="p-2.5 rounded-lg hover:bg-[var(--accent-15)] text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-all cursor-pointer disabled:opacity-50"
+                                      title="Send password reset"
+                                    >
+                                      <Mail size={20} />
+                                    </button>
 
-                                {/* Toggle Restrict */}
-                                <button
-                                  onClick={() =>
-                                    setRestrictTarget({
-                                      id: user.id,
-                                      name: userName,
-                                      restricted: user.is_restricted,
-                                    })
-                                  }
-                                  disabled={actionLoading === `restrict-${user.id}`}
-                                  className="p-1.5 rounded hover:bg-[var(--accent-15)] text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-all cursor-pointer disabled:opacity-50"
-                                  title={user.is_restricted ? 'Unrestrict user' : 'Restrict user'}
-                                >
-                                  {user.is_restricted ? <Unlock size={14} /> : <Lock size={14} />}
-                                </button>
+                                    {/* Toggle Restrict */}
+                                    <button
+                                      onClick={() =>
+                                        setRestrictTarget({
+                                          id: user.id,
+                                          name: userName,
+                                          restricted: user.is_restricted,
+                                        })
+                                      }
+                                      disabled={actionLoading === `restrict-${user.id}`}
+                                      className="p-2.5 rounded-lg hover:bg-[var(--accent-15)] text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-all cursor-pointer disabled:opacity-50"
+                                      title={user.is_restricted ? 'Unrestrict user' : 'Restrict user'}
+                                    >
+                                      {user.is_restricted ? <Unlock size={20} /> : <Lock size={20} />}
+                                    </button>
 
-                                {/* Subscription Change */}
-                                <select
-                                  value={user.subscription_status}
-                                  onChange={(e) => handleSubscriptionChange(user.id, e.target.value)}
-                                  disabled={actionLoading === `sub-${user.id}`}
-                                  className="px-1.5 py-1 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded text-xs text-[var(--text-secondary)] cursor-pointer focus:outline-none focus:border-[var(--accent-hover)] disabled:opacity-50"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <option value="active">Active</option>
-                                  <option value="trial">Trial</option>
-                                  <option value="expired">Expired</option>
-                                  <option value="bypass">Bypass</option>
-                                </select>
+                                    {/* Subscription Change */}
+                                    <select
+                                      value={user.subscription_status}
+                                      onChange={(e) => handleSubscriptionChange(user.id, e.target.value)}
+                                      disabled={actionLoading === `sub-${user.id}`}
+                                      className="px-2 py-1.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-sm text-[var(--text-secondary)] cursor-pointer focus:outline-none focus:border-[var(--accent-hover)] disabled:opacity-50"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <option value="active">Active</option>
+                                      <option value="trial">Trial</option>
+                                      <option value="expired">Expired</option>
+                                      <option value="bypass">Bypass</option>
+                                    </select>
 
-                                {/* Delete */}
-                                <button
-                                  onClick={() =>
-                                    setDeleteTarget({
-                                      id: user.id,
-                                      name: userName,
-                                      email: user.email,
-                                      step: 1,
-                                    })
-                                  }
-                                  disabled={actionLoading === `delete-${user.id}`}
-                                  className="p-1.5 rounded hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-500 transition-all cursor-pointer disabled:opacity-50"
-                                  title="Delete user"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
+                                    {/* Delete */}
+                                    <button
+                                      onClick={() =>
+                                        setDeleteTarget({
+                                          id: user.id,
+                                          name: userName,
+                                          email: user.email,
+                                          step: 1,
+                                        })
+                                      }
+                                      disabled={actionLoading === `delete-${user.id}`}
+                                      className="p-2.5 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-500 transition-all cursor-pointer disabled:opacity-50"
+                                      title="Delete user"
+                                    >
+                                      <Trash2 size={20} />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </td>
                           </motion.tr>
 
-                          {/* Expanded detail row */}
                           {expandedUserId === user.id && (
                             <motion.tr
                               key={`${user.id}-detail`}
@@ -1039,14 +1056,13 @@ export default function AdminPage() {
                               animate={{ opacity: 1, height: 'auto' }}
                               exit={{ opacity: 0, height: 0 }}
                             >
-                              <td colSpan={9} className="p-4 bg-[var(--bg-elevated)]">
+                              <td colSpan={10} className="p-4 bg-[var(--bg-elevated)]">
                                 {!details ? (
                                   <LoadingSpinner size="small" message="Loading details..." />
                                 ) : (
                                   <div className="space-y-4">
-                                    {/* Profile Info */}
                                     <div>
-                                      <h4 className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2 font-semibold">
+                                      <h4 className="text-sm uppercase tracking-wider text-[var(--text-muted)] mb-2 font-semibold">
                                         Profile
                                       </h4>
                                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
@@ -1057,8 +1073,8 @@ export default function AdminPage() {
                                           ['Role', user.role],
                                         ] as [string, string][]).map(([label, val]) => (
                                           <div key={label}>
-                                            <p className="text-[var(--text-muted)] text-xs">{label}</p>
-                                            <p className="text-[var(--text-secondary)] font-mono text-xs break-all">
+                                            <p className="text-[var(--text-muted)] text-sm">{label}</p>
+                                            <p className="text-[var(--text-secondary)] font-mono text-sm break-all">
                                               {val}
                                             </p>
                                           </div>
@@ -1066,25 +1082,23 @@ export default function AdminPage() {
                                       </div>
                                     </div>
 
-                                    {/* Accent divider */}
                                     <div className="h-px bg-[var(--accent-30)]" />
 
-                                    {/* Recent Activity */}
                                     <div>
-                                      <h4 className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2 font-semibold">
+                                      <h4 className="text-sm uppercase tracking-wider text-[var(--text-muted)] mb-2 font-semibold">
                                         Recent Activity (Last 5)
                                       </h4>
                                       {details.recent_activity.length === 0 ? (
-                                        <p className="text-[var(--text-muted)] text-xs">No activity recorded.</p>
+                                        <p className="text-[var(--text-muted)] text-sm">No activity recorded.</p>
                                       ) : (
                                         <div className="space-y-1.5">
                                           {details.recent_activity.map((a, i) => (
                                             <div
                                               key={i}
-                                              className="flex items-center gap-3 text-xs text-[var(--text-secondary)]"
+                                              className="flex items-center gap-3 text-sm text-[var(--text-secondary)]"
                                             >
                                               <span className="text-[var(--text-muted)] whitespace-nowrap">
-                                                {formatDate(a.created_at as string)}
+                                                {formatDateReadable(a.created_at as string)}
                                               </span>
                                               <span className="inline-block px-2 py-0.5 rounded bg-[var(--accent-10)] text-[var(--accent-bright)] font-medium">
                                                 {formatActionLabel(a.action_type as string)}
@@ -1100,22 +1114,20 @@ export default function AdminPage() {
                                       )}
                                     </div>
 
-                                    {/* Accent divider */}
                                     <div className="h-px bg-[var(--accent-30)]" />
 
-                                    {/* Recent Narratives */}
                                     <div>
-                                      <h4 className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-2 font-semibold">
+                                      <h4 className="text-sm uppercase tracking-wider text-[var(--text-muted)] mb-2 font-semibold">
                                         Recent Narratives (Last 5)
                                       </h4>
                                       {details.recent_narratives.length === 0 ? (
-                                        <p className="text-[var(--text-muted)] text-xs">No narratives saved.</p>
+                                        <p className="text-[var(--text-muted)] text-sm">No narratives saved.</p>
                                       ) : (
                                         <div className="space-y-1.5">
                                           {details.recent_narratives.map((n, i) => (
-                                            <div key={i} className="text-xs text-[var(--text-secondary)]">
+                                            <div key={i} className="text-sm text-[var(--text-secondary)]">
                                               <span className="text-[var(--text-muted)] mr-2">
-                                                {formatDate(n.created_at as string)}
+                                                {formatDateReadable(n.created_at as string)}
                                               </span>
                                               <span className="font-medium mr-2">
                                                 {[n.vehicle_year, n.vehicle_make, n.vehicle_model]
@@ -1157,9 +1169,8 @@ export default function AdminPage() {
            ═══════════════════════════════════════════════════════════ */}
         {activeTab === 'analytics' && (
           <div className="space-y-6">
-            {/* Header Row: Last Updated + Range Selector + Refresh */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className="text-sm text-[var(--text-muted)]">
                 {lastUpdated
                   ? `Last updated: ${secondsAgo < 5 ? 'just now' : `${secondsAgo}s ago`}`
                   : 'Loading...'}
@@ -1169,7 +1180,7 @@ export default function AdminPage() {
                   <button
                     key={r}
                     onClick={() => setAnalyticsRange(r)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
                       analyticsRange === r
                         ? 'bg-[var(--accent-20)] text-[var(--accent-bright)] border border-[var(--accent-50)]'
                         : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--accent-10)] border border-transparent'
@@ -1184,7 +1195,7 @@ export default function AdminPage() {
                   className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--accent-bright)] hover:bg-[var(--accent-10)] transition-all cursor-pointer disabled:opacity-50"
                   title="Refresh analytics"
                 >
-                  <RefreshCw size={16} className={analyticsLoading ? 'animate-spin' : ''} />
+                  <RefreshCw size={18} className={analyticsLoading ? 'animate-spin' : ''} />
                 </button>
               </div>
             </div>
@@ -1209,11 +1220,11 @@ export default function AdminPage() {
                   ] as const).map(({ label, value, icon: Icon, color }) => (
                     <LiquidCard key={label} size="compact" className="!rounded-[16px] relative overflow-hidden">
                       <div className="relative z-10">
-                        <p className="text-3xl font-bold" style={{ color }}>{value.toLocaleString()}</p>
+                        <p className="text-4xl font-bold" style={{ color }}>{value.toLocaleString()}</p>
                         <p className="text-[var(--text-muted)] text-sm mt-1">{label}</p>
                       </div>
                       <Icon
-                        size={48}
+                        size={56}
                         className="absolute top-3 right-3"
                         style={{ color, opacity: 0.15 }}
                       />
@@ -1223,7 +1234,7 @@ export default function AdminPage() {
 
                 {/* Narrative Generation Trend Chart */}
                 <LiquidCard size="standard" className="!rounded-[16px]">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
                     Narrative Generation Trend ({analyticsRange === 'all' ? 'All Time' : `Last ${analyticsRange} Days`})
                   </h3>
                   {analyticsData.dailyNarratives.length > 0 ? (() => {
@@ -1236,7 +1247,7 @@ export default function AdminPage() {
                           const dayLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                           return (
                             <div key={date} className="flex-1 flex flex-col items-center justify-end h-full group relative">
-                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[var(--bg-elevated)] border border-[var(--accent-30)] text-[var(--text-primary)] text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[var(--bg-elevated)] border border-[var(--accent-30)] text-[var(--text-primary)] text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
                                 {count} narrative{count !== 1 ? 's' : ''}
                               </div>
                               <div
@@ -1247,7 +1258,7 @@ export default function AdminPage() {
                                   opacity: count > 0 ? 1 : 0.25,
                                 }}
                               />
-                              <p className="text-[9px] text-[var(--text-muted)] mt-1.5 rotate-[-45deg] origin-top-left whitespace-nowrap">
+                              <p className="text-[10px] text-[var(--text-muted)] mt-1.5 rotate-[-45deg] origin-top-left whitespace-nowrap">
                                 {dayLabel}
                               </p>
                             </div>
@@ -1256,15 +1267,14 @@ export default function AdminPage() {
                       </div>
                     );
                   })() : (
-                    <p className="text-[var(--text-muted)] text-sm text-center py-8">No data for this period.</p>
+                    <p className="text-[var(--text-muted)] text-base text-center py-8">No data for this period.</p>
                   )}
                 </LiquidCard>
 
                 {/* Two-Column: Story Type + Activity Type */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Story Type Breakdown */}
                   <LiquidCard size="standard" className="!rounded-[16px]">
-                    <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Story Type Breakdown</h3>
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Story Type Breakdown</h3>
                     {(() => {
                       const diag = analyticsData.storyTypes.diagnostic_only || 0;
                       const repair = analyticsData.storyTypes.repair_complete || 0;
@@ -1272,18 +1282,12 @@ export default function AdminPage() {
                       const diagPct = total > 0 ? Math.round((diag / total) * 100) : 0;
                       const repairPct = total > 0 ? 100 - diagPct : 0;
                       return total === 0 ? (
-                        <p className="text-[var(--text-muted)] text-sm text-center py-8">No narratives generated yet.</p>
+                        <p className="text-[var(--text-muted)] text-base text-center py-8">No narratives generated yet.</p>
                       ) : (
                         <div className="space-y-4">
                           <div className="h-8 rounded-full overflow-hidden flex">
-                            <div
-                              className="h-full transition-all duration-500"
-                              style={{ width: `${diagPct}%`, background: 'var(--accent-primary)' }}
-                            />
-                            <div
-                              className="h-full transition-all duration-500"
-                              style={{ width: `${repairPct}%`, background: '#16a34a' }}
-                            />
+                            <div className="h-full transition-all duration-500" style={{ width: `${diagPct}%`, background: 'var(--accent-primary)' }} />
+                            <div className="h-full transition-all duration-500" style={{ width: `${repairPct}%`, background: '#16a34a' }} />
                           </div>
                           <div className="flex justify-between text-sm">
                             <div className="flex items-center gap-2">
@@ -1302,28 +1306,27 @@ export default function AdminPage() {
                     })()}
                   </LiquidCard>
 
-                  {/* Activity Type Breakdown */}
                   <LiquidCard size="standard" className="!rounded-[16px]">
-                    <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Activity by Type (All Time)</h3>
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Activity by Type (All Time)</h3>
                     {Object.keys(analyticsData.activityByType).length === 0 ? (
-                      <p className="text-[var(--text-muted)] text-sm text-center py-8">No activity recorded.</p>
+                      <p className="text-[var(--text-muted)] text-base text-center py-8">No activity recorded.</p>
                     ) : (() => {
                       const entries = Object.entries(analyticsData.activityByType).sort(([, a], [, b]) => b - a);
                       const maxVal = Math.max(...entries.map(([, v]) => v), 1);
                       return (
-                        <div className="space-y-2.5">
+                        <div className="space-y-3">
                           {entries.map(([type, count]) => {
                             const pct = (count / maxVal) * 100;
                             const color = ACTION_BORDER_COLORS[type] || 'var(--accent-30)';
                             return (
                               <div key={type} className="space-y-1">
-                                <div className="flex justify-between text-xs">
+                                <div className="flex justify-between text-sm">
                                   <span className="text-[var(--text-secondary)] capitalize">
                                     {type.replace(/_/g, ' ')}
                                   </span>
                                   <span className="text-[var(--text-muted)] font-mono">{count}</span>
                                 </div>
-                                <div className="h-2 rounded-full bg-[var(--accent-10)] overflow-hidden">
+                                <div className="h-2.5 rounded-full bg-[var(--accent-10)] overflow-hidden">
                                   <div
                                     className="h-full rounded-full transition-all duration-500"
                                     style={{ width: `${pct}%`, background: color }}
@@ -1340,16 +1343,16 @@ export default function AdminPage() {
 
                 {/* Subscription Breakdown */}
                 <LiquidCard size="standard" className="!rounded-[16px]">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Subscription Distribution</h3>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Subscription Distribution</h3>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {Object.entries(analyticsData.subscriptionBreakdown).map(([status, count]) => {
                       const badge = SUB_BADGE[status] || SUB_BADGE.trial;
                       return (
-                        <div key={status} className="flex items-center gap-3 p-3 rounded-lg bg-[var(--accent-5)]">
-                          <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: badge.text }} />
+                        <div key={status} className="flex items-center gap-3 p-4 rounded-lg bg-[var(--accent-5)]">
+                          <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: badge.text }} />
                           <div>
-                            <p className="text-lg font-bold" style={{ color: badge.text }}>{count}</p>
-                            <p className="text-xs text-[var(--text-muted)] capitalize">{status}</p>
+                            <p className="text-xl font-bold" style={{ color: badge.text }}>{count}</p>
+                            <p className="text-sm text-[var(--text-muted)] capitalize">{status}</p>
                           </div>
                         </div>
                       );
@@ -1359,14 +1362,14 @@ export default function AdminPage() {
 
                 {/* Top 10 Users Table */}
                 <LiquidCard size="standard" className="!rounded-[16px]">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Top Users by Narratives Generated</h3>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Top Users by Narratives Generated</h3>
                   {analyticsData.topUsers.length === 0 ? (
-                    <p className="text-[var(--text-muted)] text-sm text-center py-8">No data yet.</p>
+                    <p className="text-[var(--text-muted)] text-base text-center py-8">No data yet.</p>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full">
                         <thead>
-                          <tr className="text-left text-[var(--text-muted)] text-xs uppercase tracking-wider border-b border-[var(--accent-15)]">
+                          <tr className="text-left text-[var(--text-muted)] text-sm uppercase tracking-wider border-b border-[var(--accent-15)]">
                             <th className="pb-3 pr-4 w-16">Rank</th>
                             <th className="pb-3 pr-4">Name</th>
                             <th className="pb-3 pr-4">Position</th>
@@ -1375,31 +1378,25 @@ export default function AdminPage() {
                         </thead>
                         <tbody>
                           {analyticsData.topUsers.map((user) => {
-                            const rankColors: Record<number, string> = {
-                              1: '#fbbf24',
-                              2: '#9ca3af',
-                              3: '#cd7f32',
-                            };
+                            const rankColors: Record<number, string> = { 1: '#fbbf24', 2: '#9ca3af', 3: '#cd7f32' };
                             const rankColor = rankColors[user.rank];
                             return (
                               <tr key={user.rank} className="border-b border-[var(--accent-10)]">
                                 <td className="py-3 pr-4">
                                   <span
-                                    className="inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold"
+                                    className="inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold"
                                     style={rankColor ? {
                                       background: `${rankColor}20`,
                                       color: rankColor,
                                       border: `1px solid ${rankColor}40`,
-                                    } : {
-                                      color: 'var(--text-muted)',
-                                    }}
+                                    } : { color: 'var(--text-muted)' }}
                                   >
                                     {user.rank}
                                   </span>
                                 </td>
-                                <td className="py-3 pr-4 text-[var(--text-primary)] font-medium">{user.name}</td>
-                                <td className="py-3 pr-4 text-[var(--text-muted)]">{user.position}</td>
-                                <td className="py-3 text-right text-[var(--accent-bright)] font-mono font-semibold">
+                                <td className="py-3 pr-4 text-[var(--text-primary)] font-medium text-base">{user.name}</td>
+                                <td className="py-3 pr-4 text-[var(--text-muted)] text-sm">{user.position}</td>
+                                <td className="py-3 text-right text-[var(--accent-bright)] font-mono font-semibold text-base">
                                   {user.count.toLocaleString()}
                                 </td>
                               </tr>

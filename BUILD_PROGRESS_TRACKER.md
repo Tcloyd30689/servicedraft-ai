@@ -32,6 +32,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 4 Sprint 5:** COMPLETE — Terms of Use content component, signup terms enforcement, main menu terms link, expanded FAQ content
 **Hotfix 19A:** COMPLETE — Fix delete account API: removed stray "you" prefix from SUPABASE_SERVICE_ROLE_KEY in .env.local, hardened service client with trim() and auth options, added per-step error logging
 **Stage 4 Sprint 6:** COMPLETE — Admin dashboard core rebuild: Overview tab with 8 metric cards, expanded analytics API (generations/exports/proofreads/customizations/templates/subscriptionBreakdown/activityByDay), top 10 users, activity logging audit verified
+**Post-Sprint 6 UI/UX Fixes:** COMPLETE — Admin dashboard UI overhaul: wider layout (1400px), larger text sizes, animated button tabs, user table improvements (split name, role column, date formats), protected user badge, larger action icons
 **Next Task:** Stage 4, Sprint 7 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
@@ -2484,6 +2485,17 @@ This file is a living document that Claude Code reads at the start of every sess
   - S4-6.3: Rebuilt admin page with 4 tabs — added Overview as default tab (was 3 tabs: activity/users/analytics, now 4: overview/activity/users/analytics). Overview tab contains 8 metric cards in 2x4 grid (Users, Subscriptions, Narratives, Today, Generations, Exports, Proofreads, Templates), subscription breakdown section, and 30-day activity trend chart. Refresh button + last-updated timestamp on overview.
   - S4-6.4: Activity Log tab polish — enhanced action type badges to pill-style with color-coded backgrounds and borders. All existing features confirmed working: pagination, action_type filtering, user search, expandable metadata rows.
   - S4-6.5: User Management tab verified — all features functional: sortable columns, search, user detail expansion, restrict/unrestrict with confirmation modal, delete with multi-step confirmation, subscription status change dropdown, password reset.
+
+### SESSION S4-SPRINT-6-UIFIX — Post-Sprint 6: Admin Dashboard UI/UX Fixes — COMPLETE
+- **Scope:** 6 UI/UX improvement tasks
+- **Completed:** 2026-03-06
+- **Notes:** Comprehensive admin dashboard visual and usability overhaul.
+  - Task 1: Protected user — hvcadip@gmail.com now shows "Protected" badge with ShieldCheck icon instead of delete/restrict action buttons. Cannot be accidentally deleted or restricted from admin panel.
+  - Task 2: Wider layout — container changed from max-w-7xl to max-w-[1400px] with increased horizontal padding (px-4 → px-6) for better use of screen real estate.
+  - Task 3: Larger text sizes — bumped all text-xs to text-sm minimum, metric card values to text-4xl, section headings to text-lg, table body text to text-sm with whitespace-nowrap for clean alignment.
+  - Task 4: Centered title and animated tab buttons — dashboard title and shield icon centered, tabs redesigned as large framer-motion animated buttons with whileHover/whileTap scale effects, active state uses accent-primary background with glow shadow, generous px-6 py-3 padding.
+  - Task 5: User management table improvements — split single Name column into separate First Name and Last Name columns, added Role column, changed date formats to MM-DD-YYYY (Sign Up) and MM-DD-YYYY HH:MM AM/PM (Last Activity), updated sort column types and expanded row colSpan to 10.
+  - Task 6: Larger action icons — increased icon sizes from 16 to 20, enlarged clickable area from p-1.5 to p-2.5 with rounded-lg, center-aligned Actions column header and button container.
 
 ---
 
