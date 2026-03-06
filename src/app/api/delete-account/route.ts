@@ -3,12 +3,17 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createClient } from '@supabase/supabase-js';
 
 function createServiceClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!url || !serviceKey) {
     throw new Error('Missing Supabase service role configuration');
   }
-  return createClient(url, serviceKey);
+  return createClient(url, serviceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 }
 
 export async function POST() {
@@ -27,16 +32,20 @@ export async function POST() {
     const svc = createServiceClient();
 
     // Delete user's narratives
-    await svc.from('narratives').delete().eq('user_id', user.id);
+    const { error: narrativesErr } = await svc.from('narratives').delete().eq('user_id', user.id);
+    if (narrativesErr) console.error('Failed to delete narratives:', narrativesErr.message);
 
     // Delete user's activity log entries
-    await svc.from('activity_log').delete().eq('user_id', user.id);
+    const { error: activityErr } = await svc.from('activity_log').delete().eq('user_id', user.id);
+    if (activityErr) console.error('Failed to delete activity log:', activityErr.message);
 
     // Delete user's saved repairs
-    await svc.from('saved_repairs').delete().eq('user_id', user.id);
+    const { error: repairsErr } = await svc.from('saved_repairs').delete().eq('user_id', user.id);
+    if (repairsErr) console.error('Failed to delete saved repairs:', repairsErr.message);
 
     // Delete user's profile row
-    await svc.from('users').delete().eq('id', user.id);
+    const { error: profileErr } = await svc.from('users').delete().eq('id', user.id);
+    if (profileErr) console.error('Failed to delete user profile:', profileErr.message);
 
     // Delete the auth user (removes from auth.users)
     const { error } = await svc.auth.admin.deleteUser(user.id);
