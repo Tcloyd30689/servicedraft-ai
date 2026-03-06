@@ -26,7 +26,8 @@ This file is a living document that Claude Code reads at the start of every sess
 **Last Updated:** 2026-03-06
 **Current Phase:** Stage 4 — UI Quick Fixes & Polish
 **Stage 4 Sprint 1:** COMPLETE — Font rendering fix, sidebar positioning, button relocation, template rename, access code update
-**Next Task:** Stage 4, Sprint 2 (TBD)
+**Stage 4 Sprint 2:** COMPLETE — Clear form button, story type switching preservation, ProofreadResults render bug fix
+**Next Task:** Stage 4, Sprint 3 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
@@ -2404,6 +2405,38 @@ This file is a living document that Claude Code reads at the start of every sess
 - **Scope:** S4-1.1, S4-1.2, S4-1.3, S4-1.4, S4-1.5
 - **Completed:** 2026-03-06
 - **Notes:** Five UI quick fixes: (1) Inter font now renders correctly on all input/data fields via `!important` override on `.font-data` class, (2) My Repairs sidebar panel positioned below hero+nav at 156px top offset, (3) "MY REPAIRS" button moved inside the Repair Order Information card as "REPAIR TEMPLATES" replacing the "Additional Information" subtitle, (4) All "Save as My Repair" references renamed to "Save as Repair Template", (5) Stripe fallback access code changed to `SDRAFT-BETA-2026`.
+
+---
+
+## STAGE 4 — SPRINT 2: INPUT PAGE BEHAVIOR + BUG FIX
+
+### S4-2.1 — Add Clear Form Button to Input Page
+- [x] Added `clearFormFields` action to `src/stores/narrativeStore.ts` — resets `fieldValues` to `{}`, `dropdownSelections` to `{}`, and `roNumber` to `''` without changing `storyType`
+- [x] Added `RotateCcw` icon import from lucide-react to input page
+- [x] Modified "Repair Order Information" card header to flex row: h2 on left, "CLEAR FORM" button on right
+- [x] Clear Form button styled as ghost/text button: `text-xs text-[var(--text-muted)] hover:text-[var(--accent-bright)]` with RotateCcw icon
+- [x] On click: calls `clearFormFields()` and shows "Form cleared" toast
+- [x] Does NOT reset story type selection — only clears field data within the current story type
+- **Completed:** 2026-03-06
+
+### S4-2.2 — Fix Story Type Switching to Preserve Shared Fields
+- [x] Updated `setStoryType` in `src/stores/narrativeStore.ts` to preserve values for shared fields: `year`, `make`, `model`, `customer_concern`, `codes_present`, `diagnostics_performed`, `root_cause`
+- [x] Preserves dropdown selections for shared conditional fields: `codes_present`, `diagnostics_performed`, `root_cause`
+- [x] Type-specific fields cleared on switch: `recommended_action` (diagnostic_only only), `repair_performed` + `repair_verification` (repair_complete only)
+- [x] `roNumber` always preserved (stored separately in state)
+- **Completed:** 2026-03-06
+
+### S4-2.3 — Fix ProofreadResults setState-During-Render Bug
+- [x] Fixed React console error "Cannot update a component (NarrativePage) while rendering a different component (ProofreadResults)"
+- [x] Root cause: `notifyParent()` in the `useEffect` that resets checkboxes when data changes was calling `onSelectionChange` (parent setState) synchronously during the render cycle
+- [x] Fix: Wrapped `notifyParent(fresh)` call in `setTimeout(() => ..., 0)` to defer parent state update to the next tick
+- [x] Added cleanup `clearTimeout` in the useEffect return to prevent memory leaks
+- **Completed:** 2026-03-06
+
+### SESSION S4-SPRINT-2 — Stage 4 Sprint 2 — COMPLETE
+- **Scope:** S4-2.1, S4-2.2, S4-2.3
+- **Completed:** 2026-03-06
+- **Notes:** Three changes: (1) Clear Form button added to Repair Order Information card header with RotateCcw icon and ghost styling, (2) Story type switching now preserves shared field values (year, make, model, customer_concern, codes_present, diagnostics_performed, root_cause) instead of wiping all fields, (3) ProofreadResults render bug fixed by deferring parent notification to next tick with setTimeout.
 
 ---
 

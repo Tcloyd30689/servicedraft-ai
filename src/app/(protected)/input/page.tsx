@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Wrench, BookmarkPlus } from 'lucide-react';
+import { Wrench, BookmarkPlus, RotateCcw } from 'lucide-react';
 import { getFieldsForStoryType } from '@/constants/fieldConfig';
 import type { StoryType, DropdownOption } from '@/constants/fieldConfig';
 import { compileDataBlock } from '@/lib/compileDataBlock';
@@ -30,6 +30,7 @@ export default function InputPage() {
     setRoNumber,
     setCompiledDataBlock,
     clearForNewGeneration,
+    clearFormFields,
   } = useNarrativeStore();
 
   const [isRepairsPanelOpen, setIsRepairsPanelOpen] = useState(false);
@@ -160,9 +161,22 @@ export default function InputPage() {
             transition={{ duration: 0.4 }}
           >
             <LiquidCard size="standard" className="mb-6">
-              <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-6">
-                Repair Order Information
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-[var(--text-primary)]">
+                  Repair Order Information
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearFormFields();
+                    toast.success('Form cleared');
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-colors"
+                >
+                  <RotateCcw size={14} />
+                  CLEAR FORM
+                </button>
+              </div>
 
               {/* Required fields (1-5) */}
               {fields

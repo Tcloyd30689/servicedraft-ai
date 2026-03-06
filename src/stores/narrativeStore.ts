@@ -77,7 +77,26 @@ export function useNarrativeStore() {
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   const setStoryType = useCallback((type: StoryType | null) => {
-    globalState = { ...globalState, storyType: type, fieldValues: {}, dropdownSelections: {} };
+    // Shared fields that exist in BOTH story types — preserve their values
+    const sharedFieldIds = ['year', 'make', 'model', 'customer_concern', 'codes_present', 'diagnostics_performed', 'root_cause'];
+    // Conditional shared fields that have dropdown selections
+    const sharedDropdownIds = ['codes_present', 'diagnostics_performed', 'root_cause'];
+
+    const preservedValues: Record<string, string> = {};
+    const preservedDropdowns: Record<string, DropdownOption> = {};
+
+    for (const id of sharedFieldIds) {
+      if (globalState.fieldValues[id]) {
+        preservedValues[id] = globalState.fieldValues[id];
+      }
+    }
+    for (const id of sharedDropdownIds) {
+      if (globalState.dropdownSelections[id]) {
+        preservedDropdowns[id] = globalState.dropdownSelections[id];
+      }
+    }
+
+    globalState = { ...globalState, storyType: type, fieldValues: preservedValues, dropdownSelections: preservedDropdowns };
     notifyListeners();
   }, []);
 
@@ -169,6 +188,11 @@ export function useNarrativeStore() {
     notifyListeners();
   }, []);
 
+  const clearFormFields = useCallback(() => {
+    globalState = { ...globalState, fieldValues: {}, dropdownSelections: {}, roNumber: '' };
+    notifyListeners();
+  }, []);
+
   const markSaved = useCallback((narrativeId: string) => {
     globalState = { ...globalState, isSaved: true, savedNarrativeId: narrativeId };
     notifyListeners();
@@ -224,6 +248,7 @@ export function useNarrativeStore() {
     resetCustomization,
     clearForNewGeneration,
     resetAll,
+    clearFormFields,
     markSaved,
     setForRepairUpdate,
   };

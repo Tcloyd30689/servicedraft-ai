@@ -58,7 +58,9 @@ export default function ProofreadResults({
   useEffect(() => {
     const fresh = new Array(data.suggested_edits.length).fill(false);
     setCheckedEdits(fresh);
-    notifyParent(fresh);
+    // Defer parent notification to avoid setState-during-render
+    const timer = setTimeout(() => notifyParent(fresh), 0);
+    return () => clearTimeout(timer);
   }, [data.suggested_edits, notifyParent]);
 
   const toggleEdit = (index: number) => {
