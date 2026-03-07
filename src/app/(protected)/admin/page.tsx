@@ -266,9 +266,21 @@ export default function AdminPage() {
       }
 
       if (searchQuery.trim()) {
-        query = query.or(
-          `users.email.ilike.%${searchQuery.trim()}%,users.first_name.ilike.%${searchQuery.trim()}%,users.last_name.ilike.%${searchQuery.trim()}%`
-        );
+        const { data: matchingUsers } = await supabase
+          .from('users')
+          .select('id')
+          .or(`email.ilike.%${searchQuery.trim()}%,first_name.ilike.%${searchQuery.trim()}%,last_name.ilike.%${searchQuery.trim()}%`);
+
+        if (matchingUsers && matchingUsers.length > 0) {
+          const userIds = matchingUsers.map((u: { id: string }) => u.id);
+          query = query.in('user_id', userIds);
+        } else {
+          // No matching users found — return empty results
+          setLogs([]);
+          setTotalCount(0);
+          setLoading(false);
+          return;
+        }
       }
 
       query = query
