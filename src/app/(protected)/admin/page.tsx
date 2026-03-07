@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -8,7 +8,7 @@ import {
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   Search, Mail, Lock, Unlock, Trash2, TrendingUp,
   CreditCard, FileText, RefreshCw, Zap, Printer,
-  CheckCircle, BookOpen, ShieldCheck,
+  CheckCircle, BookOpen, ShieldCheck, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -116,17 +116,17 @@ const SUB_BADGE: Record<string, { bg: string; text: string }> = {
 type UserSortColumn = 'first_name' | 'last_name' | 'email' | 'position' | 'role' | 'created_at' | 'subscription_status' | 'narrative_count' | 'last_active';
 
 // ─── Date formatting helpers ─────────────────────────────────
-/** MM-DD-YYYY */
+/** MM/DD/YYYY */
 function formatDateShort(iso: string): string {
   const d = new Date(iso);
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   const yyyy = d.getFullYear();
-  return `${mm}-${dd}-${yyyy}`;
+  return `${mm}/${dd}/${yyyy}`;
 }
 
-/** MM-DD-YYYY HH:MM AM/PM */
-function formatDateTimeFull(iso: string): string {
+/** Returns { date: 'MM/DD/YYYY', time: 'H:MM AM/PM' } for stacked display */
+function formatDateTimeStacked(iso: string): { date: string; time: string } {
   const d = new Date(iso);
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
@@ -135,7 +135,7 @@ function formatDateTimeFull(iso: string): string {
   const minutes = String(d.getMinutes()).padStart(2, '0');
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12 || 12;
-  return `${mm}-${dd}-${yyyy} ${hours}:${minutes} ${ampm}`;
+  return { date: `${mm}/${dd}/${yyyy}`, time: `${hours}:${minutes} ${ampm}` };
 }
 
 /** Short readable format for activity log */
@@ -186,6 +186,17 @@ export default function AdminPage() {
   const [analyticsRange, setAnalyticsRange] = useState<'7' | '14' | '30' | 'all'>('30');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [secondsAgo, setSecondsAgo] = useState(0);
+
+  // Title spotlight state
+  const titleRef = useRef<HTMLDivElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isHoveringTitle, setIsHoveringTitle] = useState(false);
+
+  const handleTitleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!titleRef.current) return;
+    const rect = titleRef.current.getBoundingClientRect();
+    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }, []);
 
   // Redirect non-admin users
   useEffect(() => {
@@ -557,16 +568,57 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="max-w-[1400px] mx-auto px-6 py-6">
+    <div className="max-w-[90vw] mx-auto px-6 py-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Header — centered */}
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <Shield size={32} className="text-[var(--accent-primary)]" />
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">Admin Dashboard</h1>
+        {/* Header — OWNER DASHBOARD with premium styling */}
+        <div className="flex items-center justify-center mb-8">
+          <div
+            ref={titleRef}
+            className="relative overflow-hidden rounded-[16px] px-10 py-5 cursor-default select-none"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid var(--accent-20)',
+            }}
+            onMouseMove={handleTitleMouseMove}
+            onMouseEnter={() => setIsHoveringTitle(true)}
+            onMouseLeave={() => setIsHoveringTitle(false)}
+          >
+            {/* Spotlight overlay */}
+            <div
+              className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+              style={{
+                opacity: isHoveringTitle ? 1 : 0,
+                background: `radial-gradient(circle 150px at ${mousePos.x}px ${mousePos.y}px, rgba(255,255,255,0.08), transparent)`,
+                borderRadius: 'inherit',
+              }}
+            />
+            {/* Title content */}
+            <div className="relative z-10 flex items-center justify-center gap-4">
+              <Shield
+                size={44}
+                style={{
+                  color: 'var(--accent-bright)',
+                  filter: 'drop-shadow(0 0 10px var(--accent-primary)) drop-shadow(0 0 20px var(--accent-primary))',
+                }}
+              />
+              <h1
+                className="text-5xl font-bold uppercase tracking-widest"
+                style={{
+                  color: 'transparent',
+                  WebkitTextStroke: '2px var(--accent-bright)',
+                  textShadow: '0 0 10px var(--accent-primary), 0 0 20px var(--accent-primary), 0 0 40px var(--accent-primary), 0 0 80px var(--accent-primary)',
+                }}
+              >
+                OWNER DASHBOARD
+              </h1>
+            </div>
+          </div>
         </div>
 
         {/* Tab Navigation — centered, large styled buttons */}
@@ -876,8 +928,8 @@ export default function AdminPage() {
            ═══════════════════════════════════════════════════════════ */}
         {activeTab === 'users' && (
           <LiquidCard size="standard" className="!rounded-[16px]">
-            <div className="flex flex-col sm:flex-row gap-3 mb-5">
-              <div className="relative flex-1">
+            <div className="flex flex-col sm:flex-row gap-3 mb-5 items-center">
+              <div className="relative w-full sm:w-[35%]">
                 <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                 <input
                   type="text"
@@ -887,10 +939,39 @@ export default function AdminPage() {
                   className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
                 />
               </div>
-              <Button variant="ghost" size="small" onClick={fetchUsers} disabled={usersLoading}>
-                <RefreshCw size={16} className={usersLoading ? 'animate-spin' : ''} />
-                Refresh
-              </Button>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">Sort by:</span>
+                <select
+                  value={userSortCol}
+                  onChange={(e) => {
+                    setUserSortCol(e.target.value as UserSortColumn);
+                    setUserSortAsc(e.target.value === 'first_name' || e.target.value === 'last_name' || e.target.value === 'email');
+                  }}
+                  className="px-3 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] text-sm cursor-pointer focus:outline-none focus:border-[var(--accent-hover)] appearance-none transition-all"
+                >
+                  <option value="first_name">First Name</option>
+                  <option value="last_name">Last Name</option>
+                  <option value="email">Email</option>
+                  <option value="subscription_status">Subscription</option>
+                  <option value="narrative_count">Narratives</option>
+                  <option value="created_at">Sign Up Date</option>
+                  <option value="last_active">Last Active</option>
+                </select>
+                <button
+                  onClick={() => setUserSortAsc(!userSortAsc)}
+                  className="flex items-center gap-1.5 px-3 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-secondary)] text-sm hover:border-[var(--accent-hover)] transition-all cursor-pointer whitespace-nowrap"
+                  title={userSortAsc ? 'Ascending' : 'Descending'}
+                >
+                  {userSortAsc ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                  {userSortAsc ? 'A→Z' : 'Z→A'}
+                </button>
+              </div>
+              <div className="ml-auto">
+                <Button variant="ghost" size="small" onClick={fetchUsers} disabled={usersLoading}>
+                  <RefreshCw size={16} className={usersLoading ? 'animate-spin' : ''} />
+                  Refresh
+                </Button>
+              </div>
             </div>
 
             <p className="text-sm text-[var(--text-muted)] mb-3">
@@ -908,7 +989,7 @@ export default function AdminPage() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-[var(--text-muted)] text-sm uppercase tracking-wider border-b border-[var(--accent-15)]">
+                    <tr className="text-center text-[var(--text-muted)] text-sm uppercase tracking-wider border-b border-[var(--accent-15)]">
                       {([
                         ['first_name', 'First Name'],
                         ['last_name', 'Last Name'],
@@ -922,10 +1003,10 @@ export default function AdminPage() {
                       ] as [UserSortColumn, string][]).map(([col, label]) => (
                         <th
                           key={col}
-                          className="pb-3 pr-3 cursor-pointer hover:text-[var(--text-secondary)] transition-colors select-none whitespace-nowrap"
+                          className="pb-3 pr-3 text-center cursor-pointer hover:text-[var(--text-secondary)] transition-colors select-none whitespace-nowrap"
                           onClick={() => toggleUserSort(col)}
                         >
-                          <span className="inline-flex items-center gap-1">
+                          <span className="inline-flex items-center justify-center gap-1">
                             {label}
                             {userSortCol === col && (
                               userSortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />
@@ -974,8 +1055,16 @@ export default function AdminPage() {
                             <td className="py-3 pr-3 text-[var(--text-secondary)] whitespace-nowrap">
                               {formatDateShort(user.created_at)}
                             </td>
-                            <td className="py-3 pr-3 text-[var(--text-muted)] whitespace-nowrap">
-                              {user.last_active ? formatDateTimeFull(user.last_active) : '—'}
+                            <td className="py-3 pr-3 whitespace-nowrap">
+                              {user.last_active ? (() => {
+                                const { date, time } = formatDateTimeStacked(user.last_active);
+                                return (
+                                  <div className="flex flex-col">
+                                    <span className="text-[var(--text-secondary)]">{date}</span>
+                                    <span className="text-[var(--text-muted)] text-xs">{time}</span>
+                                  </div>
+                                );
+                              })() : '—'}
                             </td>
                             <td className="py-3" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center justify-center gap-2">

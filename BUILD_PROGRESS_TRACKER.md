@@ -33,6 +33,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Hotfix 19A:** COMPLETE — Fix delete account API: removed stray "you" prefix from SUPABASE_SERVICE_ROLE_KEY in .env.local, hardened service client with trim() and auth options, added per-step error logging
 **Stage 4 Sprint 6:** COMPLETE — Admin dashboard core rebuild: Overview tab with 8 metric cards, expanded analytics API (generations/exports/proofreads/customizations/templates/subscriptionBreakdown/activityByDay), top 10 users, activity logging audit verified
 **Post-Sprint 6 UI/UX Fixes:** COMPLETE — Admin dashboard UI overhaul: wider layout (1400px), larger text sizes, animated button tabs, user table improvements (split name, role column, date formats), protected user badge, larger action icons
+**Post-Sprint 6 UI/UX Fixes Round 2:** COMPLETE — Owner Dashboard UI round 2: stacked dates, centered headers, 90vw layout, sorting dropdown, premium title styling with neon glow and spotlight animation
 **Next Task:** Stage 4, Sprint 7 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
@@ -2496,6 +2497,18 @@ This file is a living document that Claude Code reads at the start of every sess
   - Task 4: Centered title and animated tab buttons — dashboard title and shield icon centered, tabs redesigned as large framer-motion animated buttons with whileHover/whileTap scale effects, active state uses accent-primary background with glow shadow, generous px-6 py-3 padding.
   - Task 5: User management table improvements — split single Name column into separate First Name and Last Name columns, added Role column, changed date formats to MM-DD-YYYY (Sign Up) and MM-DD-YYYY HH:MM AM/PM (Last Activity), updated sort column types and expanded row colSpan to 10.
   - Task 6: Larger action icons — increased icon sizes from 16 to 20, enlarged clickable area from p-1.5 to p-2.5 with rounded-lg, center-aligned Actions column header and button container.
+
+---
+
+## SESSION S4-SPRINT-6-UIFIX-R2 — Owner Dashboard UI Fixes Round 2 — COMPLETE
+- **Scope:** 5 UI/UX improvement tasks
+- **Completed:** 2026-03-06
+- **Notes:** Second round of admin/owner dashboard visual and usability improvements.
+  - Task 1: Last Activity column — stacked date (MM/DD/YYYY) and time (HH:MM AM/PM) vertically with time in smaller muted text. Also changed date format from dashes to slashes throughout.
+  - Task 2: Center-aligned all column header titles — changed thead tr from text-left to text-center, added text-center and justify-center to each th element in the User Management table.
+  - Task 3: Wider layout — container changed from max-w-[1400px] to max-w-[90vw] for better use of screen real estate on all screen sizes.
+  - Task 4: Sorting controls — reduced search bar width to 35%, added "Sort by" dropdown (First Name, Last Name, Email, Subscription, Narratives, Sign Up Date, Last Active) and ascending/descending toggle button with ArrowUp/ArrowDown icons next to the search bar. Column headers remain clickable for sort as well.
+  - Task 5: Renamed "Admin Dashboard" to "OWNER DASHBOARD" with premium styling — text-5xl outlined text with neon glow (text-shadow using accent-primary), liquid glass background (rgba backdrop-blur with accent border, rounded-[16px]), and spotlight mouse hover animation (radial-gradient that follows cursor position via onMouseMove/useState). Shield icon also has accent glow via drop-shadow filter.
 
 ---
 
