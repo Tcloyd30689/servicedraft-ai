@@ -35,7 +35,8 @@ This file is a living document that Claude Code reads at the start of every sess
 **Post-Sprint 6 UI/UX Fixes:** COMPLETE — Admin dashboard UI overhaul: wider layout (1400px), larger text sizes, animated button tabs, user table improvements (split name, role column, date formats), protected user badge, larger action icons
 **Post-Sprint 6 UI/UX Fixes Round 2:** COMPLETE — Owner Dashboard UI round 2: stacked dates, centered headers, 90vw layout, sorting dropdown, premium title styling with neon glow and spotlight animation
 **Stage 4 Sprint 7:** COMPLETE — Admin analytics with recharts charts (LineChart, BarChart, PieChart, AreaChart), time range selector (7d/30d/90d/all), system health indicators (DB row counts, last activity, app version)
-**Next Task:** Stage 4, Sprint 8 (TBD)
+**Stage 4 Sprint 8:** COMPLETE — Admin management tools, export, polish, and dashboard refinement
+**Next Task:** Stage 4, Sprint 9 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
@@ -2522,6 +2523,17 @@ This file is a living document that Claude Code reads at the start of every sess
   - Task 3: Updated analytics API (`src/app/api/admin/analytics/route.ts`) — accepts `range` query param (`7`, `30`, `90`, `all`). Added `usageOverTime` (per-day per-action-type breakdown for stacked AreaChart), `actionTypes` (list of all action types), and `systemHealth` (DB row counts, last activity timestamp, app version). Activity-by-day chart now uses range-based query instead of fixed 30 days.
   - Task 4: Added System Health indicators to Overview tab — DB row counts card grid (users, narratives, activity_log, saved_repairs), last activity timestamp, app version "v1.0.0-beta". Also replaced Overview tab's CSS bar chart with recharts LineChart. Added Database, Clock, Server icons from lucide-react.
   - **Package added:** `recharts` (npm install recharts)
+
+---
+
+## Stage 4 Sprint 8 — Admin Management Tools, Export, Polish, and Dashboard Refinement — COMPLETE
+- **Scope:** 4 tasks
+- **Completed:** 2026-03-06
+- **Notes:** Added Settings tab, CSV export, user management polish, and overall dashboard polish.
+  - Task 1: **Settings Tab (5th tab)** — Added new "Settings" tab with three sections: (1) Access Code Management — displays current ACCESS_CODE from env, copy-to-clipboard button, "Generate New Code" button that creates SDRAFT-XXXX-XXXX format codes, instruction callout to update Vercel env var; (2) Quick Stats Summary — 8-stat grid showing all key metrics at a glance; (3) System Information — version, environment (dev/prod auto-detect), database (Supabase PostgreSQL + total row count), deployment platform. Added `get_access_code` action to admin API route.
+  - Task 2: **Export Report CSV** — Added "Export Report" button to Analytics tab header. Generates comprehensive CSV with sections: key metrics, subscription breakdown, story type breakdown, activity by type, daily activity data, top users leaderboard. Downloads as `servicedraft-analytics-YYYY-MM-DD.csv`.
+  - Task 3: **User Management Polish** — Added role column with color-coded badge (Admin = gold crown icon, User = gray). Added admin promotion/demotion with confirmation modal (Crown icon, warns about dashboard access). Added `promote_to_admin` and `demote_to_user` actions to admin API. Added user count summary cards at top (Total Users, Active, Inactive) with UserCheck/UserX icons.
+  - Task 4: **Overall Polish** — Wrapped all tab content in `AnimatePresence mode="wait"` with slide/fade transitions (tabVariants: initial/animate/exit). Added error states with retry button (AlertTriangle icon + retry button) for analytics. Made responsive: smaller padding/text on mobile, hidden columns (email/position on md, last_active on lg), tab labels hidden on mobile (icons only), responsive grid gaps. Consistent spacing throughout with sm: breakpoint responsive padding.
 
 ---
 

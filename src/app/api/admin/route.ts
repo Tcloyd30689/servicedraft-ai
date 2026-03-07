@@ -183,6 +183,47 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true });
       }
 
+      case 'get_access_code': {
+        const currentCode = process.env.ACCESS_CODE || 'SDRAFT-BETA-2026';
+        return NextResponse.json({ success: true, data: { code: currentCode } });
+      }
+
+      case 'promote_to_admin': {
+        const { userId: promoteUserId } = params;
+        if (!promoteUserId) {
+          return NextResponse.json({ success: false, error: 'userId is required' }, { status: 400 });
+        }
+
+        const { error: promoteError } = await svc
+          .from('users')
+          .update({ role: 'admin' })
+          .eq('id', promoteUserId);
+
+        if (promoteError) {
+          return NextResponse.json({ success: false, error: promoteError.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true });
+      }
+
+      case 'demote_to_user': {
+        const { userId: demoteUserId } = params;
+        if (!demoteUserId) {
+          return NextResponse.json({ success: false, error: 'userId is required' }, { status: 400 });
+        }
+
+        const { error: demoteError } = await svc
+          .from('users')
+          .update({ role: 'user' })
+          .eq('id', demoteUserId);
+
+        if (demoteError) {
+          return NextResponse.json({ success: false, error: demoteError.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true });
+      }
+
       case 'change_subscription': {
         const { userId, status } = params;
         if (!userId || !status) {
