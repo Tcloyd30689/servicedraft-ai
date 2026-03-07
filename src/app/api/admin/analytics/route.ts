@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const range = searchParams.get('range') || '30';
-    const rangeDays = parseInt(range, 10) || 30;
+    const rangeDays = range === 'all' ? 3650 : (parseInt(range, 10) || 30);
 
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -55,12 +55,14 @@ export async function GET(request: NextRequest) {
       narrativesWeekRes,
       narrativesTodayRes,
       allActivityRes,
-      activityByDayRes,
+      rangeActivityRes,
       dailyNarrativesRes,
       topUsersRes,
       storyTypeRes,
       subscriptionRes,
       savedTemplatesRes,
+      totalActivityRes,
+      lastActivityRes,
     ] = await Promise.all([
       // 1. Total registered users
       svc.from('users').select('id', { count: 'exact', head: true }),
@@ -88,12 +90,12 @@ export async function GET(request: NextRequest) {
       svc.from('narratives').select('id', { count: 'exact', head: true })
         .gte('created_at', startOfToday),
 
-      // 8. All activity (for type counts and totals)
+      // 8. All activity (for type counts and totals — all-time)
       svc.from('activity_log').select('action_type'),
 
-      // 9. Activity by day (last 30 days for the chart)
-      svc.from('activity_log').select('created_at')
-        .gte('created_at', thirtyDaysAgo),
+      // 9. Activity within range (for charts — includes action_type + created_at)
+      svc.from('activity_log').select('action_type, created_at')
+        .gte('created_at', rangeStart),
 
       // 10. Daily narrative counts for chart (based on range)
       svc.from('narratives').select('created_at')
@@ -110,6 +112,14 @@ export async function GET(request: NextRequest) {
 
       // 14. Total saved templates
       svc.from('saved_repairs').select('id', { count: 'exact', head: true }),
+
+      // 15. Total activity log rows (system health)
+      svc.from('activity_log').select('id', { count: 'exact', head: true }),
+
+      // 16. Last activity timestamp (system health)
+      svc.from('activity_log').select('created_at')
+        .order('created_at', { ascending: false })
+        .limit(1),
     ]);
 
     // 8. Aggregate activity by type (all-time) + compute specific totals
@@ -135,24 +145,45 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // 9. Aggregate activity by day (last 30 days)
+    // 9. Aggregate activity by day (range-based) — total + by action type
+    const displayDays = Math.min(rangeDays, 365); // cap display at 365 days for all-time
     const activityDailyCounts: Record<string, number> = {};
-    for (let i = 29; i >= 0; i--) {
+    const activityByTypeByDay: Record<string, Record<string, number>> = {};
+
+    for (let i = displayDays - 1; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const key = d.toISOString().split('T')[0];
       activityDailyCounts[key] = 0;
+      activityByTypeByDay[key] = {};
     }
-    (activityByDayRes.data || []).forEach((row: { created_at: string }) => {
+
+    (rangeActivityRes.data || []).forEach((row: { action_type: string; created_at: string }) => {
       const key = row.created_at.split('T')[0];
       if (activityDailyCounts[key] !== undefined) {
         activityDailyCounts[key]++;
+        activityByTypeByDay[key][row.action_type] = (activityByTypeByDay[key][row.action_type] || 0) + 1;
       }
     });
+
     const activityByDay = Object.entries(activityDailyCounts).map(([date, count]) => ({ date, count }));
+
+    // Build stacked area data — each row has date + a key per action_type
+    const allActionTypes = new Set<string>();
+    Object.values(activityByTypeByDay).forEach((dayData) => {
+      Object.keys(dayData).forEach((t) => allActionTypes.add(t));
+    });
+
+    const usageOverTime = Object.entries(activityByTypeByDay).map(([date, typeCounts]) => {
+      const row: Record<string, string | number> = { date };
+      allActionTypes.forEach((t) => {
+        row[t] = typeCounts[t] || 0;
+      });
+      return row;
+    });
 
     // 10. Aggregate daily narratives (range-based)
     const dailyCounts: Record<string, number> = {};
-    for (let i = rangeDays - 1; i >= 0; i--) {
+    for (let i = displayDays - 1; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const key = d.toISOString().split('T')[0];
       dailyCounts[key] = 0;
@@ -218,6 +249,20 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // System health data
+    const lastActivityTimestamp = lastActivityRes.data?.[0]?.created_at || null;
+
+    const systemHealth = {
+      dbRowCounts: {
+        users: totalUsersRes.count ?? 0,
+        narratives: totalNarrativesRes.count ?? 0,
+        activity_log: totalActivityRes.count ?? 0,
+        saved_repairs: savedTemplatesRes.count ?? 0,
+      },
+      lastActivityTimestamp,
+      appVersion: 'v1.0.0-beta',
+    };
+
     return NextResponse.json({
       success: true,
       data: {
@@ -239,6 +284,9 @@ export async function GET(request: NextRequest) {
         topUsers,
         storyTypes,
         subscriptionBreakdown,
+        usageOverTime,
+        actionTypes: Array.from(allActionTypes),
+        systemHealth,
       },
     });
   } catch (err) {

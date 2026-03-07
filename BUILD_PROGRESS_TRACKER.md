@@ -34,7 +34,8 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 4 Sprint 6:** COMPLETE — Admin dashboard core rebuild: Overview tab with 8 metric cards, expanded analytics API (generations/exports/proofreads/customizations/templates/subscriptionBreakdown/activityByDay), top 10 users, activity logging audit verified
 **Post-Sprint 6 UI/UX Fixes:** COMPLETE — Admin dashboard UI overhaul: wider layout (1400px), larger text sizes, animated button tabs, user table improvements (split name, role column, date formats), protected user badge, larger action icons
 **Post-Sprint 6 UI/UX Fixes Round 2:** COMPLETE — Owner Dashboard UI round 2: stacked dates, centered headers, 90vw layout, sorting dropdown, premium title styling with neon glow and spotlight animation
-**Next Task:** Stage 4, Sprint 7 (TBD)
+**Stage 4 Sprint 7:** COMPLETE — Admin analytics with recharts charts (LineChart, BarChart, PieChart, AreaChart), time range selector (7d/30d/90d/all), system health indicators (DB row counts, last activity, app version)
+**Next Task:** Stage 4, Sprint 8 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
@@ -2509,6 +2510,18 @@ This file is a living document that Claude Code reads at the start of every sess
   - Task 3: Wider layout — container changed from max-w-[1400px] to max-w-[90vw] for better use of screen real estate on all screen sizes.
   - Task 4: Sorting controls — reduced search bar width to 35%, added "Sort by" dropdown (First Name, Last Name, Email, Subscription, Narratives, Sign Up Date, Last Active) and ascending/descending toggle button with ArrowUp/ArrowDown icons next to the search bar. Column headers remain clickable for sort as well.
   - Task 5: Renamed "Admin Dashboard" to "OWNER DASHBOARD" with premium styling — text-5xl outlined text with neon glow (text-shadow using accent-primary), liquid glass background (rgba backdrop-blur with accent border, rounded-[16px]), and spotlight mouse hover animation (radial-gradient that follows cursor position via onMouseMove/useState). Shield icon also has accent glow via drop-shadow filter.
+
+---
+
+## Stage 4 Sprint 7 — Admin Analytics with Charts, Time Ranges, and System Health — COMPLETE
+- **Scope:** 4 tasks
+- **Completed:** 2026-03-06
+- **Notes:** Upgraded admin analytics tab from CSS bar charts to recharts library, added time range filtering, and system health indicators.
+  - Task 1: Built Analytics tab with recharts — Activity Trend (LineChart, accent color), Feature Usage (horizontal BarChart by action_type, color-coded using ACTION_BORDER_COLORS), Story Type Distribution (PieChart, diagnostic vs repair), Subscription Breakdown (PieChart by status), Top Users Leaderboard (table, top 10), Usage Over Time (stacked AreaChart by action type). All charts use themed tooltips with dark background styling.
+  - Task 2: Added time range selector — "Last 7 Days", "Last 30 Days", "Last 90 Days", "All Time" filter buttons. Default 30d. Re-fetches analytics data on change. Updated analyticsRange state type from `'7'|'14'|'30'|'all'` to `'7'|'30'|'90'|'all'`.
+  - Task 3: Updated analytics API (`src/app/api/admin/analytics/route.ts`) — accepts `range` query param (`7`, `30`, `90`, `all`). Added `usageOverTime` (per-day per-action-type breakdown for stacked AreaChart), `actionTypes` (list of all action types), and `systemHealth` (DB row counts, last activity timestamp, app version). Activity-by-day chart now uses range-based query instead of fixed 30 days.
+  - Task 4: Added System Health indicators to Overview tab — DB row counts card grid (users, narratives, activity_log, saved_repairs), last activity timestamp, app version "v1.0.0-beta". Also replaced Overview tab's CSS bar chart with recharts LineChart. Added Database, Clock, Server icons from lucide-react.
+  - **Package added:** `recharts` (npm install recharts)
 
 ---
 

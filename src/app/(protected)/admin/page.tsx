@@ -9,7 +9,13 @@ import {
   Search, Mail, Lock, Unlock, Trash2, TrendingUp,
   CreditCard, FileText, RefreshCw, Zap, Printer,
   CheckCircle, BookOpen, ShieldCheck, ArrowUp, ArrowDown,
+  Database, Clock, Server,
 } from 'lucide-react';
+import {
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend,
+} from 'recharts';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { createClient } from '@/lib/supabase/client';
@@ -98,6 +104,13 @@ interface AnalyticsData {
   totalProofreads: number;
   totalCustomizations: number;
   totalSavedTemplates: number;
+  usageOverTime: Array<Record<string, string | number>>;
+  actionTypes: string[];
+  systemHealth: {
+    dbRowCounts: { users: number; narratives: number; activity_log: number; saved_repairs: number };
+    lastActivityTimestamp: string | null;
+    appVersion: string;
+  };
   activityByDay: Array<{ date: string; count: number }>;
   activityByType: Record<string, number>;
   dailyNarratives: Array<{ date: string; count: number }>;
@@ -183,7 +196,7 @@ export default function AdminPage() {
   // Analytics / Overview state
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [analyticsRange, setAnalyticsRange] = useState<'7' | '14' | '30' | 'all'>('30');
+  const [analyticsRange, setAnalyticsRange] = useState<'7' | '30' | '90' | 'all'>('30');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [secondsAgo, setSecondsAgo] = useState(0);
 
@@ -498,7 +511,7 @@ export default function AdminPage() {
   const fetchAnalytics = useCallback(async () => {
     setAnalyticsLoading(true);
     try {
-      const rangeParam = analyticsRange === 'all' ? '3650' : analyticsRange;
+      const rangeParam = analyticsRange === 'all' ? 'all' : analyticsRange;
       const res = await fetch(`/api/admin/analytics?range=${rangeParam}`);
       const json = await res.json();
       if (json.success) {
@@ -516,10 +529,11 @@ export default function AdminPage() {
   }, [analyticsRange]);
 
   useEffect(() => {
-    if ((activeTab === 'analytics' || activeTab === 'overview') && profile?.role === 'admin' && !analyticsData) {
+    if ((activeTab === 'analytics' || activeTab === 'overview') && profile?.role === 'admin') {
       fetchAnalytics();
     }
-  }, [activeTab, profile, analyticsData, fetchAnalytics]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, profile, analyticsRange]);
 
   useEffect(() => {
     if (activeTab !== 'analytics' && activeTab !== 'overview') return;
@@ -707,38 +721,94 @@ export default function AdminPage() {
                   </div>
                 </LiquidCard>
 
-                {/* Activity by Day (30 days) */}
+                {/* Activity by Day (30 days) — LineChart */}
                 <LiquidCard size="standard" className="!rounded-[16px]">
                   <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Activity Trend (Last 30 Days)</h3>
-                  {analyticsData.activityByDay.length > 0 ? (() => {
-                    const maxCount = Math.max(...analyticsData.activityByDay.map((d) => d.count), 1);
-                    return (
-                      <div className="flex items-end gap-[2px] h-[160px]">
-                        {analyticsData.activityByDay.map(({ date, count }) => {
-                          const pct = (count / maxCount) * 100;
-                          const d = new Date(date + 'T12:00:00');
-                          const dayLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                          return (
-                            <div key={date} className="flex-1 flex flex-col items-center justify-end h-full group relative">
-                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[var(--bg-elevated)] border border-[var(--accent-30)] text-[var(--text-primary)] text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                                {count} action{count !== 1 ? 's' : ''} &middot; {dayLabel}
-                              </div>
-                              <div
-                                className="w-full rounded-t-sm transition-all duration-300 min-h-[2px]"
-                                style={{
-                                  height: `${Math.max(pct, 1.5)}%`,
-                                  background: 'var(--accent-primary)',
-                                  opacity: count > 0 ? 1 : 0.25,
-                                }}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })() : (
+                  {analyticsData.activityByDay.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={analyticsData.activityByDay} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--accent-15)" />
+                        <XAxis
+                          dataKey="date"
+                          tickFormatter={(d: string) => {
+                            const dt = new Date(d + 'T12:00:00');
+                            return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                          }}
+                          stroke="var(--text-muted)"
+                          tick={{ fontSize: 10 }}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis stroke="var(--text-muted)" tick={{ fontSize: 10 }} allowDecimals={false} />
+                        <Tooltip
+                          contentStyle={{
+                            background: 'var(--bg-elevated)',
+                            border: '1px solid var(--accent-30)',
+                            borderRadius: '8px',
+                            color: 'var(--text-primary)',
+                            fontSize: 12,
+                          }}
+                          labelFormatter={(d) => {
+                            const dt = new Date(String(d) + 'T12:00:00');
+                            return dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="count"
+                          stroke="var(--accent-primary)"
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 4, fill: 'var(--accent-bright)' }}
+                          name="Actions"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
                     <p className="text-[var(--text-muted)] text-base text-center py-8">No activity data.</p>
                   )}
+                </LiquidCard>
+
+                {/* System Health Indicators */}
+                <LiquidCard size="standard" className="!rounded-[16px]">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Server size={20} style={{ color: 'var(--accent-bright)' }} />
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)]">System Health</h3>
+                  </div>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    {([
+                      { label: 'Users', count: analyticsData.systemHealth.dbRowCounts.users, icon: Users },
+                      { label: 'Narratives', count: analyticsData.systemHealth.dbRowCounts.narratives, icon: FileText },
+                      { label: 'Activity Logs', count: analyticsData.systemHealth.dbRowCounts.activity_log, icon: Activity },
+                      { label: 'Saved Repairs', count: analyticsData.systemHealth.dbRowCounts.saved_repairs, icon: BookOpen },
+                    ]).map(({ label, count, icon: Icon }) => (
+                      <div key={label} className="flex items-center gap-3 p-4 rounded-lg bg-[var(--accent-5)]">
+                        <Database size={18} style={{ color: 'var(--accent-hover)', opacity: 0.7 }} />
+                        <div>
+                          <p className="text-xl font-bold text-[var(--text-primary)]">{count.toLocaleString()}</p>
+                          <p className="text-sm text-[var(--text-muted)]">{label} rows</p>
+                        </div>
+                        <Icon size={16} className="ml-auto" style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-6 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Clock size={15} style={{ color: 'var(--text-muted)' }} />
+                      <span className="text-[var(--text-muted)]">Last Activity:</span>
+                      <span className="text-[var(--text-secondary)] font-medium">
+                        {analyticsData.systemHealth.lastActivityTimestamp
+                          ? formatDateReadable(analyticsData.systemHealth.lastActivityTimestamp)
+                          : 'None'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Server size={15} style={{ color: 'var(--text-muted)' }} />
+                      <span className="text-[var(--text-muted)]">App Version:</span>
+                      <span className="text-[var(--accent-bright)] font-mono font-medium">
+                        {analyticsData.systemHealth.appVersion}
+                      </span>
+                    </div>
+                  </div>
                 </LiquidCard>
               </>
             ) : null}
@@ -1258,6 +1328,7 @@ export default function AdminPage() {
            ═══════════════════════════════════════════════════════════ */}
         {activeTab === 'analytics' && (
           <div className="space-y-6">
+            {/* Header with time range selector */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <p className="text-sm text-[var(--text-muted)]">
                 {lastUpdated
@@ -1265,17 +1336,22 @@ export default function AdminPage() {
                   : 'Loading...'}
               </p>
               <div className="flex items-center gap-2">
-                {(['7', '14', '30', 'all'] as const).map((r) => (
+                {([
+                  { value: '7' as const, label: 'Last 7 Days' },
+                  { value: '30' as const, label: 'Last 30 Days' },
+                  { value: '90' as const, label: 'Last 90 Days' },
+                  { value: 'all' as const, label: 'All Time' },
+                ]).map(({ value, label }) => (
                   <button
-                    key={r}
-                    onClick={() => setAnalyticsRange(r)}
+                    key={value}
+                    onClick={() => setAnalyticsRange(value)}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                      analyticsRange === r
+                      analyticsRange === value
                         ? 'bg-[var(--accent-20)] text-[var(--accent-bright)] border border-[var(--accent-50)]'
                         : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--accent-10)] border border-transparent'
                     }`}
                   >
-                    {r === 'all' ? 'All Time' : `${r}d`}
+                    {label}
                   </button>
                 ))}
                 <button
@@ -1297,161 +1373,274 @@ export default function AdminPage() {
               </LiquidCard>
             ) : analyticsData ? (
               <>
-                {/* Stat Cards (2x3 grid) */}
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                  {([
-                    { label: 'Total Users', value: analyticsData.totalUsers, icon: Users, color: 'var(--accent-bright)' },
-                    { label: 'New This Week', value: analyticsData.newUsersWeek, icon: TrendingUp, color: '#16a34a' },
-                    { label: 'Active Subscriptions', value: analyticsData.activeSubscriptions, icon: CreditCard, color: '#3b82f6' },
-                    { label: 'Total Narratives', value: analyticsData.totalNarratives, icon: FileText, color: 'var(--accent-bright)' },
-                    { label: 'Narratives This Week', value: analyticsData.narrativesWeek, icon: BarChart3, color: '#f59e0b' },
-                    { label: 'Narratives Today', value: analyticsData.narrativesToday, icon: Activity, color: '#ef4444' },
-                  ] as const).map(({ label, value, icon: Icon, color }) => (
-                    <LiquidCard key={label} size="compact" className="!rounded-[16px] relative overflow-hidden">
-                      <div className="relative z-10">
-                        <p className="text-4xl font-bold" style={{ color }}>{value.toLocaleString()}</p>
-                        <p className="text-[var(--text-muted)] text-sm mt-1">{label}</p>
-                      </div>
-                      <Icon
-                        size={56}
-                        className="absolute top-3 right-3"
-                        style={{ color, opacity: 0.15 }}
-                      />
-                    </LiquidCard>
-                  ))}
-                </div>
-
-                {/* Narrative Generation Trend Chart */}
+                {/* Activity Trend — LineChart */}
                 <LiquidCard size="standard" className="!rounded-[16px]">
                   <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-                    Narrative Generation Trend ({analyticsRange === 'all' ? 'All Time' : `Last ${analyticsRange} Days`})
+                    Activity Trend ({analyticsRange === 'all' ? 'All Time' : `Last ${analyticsRange} Days`})
                   </h3>
-                  {analyticsData.dailyNarratives.length > 0 ? (() => {
-                    const maxCount = Math.max(...analyticsData.dailyNarratives.map((d) => d.count), 1);
-                    return (
-                      <div className="flex items-end gap-[3px] h-[180px]">
-                        {analyticsData.dailyNarratives.map(({ date, count }) => {
-                          const pct = (count / maxCount) * 100;
-                          const d = new Date(date + 'T12:00:00');
-                          const dayLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                          return (
-                            <div key={date} className="flex-1 flex flex-col items-center justify-end h-full group relative">
-                              <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-[var(--bg-elevated)] border border-[var(--accent-30)] text-[var(--text-primary)] text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                                {count} narrative{count !== 1 ? 's' : ''}
-                              </div>
-                              <div
-                                className="w-full rounded-t-sm transition-all duration-300 min-h-[2px]"
-                                style={{
-                                  height: `${Math.max(pct, 1.5)}%`,
-                                  background: 'var(--accent-primary)',
-                                  opacity: count > 0 ? 1 : 0.25,
-                                }}
-                              />
-                              <p className="text-[10px] text-[var(--text-muted)] mt-1.5 rotate-[-45deg] origin-top-left whitespace-nowrap">
-                                {dayLabel}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })() : (
-                    <p className="text-[var(--text-muted)] text-base text-center py-8">No data for this period.</p>
+                  {analyticsData.activityByDay.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <LineChart data={analyticsData.activityByDay} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--accent-15)" />
+                        <XAxis
+                          dataKey="date"
+                          tickFormatter={(d: string) => {
+                            const dt = new Date(d + 'T12:00:00');
+                            return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                          }}
+                          stroke="var(--text-muted)"
+                          tick={{ fontSize: 11 }}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} allowDecimals={false} />
+                        <Tooltip
+                          contentStyle={{
+                            background: 'var(--bg-elevated)',
+                            border: '1px solid var(--accent-30)',
+                            borderRadius: '8px',
+                            color: 'var(--text-primary)',
+                            fontSize: 13,
+                          }}
+                          labelFormatter={(d) => {
+                            const dt = new Date(String(d) + 'T12:00:00');
+                            return dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="count"
+                          stroke="var(--accent-primary)"
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 5, fill: 'var(--accent-bright)' }}
+                          name="Actions"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-[var(--text-muted)] text-base text-center py-8">No activity data for this period.</p>
                   )}
                 </LiquidCard>
 
-                {/* Two-Column: Story Type + Activity Type */}
+                {/* Two-Column: Feature Usage BarChart + Story Type PieChart */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Feature Usage — horizontal BarChart */}
                   <LiquidCard size="standard" className="!rounded-[16px]">
-                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Story Type Breakdown</h3>
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Feature Usage (All Time)</h3>
+                    {Object.keys(analyticsData.activityByType).length === 0 ? (
+                      <p className="text-[var(--text-muted)] text-base text-center py-8">No activity recorded.</p>
+                    ) : (() => {
+                      const barData = Object.entries(analyticsData.activityByType)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([type, count]) => ({
+                          name: type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+                          count,
+                          fill: ACTION_BORDER_COLORS[type] || 'var(--accent-30)',
+                        }));
+                      return (
+                        <ResponsiveContainer width="100%" height={Math.max(barData.length * 40, 200)}>
+                          <BarChart data={barData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--accent-15)" horizontal={false} />
+                            <XAxis type="number" stroke="var(--text-muted)" tick={{ fontSize: 11 }} allowDecimals={false} />
+                            <YAxis
+                              dataKey="name"
+                              type="category"
+                              width={110}
+                              stroke="var(--text-muted)"
+                              tick={{ fontSize: 12 }}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                background: 'var(--bg-elevated)',
+                                border: '1px solid var(--accent-30)',
+                                borderRadius: '8px',
+                                color: 'var(--text-primary)',
+                                fontSize: 13,
+                              }}
+                            />
+                            <Bar dataKey="count" name="Count" radius={[0, 4, 4, 0]}>
+                              {barData.map((entry, idx) => (
+                                <Cell key={idx} fill={entry.fill} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      );
+                    })()}
+                  </LiquidCard>
+
+                  {/* Story Type Distribution — PieChart */}
+                  <LiquidCard size="standard" className="!rounded-[16px]">
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Story Type Distribution</h3>
                     {(() => {
                       const diag = analyticsData.storyTypes.diagnostic_only || 0;
                       const repair = analyticsData.storyTypes.repair_complete || 0;
                       const total = diag + repair;
-                      const diagPct = total > 0 ? Math.round((diag / total) * 100) : 0;
-                      const repairPct = total > 0 ? 100 - diagPct : 0;
-                      return total === 0 ? (
-                        <p className="text-[var(--text-muted)] text-base text-center py-8">No narratives generated yet.</p>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="h-8 rounded-full overflow-hidden flex">
-                            <div className="h-full transition-all duration-500" style={{ width: `${diagPct}%`, background: 'var(--accent-primary)' }} />
-                            <div className="h-full transition-all duration-500" style={{ width: `${repairPct}%`, background: '#16a34a' }} />
-                          </div>
-                          <div className="flex justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full" style={{ background: 'var(--accent-primary)' }} />
-                              <span className="text-[var(--text-secondary)]">Diagnostic Only</span>
-                              <span className="text-[var(--text-muted)] font-mono">{diag} ({diagPct}%)</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full" style={{ background: '#16a34a' }} />
-                              <span className="text-[var(--text-secondary)]">Repair Complete</span>
-                              <span className="text-[var(--text-muted)] font-mono">{repair} ({repairPct}%)</span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </LiquidCard>
-
-                  <LiquidCard size="standard" className="!rounded-[16px]">
-                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Activity by Type (All Time)</h3>
-                    {Object.keys(analyticsData.activityByType).length === 0 ? (
-                      <p className="text-[var(--text-muted)] text-base text-center py-8">No activity recorded.</p>
-                    ) : (() => {
-                      const entries = Object.entries(analyticsData.activityByType).sort(([, a], [, b]) => b - a);
-                      const maxVal = Math.max(...entries.map(([, v]) => v), 1);
+                      if (total === 0) {
+                        return <p className="text-[var(--text-muted)] text-base text-center py-8">No narratives generated yet.</p>;
+                      }
+                      const pieData = [
+                        { name: 'Diagnostic Only', value: diag, fill: 'var(--accent-primary)' },
+                        { name: 'Repair Complete', value: repair, fill: '#16a34a' },
+                      ];
                       return (
-                        <div className="space-y-3">
-                          {entries.map(([type, count]) => {
-                            const pct = (count / maxVal) * 100;
-                            const color = ACTION_BORDER_COLORS[type] || 'var(--accent-30)';
-                            return (
-                              <div key={type} className="space-y-1">
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-[var(--text-secondary)] capitalize">
-                                    {type.replace(/_/g, ' ')}
-                                  </span>
-                                  <span className="text-[var(--text-muted)] font-mono">{count}</span>
-                                </div>
-                                <div className="h-2.5 rounded-full bg-[var(--accent-10)] overflow-hidden">
-                                  <div
-                                    className="h-full rounded-full transition-all duration-500"
-                                    style={{ width: `${pct}%`, background: color }}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                        <ResponsiveContainer width="100%" height={260}>
+                          <PieChart>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={100}
+                              paddingAngle={3}
+                              dataKey="value"
+                              label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                              labelLine={false}
+                            >
+                              {pieData.map((entry, idx) => (
+                                <Cell key={idx} fill={entry.fill} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{
+                                background: 'var(--bg-elevated)',
+                                border: '1px solid var(--accent-30)',
+                                borderRadius: '8px',
+                                color: 'var(--text-primary)',
+                                fontSize: 13,
+                              }}
+                            />
+                            <Legend
+                              wrapperStyle={{ color: 'var(--text-secondary)', fontSize: 13 }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
                       );
                     })()}
                   </LiquidCard>
                 </div>
 
-                {/* Subscription Breakdown */}
-                <LiquidCard size="standard" className="!rounded-[16px]">
-                  <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Subscription Distribution</h3>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {Object.entries(analyticsData.subscriptionBreakdown).map(([status, count]) => {
-                      const badge = SUB_BADGE[status] || SUB_BADGE.trial;
+                {/* Two-Column: Subscription PieChart + Usage Over Time AreaChart */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Subscription Breakdown — PieChart */}
+                  <LiquidCard size="standard" className="!rounded-[16px]">
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Subscription Breakdown</h3>
+                    {(() => {
+                      const subColors: Record<string, string> = {
+                        active: '#16a34a',
+                        trial: '#eab308',
+                        expired: '#ef4444',
+                        bypass: '#3b82f6',
+                      };
+                      const subData = Object.entries(analyticsData.subscriptionBreakdown)
+                        .filter(([, count]) => count > 0)
+                        .map(([status, count]) => ({
+                          name: status.charAt(0).toUpperCase() + status.slice(1),
+                          value: count,
+                          fill: subColors[status] || 'var(--accent-30)',
+                        }));
+                      if (subData.length === 0) {
+                        return <p className="text-[var(--text-muted)] text-base text-center py-8">No subscription data.</p>;
+                      }
                       return (
-                        <div key={status} className="flex items-center gap-3 p-4 rounded-lg bg-[var(--accent-5)]">
-                          <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: badge.text }} />
-                          <div>
-                            <p className="text-xl font-bold" style={{ color: badge.text }}>{count}</p>
-                            <p className="text-sm text-[var(--text-muted)] capitalize">{status}</p>
-                          </div>
-                        </div>
+                        <ResponsiveContainer width="100%" height={260}>
+                          <PieChart>
+                            <Pie
+                              data={subData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={100}
+                              paddingAngle={3}
+                              dataKey="value"
+                              label={({ name, value }) => `${name}: ${value}`}
+                              labelLine={false}
+                            >
+                              {subData.map((entry, idx) => (
+                                <Cell key={idx} fill={entry.fill} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{
+                                background: 'var(--bg-elevated)',
+                                border: '1px solid var(--accent-30)',
+                                borderRadius: '8px',
+                                color: 'var(--text-primary)',
+                                fontSize: 13,
+                              }}
+                            />
+                            <Legend
+                              wrapperStyle={{ color: 'var(--text-secondary)', fontSize: 13 }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
                       );
-                    })}
-                  </div>
-                </LiquidCard>
+                    })()}
+                  </LiquidCard>
 
-                {/* Top 10 Users Table */}
+                  {/* Usage Over Time — stacked AreaChart */}
+                  <LiquidCard size="standard" className="!rounded-[16px]">
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+                      Usage Over Time ({analyticsRange === 'all' ? 'All Time' : `Last ${analyticsRange} Days`})
+                    </h3>
+                    {analyticsData.usageOverTime && analyticsData.usageOverTime.length > 0 && analyticsData.actionTypes.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={260}>
+                        <AreaChart data={analyticsData.usageOverTime} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--accent-15)" />
+                          <XAxis
+                            dataKey="date"
+                            tickFormatter={(d: string) => {
+                              const dt = new Date(d + 'T12:00:00');
+                              return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            }}
+                            stroke="var(--text-muted)"
+                            tick={{ fontSize: 11 }}
+                            interval="preserveStartEnd"
+                          />
+                          <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} allowDecimals={false} />
+                          <Tooltip
+                            contentStyle={{
+                              background: 'var(--bg-elevated)',
+                              border: '1px solid var(--accent-30)',
+                              borderRadius: '8px',
+                              color: 'var(--text-primary)',
+                              fontSize: 13,
+                            }}
+                            labelFormatter={(d) => {
+                              const dt = new Date(d + 'T12:00:00');
+                              return dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                            }}
+                          />
+                          {analyticsData.actionTypes.map((actionType, idx) => {
+                            const stackColors = [
+                              'var(--accent-primary)', '#3b82f6', '#16a34a', '#f59e0b',
+                              '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899',
+                              '#6b7280', '#d946ef', '#14b8a6',
+                            ];
+                            return (
+                              <Area
+                                key={actionType}
+                                type="monotone"
+                                dataKey={actionType}
+                                stackId="usage"
+                                fill={ACTION_BORDER_COLORS[actionType] || stackColors[idx % stackColors.length]}
+                                stroke={ACTION_BORDER_COLORS[actionType] || stackColors[idx % stackColors.length]}
+                                fillOpacity={0.5}
+                                name={actionType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                              />
+                            );
+                          })}
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <p className="text-[var(--text-muted)] text-base text-center py-8">No usage data for this period.</p>
+                    )}
+                  </LiquidCard>
+                </div>
+
+                {/* Top 10 Users Leaderboard */}
                 <LiquidCard size="standard" className="!rounded-[16px]">
-                  <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Top Users by Narratives Generated</h3>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Top Users Leaderboard</h3>
                   {analyticsData.topUsers.length === 0 ? (
                     <p className="text-[var(--text-muted)] text-base text-center py-8">No data yet.</p>
                   ) : (
