@@ -96,7 +96,7 @@ export default function UserPopup() {
                   className="flex items-center gap-2 text-[var(--text-secondary)] text-sm px-3 py-2 rounded-md hover:bg-[var(--accent-10)] hover:text-[var(--text-primary)] transition-all"
                 >
                   <Shield size={16} />
-                  Owner Dashboard
+                  Admin Panel
                 </Link>
               </>
             )}
