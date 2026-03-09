@@ -37,6 +37,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 4 Sprint 7:** COMPLETE — Admin analytics with recharts charts (LineChart, BarChart, PieChart, AreaChart), time range selector (7d/30d/90d/all), system health indicators (DB row counts, last activity, app version)
 **Stage 4 Sprint 8:** COMPLETE — Admin management tools, export, polish, and dashboard refinement
 **Pre-Deployment Audit:** COMPLETE — Security hardening, auth on all API routes, rate limiting, CSP headers, env validation, code cleanup
+**Stage 5 Sprint 1:** COMPLETE — Quick text & label fixes: "Admin Panel" → "Owner Dashboard", slider "Standard" → "No Change", "Detailed" → "Extended", custom instructions maxLength 50 with counter, MAX_RECIPIENTS 3 → 10, loading spinner text updated
 **Next Task:** Vercel production deployment
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
@@ -2576,6 +2577,21 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ### Deployment Documentation
 - [x] Created `DEPLOYMENT_NOTES.md` with complete env var list, Supabase RLS policy requirements, Stripe webhook setup, external service URLs, security measures, known limitations, and deployment checklist.
+
+---
+
+## Stage 5 Sprint 1 — Quick Text & Label Fixes — COMPLETE
+- **Scope:** 6 text/label changes across 4 files
+- **Completed:** 2026-03-09
+- **Build verified:** `npm run build` passes with 0 errors
+
+### Tasks
+- [x] **Task 1:** Changed "Admin Panel" → "Owner Dashboard" in UserPopup.tsx (display text only, route unchanged)
+- [x] **Task 2:** Changed all three slider "Standard" labels → "No Change" in CustomizationPanel.tsx (lengthOptions, toneOptions, detailOptions)
+- [x] **Task 3:** Changed lengthOptions "Detailed" label → "Extended" in CustomizationPanel.tsx
+- [x] **Task 4:** Added maxLength={50} to Custom Instructions Textarea + character counter (current/50) in CustomizationPanel.tsx
+- [x] **Task 5:** Changed MAX_RECIPIENTS from 3 → 10 in EmailExportModal.tsx
+- [x] **Task 6:** Changed loading spinner text from "Generating your warranty narrative..." → "Generating narrative..." in narrative/page.tsx
 
 ---
 
