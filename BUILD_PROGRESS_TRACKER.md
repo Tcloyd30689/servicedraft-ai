@@ -23,8 +23,8 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-03-06
-**Current Phase:** Stage 4 — UI Quick Fixes & Polish
+**Last Updated:** 2026-03-09
+**Current Phase:** Pre-Deployment Audit Complete — Ready for Vercel Deployment
 **Stage 4 Sprint 1:** COMPLETE — Font rendering fix, sidebar positioning, button relocation, template rename, access code update
 **Stage 4 Sprint 2:** COMPLETE — Clear form button, story type switching preservation, ProofreadResults render bug fix
 **Stage 4 Sprint 3:** COMPLETE — Refactored repair templates to save only 5 core repair fields (codes_present, diagnostics_performed, root_cause, repair_performed, repair_verification), removing vehicle info and non-core fields from save/display/edit flows
@@ -36,7 +36,8 @@ This file is a living document that Claude Code reads at the start of every sess
 **Post-Sprint 6 UI/UX Fixes Round 2:** COMPLETE — Owner Dashboard UI round 2: stacked dates, centered headers, 90vw layout, sorting dropdown, premium title styling with neon glow and spotlight animation
 **Stage 4 Sprint 7:** COMPLETE — Admin analytics with recharts charts (LineChart, BarChart, PieChart, AreaChart), time range selector (7d/30d/90d/all), system health indicators (DB row counts, last activity, app version)
 **Stage 4 Sprint 8:** COMPLETE — Admin management tools, export, polish, and dashboard refinement
-**Next Task:** Stage 4, Sprint 9 (TBD)
+**Pre-Deployment Audit:** COMPLETE — Security hardening, auth on all API routes, rate limiting, CSP headers, env validation, code cleanup
+**Next Task:** Vercel production deployment
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
@@ -2534,6 +2535,47 @@ This file is a living document that Claude Code reads at the start of every sess
   - Task 2: **Export Report CSV** — Added "Export Report" button to Analytics tab header. Generates comprehensive CSV with sections: key metrics, subscription breakdown, story type breakdown, activity by type, daily activity data, top users leaderboard. Downloads as `servicedraft-analytics-YYYY-MM-DD.csv`.
   - Task 3: **User Management Polish** — Added role column with color-coded badge (Admin = gold crown icon, User = gray). Added admin promotion/demotion with confirmation modal (Crown icon, warns about dashboard access). Added `promote_to_admin` and `demote_to_user` actions to admin API. Added user count summary cards at top (Total Users, Active, Inactive) with UserCheck/UserX icons.
   - Task 4: **Overall Polish** — Wrapped all tab content in `AnimatePresence mode="wait"` with slide/fade transitions (tabVariants: initial/animate/exit). Added error states with retry button (AlertTriangle icon + retry button) for analytics. Made responsive: smaller padding/text on mobile, hidden columns (email/position on md, last_active on lg), tab labels hidden on mobile (icons only), responsive grid gaps. Consistent spacing throughout with sm: breakpoint responsive padding.
+
+---
+
+## Pre-Deployment Audit — Security Hardening & Production Readiness — COMPLETE
+- **Scope:** 11 audit items across 6 categories
+- **Completed:** 2026-03-09
+- **Notes:** Comprehensive audit preparing for Vercel production deployment.
+
+### Build Verification
+- [x] `npm run build` passes with 0 errors, 0 TypeScript violations
+- [x] All imports resolve correctly
+- [x] Only cosmetic warning: Next.js 16 middleware deprecation (non-blocking)
+
+### Security Hardening
+- [x] **CRITICAL FIX:** Removed dangerous ANON_KEY fallback in Stripe webhook (`/api/stripe/webhook/route.ts`). Service role key now required — throws error if missing instead of silently degrading to public key.
+- [x] **Added authentication** to 5 previously unauthenticated API routes: `/api/proofread`, `/api/customize`, `/api/apply-edits`, `/api/export-pdf`, `/api/export-docx`. All now require valid Supabase session.
+- [x] **Added rate limiting** to `/api/generate` — 20 requests per user per 15 minutes (in-memory, server-side). Created `src/lib/rateLimit.ts` utility.
+- [x] **Added input length validation** to `/api/generate` — compiled data block capped at 10,000 characters.
+- [x] **Added CSP and security headers** to `next.config.ts`: Content-Security-Policy, X-Frame-Options (DENY), X-Content-Type-Options (nosniff), Referrer-Policy, Permissions-Policy.
+- [x] **Removed hardcoded access code** default (`SDRAFT-BETA-2026`) from `/api/stripe/route.ts` and `/api/admin/route.ts`. Access code now read exclusively from `ACCESS_CODE` environment variable.
+- [x] Verified: No API keys, secrets, or sensitive data in client-side code. Service role key only used in server-side API routes.
+- [x] Verified: `.env.local` is in `.gitignore` and was never committed to git history.
+
+### Environment Variable Audit
+- [x] Added `STRIPE_PRICE_ID` to `src/lib/env.ts` optional vars (was used but undeclared).
+- [x] Added `validateEnv()` call at app startup in `src/app/layout.tsx`.
+- [x] Complete environment variable list documented in `DEPLOYMENT_NOTES.md`.
+
+### Code Cleanup
+- [x] Replaced `console.log` in `/api/support/route.ts` with `console.error` (server-side logging).
+- [x] No TODO/FIXME/HACK comments found — codebase is clean.
+- [x] No commented-out code blocks found.
+- [x] ErrorBoundary component exists and is used in protected layout.
+
+### Performance Check
+- [x] Logo component uses Next.js `Image` component (auto-optimization to WebP).
+- [x] Logo source files are large (~2.2MB each) but served optimized by Next.js — noted as deployment consideration.
+- [x] Unused Next.js default SVGs (file.svg, globe.svg, window.svg, next.svg, vercel.svg) are not referenced in code.
+
+### Deployment Documentation
+- [x] Created `DEPLOYMENT_NOTES.md` with complete env var list, Supabase RLS policy requirements, Stripe webhook setup, external service URLs, security measures, known limitations, and deployment checklist.
 
 ---
 

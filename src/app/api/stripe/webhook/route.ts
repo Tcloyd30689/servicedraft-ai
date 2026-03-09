@@ -3,10 +3,14 @@ import { stripe } from '@/lib/stripe/client';
 import { createClient } from '@supabase/supabase-js';
 
 // Use service role client to bypass RLS for webhook updates
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
+// SECURITY: Never fall back to anon key — webhook needs admin privileges
+function getSupabaseAdmin() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for webhook processing');
+  }
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey);
+}
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -31,6 +35,8 @@ export async function POST(request: Request) {
   }
 
   try {
+    const supabaseAdmin = getSupabaseAdmin();
+
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;

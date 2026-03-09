@@ -4,9 +4,15 @@ import { stripe } from '@/lib/stripe/client';
 export async function POST(request: Request) {
   const { accessCode, mode, userId } = await request.json();
 
-  // Access code bypass for prototype
+  // Access code bypass for beta
   if (accessCode) {
-    const validCode = process.env.ACCESS_CODE || 'SDRAFT-BETA-2026';
+    const validCode = process.env.ACCESS_CODE;
+    if (!validCode) {
+      return NextResponse.json(
+        { error: 'Access code system not configured' },
+        { status: 500 },
+      );
+    }
 
     if (accessCode === validCode) {
       return NextResponse.json({ success: true, method: 'access_code' });

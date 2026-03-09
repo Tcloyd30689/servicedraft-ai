@@ -184,7 +184,7 @@ export async function POST(request: Request) {
       }
 
       case 'get_access_code': {
-        const currentCode = process.env.ACCESS_CODE || 'SDRAFT-BETA-2026';
+        const currentCode = process.env.ACCESS_CODE || '(not configured)';
         return NextResponse.json({ success: true, data: { code: currentCode } });
       }
 

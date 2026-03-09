@@ -3,6 +3,13 @@ import { Orbitron, Inter } from "next/font/google";
 import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
 import ToastProvider from "@/components/ui/ToastProvider";
+import { validateEnv } from "@/lib/env";
+
+// Validate environment variables at build/startup time
+const envCheck = validateEnv();
+if (!envCheck.valid) {
+  console.error(`Missing required environment variables: ${envCheck.missing.join(', ')}`);
+}
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",

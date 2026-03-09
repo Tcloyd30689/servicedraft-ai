@@ -11,6 +11,7 @@ const requiredEnvVars = [
 
 const optionalEnvVars = [
   'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_PRICE_ID',
   'ACCESS_CODE',
   'NEXT_PUBLIC_APP_URL',
   'RESEND_API_KEY',

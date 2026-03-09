@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 import { generateWithGemini, parseJsonResponse } from '@/lib/gemini/client';
 import { CUSTOMIZATION_SYSTEM_PROMPT, LENGTH_MODIFIERS, TONE_MODIFIERS, DETAIL_MODIFIERS } from '@/constants/prompts';
 
@@ -11,6 +12,12 @@ interface NarrativeResponse {
 
 export async function POST(request: Request) {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const {
       concern,
       cause,

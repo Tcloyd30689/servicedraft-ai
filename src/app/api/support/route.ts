@@ -11,8 +11,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // For now, log the support ticket. In production, this would send an email.
-    console.log('Support ticket received:', { name, email, message, timestamp: new Date().toISOString() });
+    // Log support ticket for monitoring (server-side only)
+    console.error('Support ticket received:', { name, email, timestamp: new Date().toISOString() });
 
     return NextResponse.json({ success: true });
   } catch {
