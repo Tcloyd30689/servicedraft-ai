@@ -29,7 +29,7 @@ export default function NavBar() {
           className={cn(
             'inline-flex items-center justify-center rounded-lg px-4 py-1.5 text-sm font-semibold tracking-wide uppercase transition-all duration-200 border',
             'bg-[var(--accent-10)] border-[var(--accent-border)] text-[var(--text-primary)]',
-            'hover:bg-[var(--accent-20)] hover:shadow-[var(--shadow-glow-sm)]',
+            'hover:bg-[var(--accent-20)] hover:text-white hover:border-[var(--accent-primary)] hover:shadow-[0_0_15px_rgba(168,85,247,0.4),0_0_30px_rgba(168,85,247,0.2)]',
             pathname === '/main-menu' && 'bg-[var(--accent-20)] shadow-[var(--shadow-glow-sm)]',
           )}
         >
@@ -49,7 +49,7 @@ export default function NavBar() {
         {/* Light/Dark mode toggle */}
         <button
           onClick={toggleColorMode}
-          className="p-1.5 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-10)] transition-all duration-200 cursor-pointer"
+          className="p-1.5 rounded-md text-[var(--text-secondary)] hover:text-white hover:bg-[var(--accent-10)] hover:shadow-[0_0_15px_rgba(168,85,247,0.4),0_0_30px_rgba(168,85,247,0.2)] transition-all duration-300 cursor-pointer"
           aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {isDark ? <Sun size={18} /> : <Moon size={18} />}

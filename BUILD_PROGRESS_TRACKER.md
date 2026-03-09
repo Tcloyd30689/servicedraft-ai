@@ -38,6 +38,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 4 Sprint 8:** COMPLETE — Admin management tools, export, polish, and dashboard refinement
 **Pre-Deployment Audit:** COMPLETE — Security hardening, auth on all API routes, rate limiting, CSP headers, env validation, code cleanup
 **Stage 5 Sprint 1:** COMPLETE — Quick text/label fixes: Owner Dashboard rename, slider label updates, custom instructions maxLength, MAX_RECIPIENTS=10, loading spinner text, NavBar version label
+**Stage 5 Sprint 3:** COMPLETE — NavBar glowing purple hover animations on all interactive elements (Main Menu, theme toggle, user button, dropdown items)
 **Next Task:** Vercel production deployment
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
@@ -2591,6 +2592,17 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] **Task 5:** Changed MAX_RECIPIENTS from 3 to 10 in EmailExportModal.tsx
 - [x] **Task 6:** Changed loading spinner text from "Generating your warranty narrative..." to "Generating narrative..." in narrative/page.tsx
 - [x] **Task 7:** Added centered "v1.0.0-beta" version label to NavBar.tsx — accent-bright color (reactive to user theme), text-sm font-medium (matches UserPopup display name styling), hidden on mobile (hidden md:block)
+
+---
+
+## STAGE 5 — SPRINT 3: NAVBAR GLOWING HOVER ANIMATIONS (2026-03-09)
+
+**Status:** COMPLETE
+
+- [x] **Task 1:** Added glowing purple hover effect to MAIN MENU button in NavBar.tsx — accent border glow, box-shadow with rgba(168,85,247,0.4)/0.2 double-layer, text brightens to white on hover
+- [x] **Task 2:** Added glowing purple hover effect to UserPopup trigger button — border shifts to accent-primary, dual-layer purple box-shadow glow on hover, 300ms transition
+- [x] **Task 3:** Added glowing purple hover effect to Light/Dark mode toggle icon — soft purple glow shadow behind icon on hover, text brightens to white, 300ms transition
+- [x] **Task 4:** Added hover effects to ALL UserPopup dropdown menu items (Dashboard, Owner Dashboard, Log Out) — accent-tinted background (rgba(168,85,247,0.1)), text shifts to accent-bright, left-border glow accent-primary on hover, 300ms transition
 
 ---
 

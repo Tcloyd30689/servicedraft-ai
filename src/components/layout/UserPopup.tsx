@@ -51,7 +51,7 @@ export default function UserPopup() {
       {/* Combined user button: position icon + T.Cloyd name */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 cursor-pointer rounded-lg px-2.5 py-1.5 transition-all duration-200 hover:bg-[var(--accent-10)] border border-[var(--accent-30)] hover:border-[var(--accent-50)]"
+        className="flex items-center gap-2 cursor-pointer rounded-lg px-2.5 py-1.5 transition-all duration-300 hover:bg-[var(--accent-10)] border border-[var(--accent-30)] hover:border-[var(--accent-primary)] hover:shadow-[0_0_15px_rgba(168,85,247,0.4),0_0_30px_rgba(168,85,247,0.2)]"
         aria-label="User menu"
       >
         <PositionIcon position={profile?.position ?? null} size="small" className="!w-6 !h-6 !border-0" />
@@ -82,7 +82,7 @@ export default function UserPopup() {
             <Link
               href="/dashboard"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2 text-[var(--text-secondary)] text-sm px-3 py-2 rounded-md hover:bg-[var(--accent-10)] hover:text-[var(--text-primary)] transition-all"
+              className="flex items-center gap-2 text-[var(--text-secondary)] text-sm px-3 py-2 rounded-md hover:bg-[rgba(168,85,247,0.1)] hover:text-[var(--accent-bright)] border-l-2 border-transparent hover:border-[var(--accent-primary)] transition-all duration-300"
             >
               <LayoutDashboard size={16} />
               Dashboard
@@ -93,7 +93,7 @@ export default function UserPopup() {
                 <Link
                   href="/admin"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-2 text-[var(--text-secondary)] text-sm px-3 py-2 rounded-md hover:bg-[var(--accent-10)] hover:text-[var(--text-primary)] transition-all"
+                  className="flex items-center gap-2 text-[var(--text-secondary)] text-sm px-3 py-2 rounded-md hover:bg-[rgba(168,85,247,0.1)] hover:text-[var(--accent-bright)] border-l-2 border-transparent hover:border-[var(--accent-primary)] transition-all duration-300"
                 >
                   <Shield size={16} />
                   Owner Dashboard
@@ -106,7 +106,7 @@ export default function UserPopup() {
                 resetAll();
                 await signOut();
               }}
-              className="flex items-center gap-2 text-[var(--text-secondary)] text-sm px-3 py-2 rounded-md hover:bg-[var(--accent-10)] hover:text-[var(--text-primary)] transition-all cursor-pointer w-full text-left"
+              className="flex items-center gap-2 text-[var(--text-secondary)] text-sm px-3 py-2 rounded-md hover:bg-[rgba(168,85,247,0.1)] hover:text-[var(--accent-bright)] border-l-2 border-transparent hover:border-[var(--accent-primary)] transition-all duration-300 cursor-pointer w-full text-left"
             >
               <LogOut size={16} />
               Log Out
