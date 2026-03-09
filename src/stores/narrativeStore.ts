@@ -45,7 +45,7 @@ const initialState: NarrativeState = {
   roNumber: '',
   compiledDataBlock: '',
   narrative: null,
-  displayFormat: 'ccc',
+  displayFormat: 'block',
   lengthSlider: 'standard',
   toneSlider: 'standard',
   detailSlider: 'standard',
@@ -171,7 +171,7 @@ export function useNarrativeStore() {
     globalState = {
       ...globalState,
       narrative: null,
-      displayFormat: 'ccc',
+      displayFormat: 'block',
       lengthSlider: 'standard',
       toneSlider: 'standard',
       detailSlider: 'standard',
@@ -220,7 +220,7 @@ export function useNarrativeStore() {
         model: data.model,
       },
       compiledDataBlock: '', // Not needed — narrative already generated
-      displayFormat: 'ccc',
+      displayFormat: 'block',
       lengthSlider: 'standard',
       toneSlider: 'standard',
       detailSlider: 'standard',

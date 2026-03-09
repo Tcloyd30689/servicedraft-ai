@@ -17,7 +17,6 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import TermsOfUse from '@/components/layout/TermsOfUse';
 import { setLoginTimestamp } from '@/hooks/useSessionExpiry';
 import { POSITION_OPTIONS } from '@/constants/positions';
-import { US_STATE_OPTIONS } from '@/constants/usStates';
 
 type Step = 1 | 2 | 3;
 
@@ -424,12 +423,13 @@ function SignupContent() {
                     onChange={(e) => setLastName(e.target.value)}
                     required
                   />
-                  <Select
+                  <Input
                     id="location"
                     label="Location"
+                    type="text"
+                    placeholder="e.g., Rock Springs, WY"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    options={US_STATE_OPTIONS}
                   />
                   <Select
                     id="position"
