@@ -37,6 +37,13 @@ export default function NavBar() {
         </Link>
       </div>
 
+      {/* CENTER SECTION: App version label */}
+      <div className="hidden md:block absolute left-1/2 -translate-x-1/2">
+        <span className="text-sm font-medium text-[var(--accent-bright)]">
+          v1.0.0-beta
+        </span>
+      </div>
+
       {/* RIGHT SECTION: Theme toggle, User popup, Mobile menu toggle */}
       <div className="flex items-center gap-2 ml-auto">
         {/* Light/Dark mode toggle */}

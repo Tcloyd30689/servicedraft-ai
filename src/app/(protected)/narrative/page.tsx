@@ -446,7 +446,7 @@ export default function NarrativePage() {
   if (isGenerating && !state.narrative) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="large" message="Generating your warranty narrative..." />
+        <LoadingSpinner size="large" message="Generating narrative..." />
       </div>
     );
   }

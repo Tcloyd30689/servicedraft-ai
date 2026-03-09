@@ -18,7 +18,7 @@ interface EmailExportModalProps {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STORAGE_KEY = 'sd-last-export-email';
-const MAX_RECIPIENTS = 3;
+const MAX_RECIPIENTS = 10;
 
 export default function EmailExportModal({
   isOpen,

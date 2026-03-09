@@ -11,19 +11,19 @@ interface SliderOption<T extends string> {
 
 const lengthOptions: SliderOption<NarrativeState['lengthSlider']>[] = [
   { value: 'short', label: 'Short' },
-  { value: 'standard', label: 'Standard' },
-  { value: 'detailed', label: 'Detailed' },
+  { value: 'standard', label: 'No Change' },
+  { value: 'detailed', label: 'Extended' },
 ];
 
 const toneOptions: SliderOption<NarrativeState['toneSlider']>[] = [
   { value: 'warranty', label: 'Warranty' },
-  { value: 'standard', label: 'Standard' },
+  { value: 'standard', label: 'No Change' },
   { value: 'customer_friendly', label: 'Customer Friendly' },
 ];
 
 const detailOptions: SliderOption<NarrativeState['detailSlider']>[] = [
   { value: 'concise', label: 'Concise' },
-  { value: 'standard', label: 'Standard' },
+  { value: 'standard', label: 'No Change' },
   { value: 'additional', label: 'Additional Steps' },
 ];
 
@@ -102,13 +102,19 @@ export default function CustomizationPanel({
         onChange={setDetailSlider}
       />
 
-      <Textarea
-        label="Custom Instructions"
-        placeholder="Add any specific instructions for rewriting the narrative..."
-        value={state.customInstructions}
-        onChange={(e) => setCustomInstructions(e.target.value)}
-        className="min-h-[80px]"
-      />
+      <div>
+        <Textarea
+          label="Custom Instructions"
+          placeholder="Add any specific instructions for rewriting the narrative..."
+          value={state.customInstructions}
+          onChange={(e) => setCustomInstructions(e.target.value)}
+          maxLength={50}
+          className="min-h-[80px]"
+        />
+        <p className="text-[var(--text-muted)] text-xs text-right -mt-4 mr-1">
+          {state.customInstructions.length} / 50
+        </p>
+      </div>
 
       <Button
         size="fullWidth"

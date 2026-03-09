@@ -37,6 +37,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 4 Sprint 7:** COMPLETE — Admin analytics with recharts charts (LineChart, BarChart, PieChart, AreaChart), time range selector (7d/30d/90d/all), system health indicators (DB row counts, last activity, app version)
 **Stage 4 Sprint 8:** COMPLETE — Admin management tools, export, polish, and dashboard refinement
 **Pre-Deployment Audit:** COMPLETE — Security hardening, auth on all API routes, rate limiting, CSP headers, env validation, code cleanup
+**Stage 5 Sprint 1:** COMPLETE — Quick text/label fixes: Owner Dashboard rename, slider label updates, custom instructions maxLength, MAX_RECIPIENTS=10, loading spinner text, NavBar version label
 **Next Task:** Vercel production deployment
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
@@ -2576,6 +2577,20 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ### Deployment Documentation
 - [x] Created `DEPLOYMENT_NOTES.md` with complete env var list, Supabase RLS policy requirements, Stripe webhook setup, external service URLs, security measures, known limitations, and deployment checklist.
+
+---
+
+## STAGE 5 — SPRINT 1: QUICK TEXT & LABEL FIXES (2026-03-09)
+
+**Status:** COMPLETE
+
+- [x] **Task 1:** Changed "Admin Panel" to "Owner Dashboard" in UserPopup.tsx navigation link (route unchanged)
+- [x] **Task 2:** Changed 'Standard' label to 'No Change' in all three slider option arrays (lengthOptions, toneOptions, detailOptions) in CustomizationPanel.tsx
+- [x] **Task 3:** Changed 'Detailed' label to 'Extended' in lengthOptions array in CustomizationPanel.tsx
+- [x] **Task 4:** Added maxLength={50} to Custom Instructions Textarea and character counter (current/50) in CustomizationPanel.tsx
+- [x] **Task 5:** Changed MAX_RECIPIENTS from 3 to 10 in EmailExportModal.tsx
+- [x] **Task 6:** Changed loading spinner text from "Generating your warranty narrative..." to "Generating narrative..." in narrative/page.tsx
+- [x] **Task 7:** Added centered "v1.0.0-beta" version label to NavBar.tsx — accent-bright color (reactive to user theme), text-sm font-medium (matches UserPopup display name styling), hidden on mobile (hidden md:block)
 
 ---
 
