@@ -23,7 +23,7 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-03-06
+**Last Updated:** 2026-03-09
 **Current Phase:** Stage 4 — UI Quick Fixes & Polish
 **Stage 4 Sprint 1:** COMPLETE — Font rendering fix, sidebar positioning, button relocation, template rename, access code update
 **Stage 4 Sprint 2:** COMPLETE — Clear form button, story type switching preservation, ProofreadResults render bug fix
@@ -36,6 +36,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Post-Sprint 6 UI/UX Fixes Round 2:** COMPLETE — Owner Dashboard UI round 2: stacked dates, centered headers, 90vw layout, sorting dropdown, premium title styling with neon glow and spotlight animation
 **Stage 4 Sprint 7:** COMPLETE — Admin analytics with recharts charts (LineChart, BarChart, PieChart, AreaChart), time range selector (7d/30d/90d/all), system health indicators (DB row counts, last activity, app version)
 **Stage 4 Sprint 8:** COMPLETE — Admin management tools, export, polish, and dashboard refinement
+**Pre-Deployment Sprint:** COMPLETE — Default C/C/C view, remove center navbar logo, state dropdown for location
 **Next Task:** Stage 4, Sprint 9 (TBD)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
@@ -2534,6 +2535,16 @@ This file is a living document that Claude Code reads at the start of every sess
   - Task 2: **Export Report CSV** — Added "Export Report" button to Analytics tab header. Generates comprehensive CSV with sections: key metrics, subscription breakdown, story type breakdown, activity by type, daily activity data, top users leaderboard. Downloads as `servicedraft-analytics-YYYY-MM-DD.csv`.
   - Task 3: **User Management Polish** — Added role column with color-coded badge (Admin = gold crown icon, User = gray). Added admin promotion/demotion with confirmation modal (Crown icon, warns about dashboard access). Added `promote_to_admin` and `demote_to_user` actions to admin API. Added user count summary cards at top (Total Users, Active, Inactive) with UserCheck/UserX icons.
   - Task 4: **Overall Polish** — Wrapped all tab content in `AnimatePresence mode="wait"` with slide/fade transitions (tabVariants: initial/animate/exit). Added error states with retry button (AlertTriangle icon + retry button) for analytics. Made responsive: smaller padding/text on mobile, hidden columns (email/position on md, last_active on lg), tab labels hidden on mobile (icons only), responsive grid gaps. Consistent spacing throughout with sm: breakpoint responsive padding.
+
+---
+
+## Pre-Deployment Sprint — Last Minute UI Fixes — COMPLETE
+- **Scope:** 3 tasks
+- **Completed:** 2026-03-09
+- **Notes:** Three surgical pre-deployment UI changes.
+  - Task 1: **Default C/C/C narrative view** — Changed `displayFormat` initial value from `'block'` to `'ccc'` in `src/stores/narrativeStore.ts` (initialState, clearForNewGeneration, setForRepairUpdate). Generated narratives now default to Concern/Cause/Correction format. Toggle button shows "BLOCK FORMATTING" as the switchable option.
+  - Task 2: **Remove center navbar logo** — Removed the centered SD vector logo (`ServiceDraft-Ai Vector Logo.png`) from `src/components/layout/NavBar.tsx`. Left-side Main Menu button and right-side controls remain unchanged. Removed unused `Image` import.
+  - Task 3: **Location field → 50-state dropdown** — Replaced free-text Location `<Input>` with `<Select>` dropdown listing all 50 US states by full name in both `src/app/(auth)/signup/page.tsx` (Step 3 profile creation) and `src/components/dashboard/EditProfileModal.tsx`. Created `src/constants/usStates.ts` with `US_STATES` array and `US_STATE_OPTIONS` (includes disabled "Select Your State" placeholder). Values stored as full state names. Existing users with non-matching free-text locations still display correctly in `ProfileSection.tsx` (read-only display) and can pick from dropdown on next edit.
 
 ---
 
