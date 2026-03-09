@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, X, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
@@ -36,24 +35,6 @@ export default function NavBar() {
         >
           Main Menu
         </Link>
-      </div>
-
-      {/* CENTER SECTION: Vector logo (decorative, not clickable) */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-        <Image
-          src="/ServiceDraft-Ai Vector Logo.png"
-          alt=""
-          width={160}
-          height={30}
-          priority
-          className="object-contain"
-          style={{
-            height: '30px',
-            width: 'auto',
-            filter: isDark ? 'brightness(0) invert(1)' : 'brightness(0)',
-          }}
-          aria-hidden="true"
-        />
       </div>
 
       {/* RIGHT SECTION: Theme toggle, User popup, Mobile menu toggle */}
