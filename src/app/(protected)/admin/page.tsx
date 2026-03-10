@@ -11,7 +11,7 @@ import {
   CheckCircle, BookOpen, ShieldCheck, ArrowUp, ArrowDown,
   Database, Clock, Server, Download, Copy, Key, Globe, Info,
   UserCog, UserCheck, UserX, Crown,
-  AlertTriangle,
+  AlertTriangle, DollarSign,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -25,11 +25,12 @@ import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
+import TokenCalculator from '@/components/admin/TokenCalculator';
 
 // ─── Protected user — cannot be deleted or restricted ────────
 const PROTECTED_EMAIL = 'hvcadip@gmail.com';
 
-type TabKey = 'overview' | 'activity' | 'users' | 'analytics' | 'settings';
+type TabKey = 'overview' | 'activity' | 'users' | 'analytics' | 'costs' | 'settings';
 
 const ACTION_FILTERS = [
   { value: 'all', label: 'All Actions' },
@@ -762,6 +763,7 @@ export default function AdminPage() {
     { key: 'activity', label: 'Activity Log', icon: Activity },
     { key: 'users', label: 'User Management', icon: Users },
     { key: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { key: 'costs', label: 'Cost Calculator', icon: DollarSign },
     { key: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -2003,6 +2005,19 @@ export default function AdminPage() {
           {/* ═══════════════════════════════════════════════════════════
               SETTINGS TAB
              ═══════════════════════════════════════════════════════════ */}
+          {activeTab === 'costs' && (
+            <motion.div
+              key="costs"
+              variants={tabVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+            >
+              <TokenCalculator />
+            </motion.div>
+          )}
+
           {activeTab === 'settings' && (
             <motion.div
               key="settings"

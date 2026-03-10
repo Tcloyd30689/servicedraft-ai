@@ -23,7 +23,7 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-03-09
+**Last Updated:** 2026-03-10
 **Current Phase:** Pre-Deployment Audit Complete — Ready for Vercel Deployment
 **Stage 4 Sprint 1:** COMPLETE — Font rendering fix, sidebar positioning, button relocation, template rename, access code update
 **Stage 4 Sprint 2:** COMPLETE — Clear form button, story type switching preservation, ProofreadResults render bug fix
@@ -43,6 +43,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 5 Sprint 4:** COMPLETE — Signup page updates: AccentColorPicker added to Step 3 profile creation, Location text input replaced with US state dropdown (all 50 states), accent color persists via existing ThemeProvider (localStorage + Supabase preferences)
 **Stage 5 Sprint 5:** COMPLETE — Dashboard split preferences into App Appearance modal and My Saved Repairs placeholder modal, added Owner Dashboard button for admin users with gold/amber accent
 **Stage 5 Sprint 6:** COMPLETE — Full SavedRepairsModal with template list/create/edit/delete, narrative table row hover glow, wider dashboard container (max-w-7xl)
+**Stage 5 Sprint 7:** COMPLETE — Owner Dashboard AI token usage pricing calculator with model selector, token inputs, proofread/customization toggles, and real-time cost estimates
 **Next Task:** Vercel production deployment
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
@@ -2640,6 +2641,17 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] **Task 3:** Added Edit and Delete action buttons per template row. Edit opens inline editing with template name + 5 core fields and Save/Cancel buttons (PUT `/api/saved-repairs/[id]`). Delete shows confirmation prompt with Cancel/Confirm before DELETE. Both show appropriate loading states and toast messages. — **2026-03-09**
 - [x] **Task 4:** Added glowing hover effect to NarrativeHistory table rows: `hover:bg-[rgba(168,85,247,0.08)]` accent tint, `hover:shadow-[0_0_10px_rgba(168,85,247,0.15)]` soft glow, `transition-all duration-200` smooth animation, `group-hover:text-[var(--text-secondary)]` brighter text on all data cells. — **2026-03-09**
 - [x] **Task 5:** Widened dashboard container from `max-w-5xl` (1024px) to `max-w-7xl` (1280px) for more breathing room on the narrative table and overall dashboard layout. — **2026-03-09**
+
+---
+
+## STAGE 5 SPRINT 7 — OWNER DASHBOARD: AI TOKEN USAGE PRICING CALCULATOR
+*Add an AI token usage / pricing calculator to the Owner Dashboard for estimating Gemini API costs.*
+
+**Status:** COMPLETE
+
+- [x] **Task 1:** Created `src/components/admin/TokenCalculator.tsx` — self-contained pricing calculator component with: model selector dropdown (Gemini 2.0 Flash / 1.5 Flash / 1.5 Pro with hardcoded per-token pricing), average input tokens per narrative (default 1500), average output tokens per narrative (default 800), estimated narratives per month (default 100), proofread calls toggle (+50% API calls), customization calls toggle (+30% API calls). Output displays cost per narrative, monthly estimate, and annual estimate with accent-colored numbers. Includes disclaimer note about pricing variability. — **2026-03-10**
+- [x] **Task 2:** Added "Cost Calculator" tab to Owner Dashboard tab system — updated `TabKey` union type, added tab entry with `DollarSign` icon between Analytics and Settings tabs, added `motion.div` tab content rendering with `tabVariants` animation matching existing pattern. Imported `TokenCalculator` component. — **2026-03-10**
+- [x] **Task 3:** Styled calculator to match Owner Dashboard premium dark aesthetic — uses `LiquidCard` components with `!rounded-[16px]`, accent-colored cost numbers via `var(--accent-bright)`, custom toggle switches with `peer-checked:bg-[var(--accent-primary)]`, input fields with `bg-[var(--bg-input)]` and `border-[var(--accent-border)]`, cost output cards with `bg-[var(--accent-5)]` backgrounds and `border-[var(--accent-15)]` borders. Build verified clean with `npm run build`. — **2026-03-10**
 
 ---
 
