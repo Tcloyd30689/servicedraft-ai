@@ -1,4 +1,4 @@
-# SERVICEDRAFT.AI — PROMPT & API LOGIC DOCUMENT v1.0
+# SERVICEDRAFT.AI — PROMPT & API LOGIC DOCUMENT v2.0
 
 ## Table of Contents
 1. [Prompt Assembly Pipeline Overview](#1-prompt-assembly-pipeline-overview)
@@ -6,16 +6,20 @@
 3. [Main Generate Narrative Prompt — Diagnostic Only](#3-main-generate-narrative-prompt--diagnostic-only)
 4. [Main Generate Narrative Prompt — Repair Complete](#4-main-generate-narrative-prompt--repair-complete)
 5. [JSON Response Structure & Parsing](#5-json-response-structure--parsing)
-6. [Story Audit / Proofreading Prompt](#6-story-audit--proofreading-prompt)
+6. [Story Audit / Proofreading Prompts](#6-story-audit--proofreading-prompts)
 7. [AI Output Customization Panel Logic](#7-ai-output-customization-panel-logic)
 8. [Customization-Applied Regeneration Prompt](#8-customization-applied-regeneration-prompt)
-9. [Complete API Call Reference](#9-complete-api-call-reference)
+9. [Apply Selected Edits Prompt](#9-apply-selected-edits-prompt)
+10. [Diagnostic → Repair Complete Update Prompt](#10-diagnostic--repair-complete-update-prompt)
+11. [Convert Recommendation Prompt (Tense Conversion)](#11-convert-recommendation-prompt-tense-conversion)
+12. [Pre-Generation Output Customization](#12-pre-generation-output-customization)
+13. [Complete API Call Reference](#13-complete-api-call-reference)
 
 ---
 
 ## 1. Prompt Assembly Pipeline Overview
 
-Every API call in ServiceDraft.AI follows a **prompt assembly pipeline** — meaning the final prompt sent to the AI is never static. It is dynamically constructed based on user selections, field inputs, and customization settings.
+Every API call in ServiceDraft.AI follows a **prompt assembly pipeline** — the final prompt sent to the AI is dynamically constructed based on user selections, field inputs, and customization settings.
 
 ### How It Works
 
@@ -27,11 +31,18 @@ USER INPUT FIELDS ──► DROPDOWN LOGIC FILTERS ──► PROMPT TEMPLATE ─
 ```
 
 **Step 1:** User fills in fields on the Input Page.
-**Step 2:** The app checks each field's dropdown selection and builds a "compiled data block." (R.O. # is excluded — it's saved for database use only.)
-**Step 3:** The compiled data block is injected into the appropriate prompt template (Diagnostic Only or Repair Complete).
-**Step 4:** The complete prompt is sent to the Gemini API.
-**Step 5:** The JSON response is parsed and routed to the correct display areas.
-**Step 6:** If the user applies customization, the CURRENTLY DISPLAYED narrative is sent back to the AI with modifier instructions to rewrite it.
+**Step 2:** The app checks each field's dropdown selection and builds a "compiled data block." (R.O. # is excluded.)
+**Step 3:** If pre-generation customization is set, output style preferences are appended to the data block.
+**Step 4:** The compiled data block is injected into the appropriate prompt template (Diagnostic Only or Repair Complete).
+**Step 5:** The complete prompt is sent to the Gemini API (model: `gemini-3-flash-preview`).
+**Step 6:** The JSON response is parsed and routed to the correct display areas.
+**Step 7:** If the user applies post-generation customization, the CURRENTLY DISPLAYED narrative is sent back to the AI with modifier instructions.
+
+### AI Model Configuration
+- **Model:** `gemini-3-flash-preview`
+- **Max Output Tokens:** 8192 (applied to all Gemini calls)
+- **Client:** `src/lib/gemini/client.ts` — centralized `generateWithGemini(systemPrompt, userPrompt, maxTokens)` function
+- **JSON Parsing:** `parseJsonResponse<T>(raw)` strips markdown code fences before parsing
 
 ---
 
@@ -39,47 +50,33 @@ USER INPUT FIELDS ──► DROPDOWN LOGIC FILTERS ──► PROMPT TEMPLATE ─
 
 ### Overview
 
-Fields 1–5 are **always required** and have no dropdown menu. Fields 6+ each have a dropdown with three options that control how that field's data is handled in the final prompt.
+Fields 1–5 are **always required** and have no dropdown. Fields 6+ each have a dropdown with three options that control how that field's data is handled in the final prompt.
 
 ### Dropdown Options & Behavior
 
-#### Option 1: "Include Information"
-- **Field becomes REQUIRED** — user must type text before GENERATE STORY enables
-- **Prompt behavior:** The field label and the user's entered text are included in the compiled data block exactly as written
+**Option 1: "Include Information"**
+- Field becomes REQUIRED — user must type text before GENERATE STORY enables
+- Prompt behavior: Field label + user's entered text included in compiled data block exactly as written
 
-**Example compiled line:**
-```
-CODES PRESENT: P0300, P0301, P0304 — RANDOM/MULTIPLE MISFIRES ON CYLINDERS 1 AND 4
-```
+**Option 2: "Don't Include Information"**
+- Field is NOT required — can be left empty
+- Prompt behavior: Field is **completely excluded** from the compiled data block
 
-#### Option 2: "Don't Include Information"
-- **Field is NOT required** — can be left completely empty
-- **Prompt behavior:** The field is **completely excluded** from the compiled data block — as if the field does not exist at all. No label, no text, no placeholder.
-
-**Example:** If "Codes Present" is set to "Don't Include Information," the compiled data block simply skips that field entirely. The AI never sees it.
-
-#### Option 3: "Generate Applicable Info"
-- **Field is NOT required** — user does NOT need to type anything
-- **Prompt behavior:** Instead of user-entered text, a special instruction is injected for that field telling the AI to infer the most probable information based on the other fields the user DID provide.
+**Option 3: "Generate Applicable Info"**
+- Field is NOT required — user does NOT need to type anything
+- Prompt behavior: Special AI inference instruction injected for that field
 
 **Injected instruction per field:**
 ```
 [FIELD NAME]: This information was not specifically documented by the technician. Based on the provided customer concern, diagnostic steps, and any other available information, generate the most probable [FIELD NAME] using professional automotive terminology. Avoid any language that could suggest external damage, customer misuse, or conditions that would invalidate warranty coverage.
 ```
 
-**Example compiled line (for "Root Cause/Failure" set to Generate Applicable Info):**
-```
-ROOT CAUSE/FAILURE: This information was not specifically documented by the technician. Based on the provided customer concern, diagnostic steps, and any other available information, generate the most probable ROOT CAUSE/FAILURE using professional automotive terminology. Avoid any language that could suggest external damage, customer misuse, or conditions that would invalidate warranty coverage.
-```
-
 ### Compiled Data Block Assembly
-
-**IMPORTANT:** The R.O. # (Field 1) is **never sent to the API**. It is only used for saving the narrative to the user's profile/database. The compiled data block sent to the AI starts with Year, Make, and Model (Fields 2–4), which allow the AI to infer manufacturer-specific processes, system names, and terminology relevant to that vehicle.
 
 The app loops through fields and builds the compiled data block using this logic:
 
 ```
-SKIP Field 1 (R.O. #) — stored in app state for database save only, never sent to API
+SKIP Field 1 (R.O. #) — stored in app state for database save only
 
 FOR EACH REMAINING FIELD:
   ├── If field is REQUIRED (fields 2–5):
@@ -89,578 +86,183 @@ FOR EACH REMAINING FIELD:
   │     └── ADD: "FIELD_LABEL: user_entered_text"
   │
   ├── If dropdown = "Don't Include Information":
-  │     └── SKIP — do not add anything for this field
+  │     └── SKIP — do not add anything
   │
   └── If dropdown = "Generate Applicable Info":
         └── ADD: "FIELD_LABEL: [AI inference instruction]"
+
+IF pre-gen customization has non-standard settings:
+  └── APPEND: "--- OUTPUT STYLE PREFERENCES ---" block with modifier text
 ```
-
-### Example: Fully Compiled Data Block (Repair Complete)
-
-Assume the user has filled out the form like this:
-
-| Field | Dropdown | User Input |
-|-------|----------|------------|
-| R.O. # | — (required, saved to database only) | 123456 |
-| Year | — (required) | 2022 |
-| Make | — (required) | Chevrolet |
-| Model | — (required) | Silverado 1500 |
-| Customer Concern | — (required) | Engine has a rough idle and check engine light is on |
-| Codes Present | Include Information | P0300, P0301, P0304 — random/multiple misfires cyl 1 and 4 |
-| Diagnostics Performed | Include Information | Scanned for codes, performed cylinder balance test, checked fuel trims, inspected ignition components |
-| Root Cause/Failure | Generate Applicable Info | *(empty — AI will infer)* |
-| Repair Performed | Include Information | Replaced spark plugs and ignition coils on cylinders 1 and 4 |
-| Repair Verification | Don't Include | *(skipped entirely)* |
-
-**Resulting compiled data block (sent to API):**
-```
-YEAR: 2022
-MAKE: Chevrolet
-MODEL: Silverado 1500
-CUSTOMER CONCERN: Engine has a rough idle and check engine light is on
-CODES PRESENT: P0300, P0301, P0304 — random/multiple misfires cyl 1 and 4
-DIAGNOSTICS PERFORMED: Scanned for codes, performed cylinder balance test, checked fuel trims, inspected ignition components
-ROOT CAUSE/FAILURE: This information was not specifically documented by the technician. Based on the provided customer concern, diagnostic steps, and any other available information, generate the most probable ROOT CAUSE/FAILURE using professional automotive terminology. Avoid any language that could suggest external damage, customer misuse, or conditions that would invalidate warranty coverage.
-REPAIR PERFORMED: Replaced spark plugs and ignition coils on cylinders 1 and 4
-```
-
-Notice: "Repair Verification" is completely absent because it was set to "Don't Include Information."
 
 ### GENERATE STORY Button Enable/Disable Logic
 
 The button is **DISABLED** until ALL of the following are true:
-
-1. **Fields 1–5** all have text entered (not empty, not just whitespace)
-2. **Every field 6+** that has its dropdown set to **"Include Information"** has text entered
-3. Fields set to "Don't Include Information" or "Generate Applicable Info" do NOT need text — they are ignored in the validation check
-
-```
-BUTTON ENABLED = 
-  (field_1 has text) AND
-  (field_2 has text) AND
-  (field_3 has text) AND
-  (field_4 has text) AND
-  (field_5 has text) AND
-  FOR EACH conditional field (6+):
-    IF dropdown = "Include Information" → field must have text
-    IF dropdown = "Don't Include Information" → ignored (passes automatically)
-    IF dropdown = "Generate Applicable Info" → ignored (passes automatically)
-```
+1. Fields 1–5 all have text entered (not empty, not just whitespace)
+2. Every field 6+ with "Include Information" selected has text entered
+3. Fields with "Don't Include" or "Generate Applicable Info" do NOT require text
 
 ---
 
 ## 3. Main Generate Narrative Prompt — Diagnostic Only
 
-This prompt is used when the user selects **"DIAGNOSTIC ONLY"** as their story type on the Input Page.
+**File location:** `src/constants/prompts.ts` → `DIAGNOSTIC_ONLY_SYSTEM_PROMPT`
 
-### System Prompt (sent as the system/instruction role)
+### Critical Rules (in the system prompt)
+1. Professional warranty-appropriate tone
+2. All text FULLY CAPITALIZED
+3. Include most probable technical reason for any failure not explicitly stated
+4. NEVER use "damaged" or imply external force/customer misuse/abuse/neglect
+5. **OEM Terminology (Enhanced)**: Identify manufacturer based on MAKE, use manufacturer-specific OEM service practices, proprietary system names, diagnostic tools, fluids, and procedures. The narrative should read as if written by a manufacturer-certified technician.
+6. Natural flowing story, not bullet points
+7. Preserve all detailed diagnostic info provided; add reasonable language only when input is sparse
+8. NEVER fabricate document ID numbers, reference numbers, case numbers, authorization numbers
+9. **Technical Detail Preservation**: Include ALL specific technical data points verbatim — terminal numbers, connector IDs, circuit numbers, pin numbers, wire colors, voltage/resistance/amperage/pressure/temperature readings, specification values, measurement tool readings. NEVER summarize or omit these details.
 
-```
-You are an expert-level automotive warranty documentation specialist with extensive knowledge of dealership service operations, warranty claim processing, and professional automotive terminology. You have deep experience writing audit-proof warranty narratives that pass manufacturer review without issue.
-
-Your role is to act as a professional warranty writing assistant. You generate narratives that are professional, detailed, accurate, and written in a natural, easy-to-read style.
-
-CRITICAL RULES:
-1. Write in a professional, warranty-appropriate tone at all times.
-2. All narrative text must be FULLY CAPITALIZED for visual uniformity.
-3. If the root cause or reason for a component failure was not specifically stated, include the most probable technical reason for that failure — every failed component needs a documented "cause" in the narrative.
-4. NEVER use the word "damaged" or any language that implies external force, customer misuse, abuse, neglect, or any condition that could be interpreted as invalidating warranty coverage.
-5. You ARE allowed and encouraged to use manufacturer-specific terminology, proprietary system names, and OEM-specific language in the generated narrative when the vehicle's year, make, and model are provided. This makes the output more accurate and relevant to the specific vehicle being serviced. Use the vehicle information to infer the correct technical names for systems, components, and procedures specific to that manufacturer.
-6. The narrative should read naturally and flow well as a cohesive story, not as a list of bullet points.
-7. If diagnostic steps or details seem sparse, you may add reasonable professional language to make the narrative more complete, but do NOT fabricate information that contradicts what was provided. However, when detailed diagnostic information IS provided, you must preserve and include ALL of it — do not simplify or reduce detailed input into generalized statements.
-8. NEVER generate, fabricate, or include any document ID numbers, reference numbers, case numbers, claim numbers, or authorization numbers in the narrative. Only include identification numbers that were explicitly provided in the technician's input data (such as diagnostic trouble codes). Do not invent any numbers.
-9. The generated narrative must include ALL specific technical data points provided by the technician. This includes but is not limited to: terminal numbers, connector IDs, circuit numbers, pin numbers, wire colors, voltage readings, resistance readings, amperage readings, pressure readings, temperature readings, frequency values, signal waveform descriptions, specification values, measurement tool readings, and any other specific numerical or technical data. NEVER summarize, condense, paraphrase, or omit these details. If the technician wrote 'TESTED TERMINAL 3 AT CONNECTOR C0123 AND FOUND 0.2V WHERE 5.0V REFERENCE IS SPECIFIED,' the narrative MUST include that exact terminal number, connector ID, and both voltage values. The output narrative should ALWAYS contain MORE detail than what was provided, never less. When the technician provides specific diagnostic steps with specific values, treat every single data point as critical audit documentation that must appear in the final narrative.
-
-RESPONSE FORMAT:
-You must respond with ONLY a valid JSON object. No additional text, no markdown formatting, no code fences. Just the raw JSON.
-
-The JSON must contain exactly these four keys:
+### JSON Response Format
+```json
 {
-  "block_narrative": "THE COMPLETE STORY AS A SINGLE FLOWING PARAGRAPH SUITABLE FOR BLOCK FORMAT DISPLAY",
-  "concern": "THE CUSTOMER CONCERN SECTION ONLY — WHAT THE CUSTOMER REPORTED OR EXPERIENCED",
-  "cause": "THE CAUSE/DIAGNOSIS SECTION ONLY — WHAT WAS FOUND DURING DIAGNOSTICS AND THE ROOT CAUSE",
-  "correction": "THE CORRECTION/RECOMMENDATION SECTION ONLY — WHAT ACTION IS RECOMMENDED TO RESOLVE THE ISSUE"
+  "block_narrative": "COMPLETE FLOWING PARAGRAPH",
+  "concern": "CUSTOMER CONCERN SECTION",
+  "cause": "CAUSE/DIAGNOSIS SECTION",
+  "correction": "RECOMMENDED ACTION (future tense — 'RECOMMEND REPLACING...')"
 }
-
-IMPORTANT FORMAT REQUIREMENTS:
-- The "block_narrative" must be one complete, cohesive paragraph that tells the full story from concern through diagnosis to recommended action. It should flow naturally as a single block of text.
-- The "concern", "cause", and "correction" fields must be written so they ALSO read naturally as standalone sections when displayed separately in a Concern/Cause/Correction format.
-- The content across all four fields must be consistent — same facts, same details, same terminology. The block_narrative is NOT a summary; it is the full story. The three separate fields break that same story into its logical sections.
-- Since this is a DIAGNOSTIC ONLY narrative, the "correction" section should describe the RECOMMENDED repair action, NOT a completed repair. Use language like "RECOMMENDED REPLACING..." or "RECOMMEND PERFORMING..." rather than "REPLACED..." or "PERFORMED..."
-- All text in all four fields must be FULLY CAPITALIZED.
-```
-
-### User Prompt Template
-
-```
-Generate an audit-proof warranty narrative based on the following diagnostic-only repair order information. This is a diagnosis-only scenario — the repair has NOT been performed yet. The correction section should describe what repair is RECOMMENDED.
-
-VEHICLE & REPAIR ORDER INFORMATION:
----
-{compiled_data_block}
----
 ```
 
 ---
 
 ## 4. Main Generate Narrative Prompt — Repair Complete
 
-This prompt is used when the user selects **"REPAIR COMPLETE"** as their story type on the Input Page.
+**File location:** `src/constants/prompts.ts` → `REPAIR_COMPLETE_SYSTEM_PROMPT`
 
-### System Prompt (sent as the system/instruction role)
-
-```
-You are an expert-level automotive warranty documentation specialist with extensive knowledge of dealership service operations, warranty claim processing, and professional automotive terminology. You have deep experience writing audit-proof warranty narratives that pass manufacturer review without issue.
-
-Your role is to act as a professional warranty writing assistant. You generate narratives that are professional, detailed, accurate, and written in a natural, easy-to-read style.
-
-CRITICAL RULES:
-1. Write in a professional, warranty-appropriate tone at all times.
-2. All narrative text must be FULLY CAPITALIZED for visual uniformity.
-3. If the root cause or reason for a component failure was not specifically stated, include the most probable technical reason for that failure — every failed component needs a documented "cause" in the narrative.
-4. NEVER use the word "damaged" or any language that implies external force, customer misuse, abuse, neglect, or any condition that could be interpreted as invalidating warranty coverage.
-5. You ARE allowed and encouraged to use manufacturer-specific terminology, proprietary system names, and OEM-specific language in the generated narrative when the vehicle's year, make, and model are provided. This makes the output more accurate and relevant to the specific vehicle being serviced. Use the vehicle information to infer the correct technical names for systems, components, and procedures specific to that manufacturer.
-6. The narrative should read naturally and flow well as a cohesive story, not as a list of bullet points.
-7. If diagnostic steps or details seem sparse, you may add reasonable professional language to make the narrative more complete, but do NOT fabricate information that contradicts what was provided. However, when detailed diagnostic information IS provided, you must preserve and include ALL of it — do not simplify or reduce detailed input into generalized statements.
-8. If repair verification steps were provided, incorporate them naturally into the correction section to demonstrate the repair was confirmed successful.
-9. NEVER generate, fabricate, or include any document ID numbers, reference numbers, case numbers, claim numbers, or authorization numbers in the narrative. Only include identification numbers that were explicitly provided in the technician's input data (such as diagnostic trouble codes). Do not invent any numbers.
-10. The generated narrative must include ALL specific technical data points provided by the technician. This includes but is not limited to: terminal numbers, connector IDs, circuit numbers, pin numbers, wire colors, voltage readings, resistance readings, amperage readings, pressure readings, temperature readings, frequency values, signal waveform descriptions, specification values, measurement tool readings, and any other specific numerical or technical data. NEVER summarize, condense, paraphrase, or omit these details. If the technician wrote 'TESTED TERMINAL 3 AT CONNECTOR C0123 AND FOUND 0.2V WHERE 5.0V REFERENCE IS SPECIFIED,' the narrative MUST include that exact terminal number, connector ID, and both voltage values. The output narrative should ALWAYS contain MORE detail than what was provided, never less. When the technician provides specific diagnostic steps with specific values, treat every single data point as critical audit documentation that must appear in the final narrative.
-
-RESPONSE FORMAT:
-You must respond with ONLY a valid JSON object. No additional text, no markdown formatting, no code fences. Just the raw JSON.
-
-The JSON must contain exactly these four keys:
-{
-  "block_narrative": "THE COMPLETE STORY AS A SINGLE FLOWING PARAGRAPH SUITABLE FOR BLOCK FORMAT DISPLAY",
-  "concern": "THE CUSTOMER CONCERN SECTION ONLY — WHAT THE CUSTOMER REPORTED OR EXPERIENCED",
-  "cause": "THE CAUSE/DIAGNOSIS SECTION ONLY — WHAT WAS FOUND DURING DIAGNOSTICS AND THE ROOT CAUSE",
-  "correction": "THE CORRECTION SECTION ONLY — WHAT REPAIR WAS PERFORMED AND HOW IT WAS VERIFIED"
-}
-
-IMPORTANT FORMAT REQUIREMENTS:
-- The "block_narrative" must be one complete, cohesive paragraph that tells the full story from concern through diagnosis to completed repair. It should flow naturally as a single block of text.
-- The "concern", "cause", and "correction" fields must be written so they ALSO read naturally as standalone sections when displayed separately in a Concern/Cause/Correction format.
-- The content across all four fields must be consistent — same facts, same details, same terminology. The block_narrative is NOT a summary; it is the full story. The three separate fields break that same story into its logical sections.
-- Since this is a REPAIR COMPLETE narrative, the "correction" section should describe the repair that WAS PERFORMED in past tense. Use language like "REPLACED THE..." or "PERFORMED..." rather than "RECOMMEND REPLACING..."
-- All text in all four fields must be FULLY CAPITALIZED.
-```
-
-### User Prompt Template
-
-```
-Generate an audit-proof warranty narrative based on the following completed repair order information. This repair has been fully completed and verified.
-
-VEHICLE & REPAIR ORDER INFORMATION:
----
-{compiled_data_block}
----
-```
+Same rules as Diagnostic Only with these differences:
+- Rule 8: If repair verification steps were provided, incorporate them naturally into the correction section
+- Correction section uses **past tense** ("REPLACED THE..." not "RECOMMEND REPLACING...")
+- Rules renumbered: no-fabricated-IDs is rule 9, technical detail preservation is rule 10
 
 ---
 
 ## 5. JSON Response Structure & Parsing
 
-### Expected API Response
-
+### Standard 4-Key Response (Used by: Generate, Regenerate, Customize, Apply Edits, Update Narrative)
 ```json
 {
-  "block_narrative": "CUSTOMER STATES THE ENGINE HAS A ROUGH IDLE AND THE CHECK ENGINE LIGHT IS ILLUMINATED. TECHNICIAN CONNECTED THE DIAGNOSTIC SCAN TOOL AND RETRIEVED DIAGNOSTIC TROUBLE CODES P0300, P0301, AND P0304 INDICATING RANDOM AND MULTIPLE MISFIRES ON CYLINDERS 1 AND 4. PERFORMED A CYLINDER BALANCE TEST WHICH CONFIRMED THE MISFIRE CONDITIONS ON THE AFFECTED CYLINDERS. CHECKED FUEL TRIM DATA AND FOUND VALUES WITHIN ACCEPTABLE RANGE, RULING OUT FUEL DELIVERY CONCERNS. UPON INSPECTION OF THE IGNITION COMPONENTS, FOUND THE SPARK PLUGS ON CYLINDERS 1 AND 4 TO BE EXCESSIVELY WORN WITH DEGRADED ELECTRODE GAPS, AND THE CORRESPONDING IGNITION COILS SHOWED SIGNS OF INTERNAL INSULATION BREAKDOWN DUE TO NORMAL WEAR AND EXTENDED USE. THE WORN IGNITION COMPONENTS WERE UNABLE TO PRODUCE CONSISTENT SPARK UNDER LOAD, RESULTING IN THE MISFIRE CONDITIONS. REPLACED THE SPARK PLUGS AND IGNITION COILS ON CYLINDERS 1 AND 4. CLEARED ALL DIAGNOSTIC TROUBLE CODES AND PERFORMED A ROAD TEST TO VERIFY THE REPAIR. ENGINE IDLE IS NOW SMOOTH AND NO MISFIRES ARE PRESENT. VEHICLE IS OPERATING AS DESIGNED.",
-
-  "concern": "CUSTOMER STATES THE ENGINE HAS A ROUGH IDLE AND THE CHECK ENGINE LIGHT IS ILLUMINATED.",
-
-  "cause": "TECHNICIAN CONNECTED THE DIAGNOSTIC SCAN TOOL AND RETRIEVED DIAGNOSTIC TROUBLE CODES P0300, P0301, AND P0304 INDICATING RANDOM AND MULTIPLE MISFIRES ON CYLINDERS 1 AND 4. PERFORMED A CYLINDER BALANCE TEST WHICH CONFIRMED THE MISFIRE CONDITIONS ON THE AFFECTED CYLINDERS. CHECKED FUEL TRIM DATA AND FOUND VALUES WITHIN ACCEPTABLE RANGE, RULING OUT FUEL DELIVERY CONCERNS. UPON INSPECTION OF THE IGNITION COMPONENTS, FOUND THE SPARK PLUGS ON CYLINDERS 1 AND 4 TO BE EXCESSIVELY WORN WITH DEGRADED ELECTRODE GAPS, AND THE CORRESPONDING IGNITION COILS SHOWED SIGNS OF INTERNAL INSULATION BREAKDOWN DUE TO NORMAL WEAR AND EXTENDED USE. THE WORN IGNITION COMPONENTS WERE UNABLE TO PRODUCE CONSISTENT SPARK UNDER LOAD, RESULTING IN THE MISFIRE CONDITIONS.",
-
-  "correction": "REPLACED THE SPARK PLUGS AND IGNITION COILS ON CYLINDERS 1 AND 4. CLEARED ALL DIAGNOSTIC TROUBLE CODES AND PERFORMED A ROAD TEST TO VERIFY THE REPAIR. ENGINE IDLE IS NOW SMOOTH AND NO MISFIRES ARE PRESENT. VEHICLE IS OPERATING AS DESIGNED."
+  "block_narrative": "string",
+  "concern": "string",
+  "cause": "string",
+  "correction": "string"
 }
 ```
 
-### Parsing Logic
-
-```
-ON API RESPONSE:
-  1. Parse JSON response into object
-  2. Store all four values in application state:
-     - state.blockNarrative = response.block_narrative
-     - state.concern = response.concern
-     - state.cause = response.cause
-     - state.correction = response.correction
-  3. Default display = BLOCK FORMAT → show state.blockNarrative
-  4. When user clicks "C/C/C FORMAT" toggle → show concern, cause, correction as separate labeled sections
-  5. When user clicks "BLOCK FORMATTING" toggle → show blockNarrative again
+### Proofread Response
+```json
+{
+  "flagged_issues": ["string with [[snippet]] markers"],
+  "suggested_edits": ["string"],
+  "overall_rating": "PASS | NEEDS_REVIEW | FAIL",
+  "summary": "string"
+}
 ```
 
-### Display Rendering
-
-**Block Format (Default):**
-```
-┌─────────────────────────────────────────┐
-│                                         │
-│  {state.blockNarrative}                 │
-│                                         │
-└─────────────────────────────────────────┘
-```
-
-**C/C/C Format (Toggled):**
-```
-┌─────────────────────────────────────────┐
-│  CONCERN:                               │
-│  {state.concern}                        │
-│                                         │
-│  CAUSE:                                 │
-│  {state.cause}                          │
-│                                         │
-│  CORRECTION:                            │
-│  {state.correction}                     │
-└─────────────────────────────────────────┘
-```
-
-### Error Handling
-
-If the API response is not valid JSON or is missing any of the four required keys:
-
-```
-ON PARSE ERROR:
-  1. Show error toast: "There was an issue generating your narrative. Please try again."
-  2. Re-enable the REGENERATE STORY button
-  3. Log the raw response for debugging
-  4. Do NOT display partial/broken data to the user
-```
+### Parsing
+All Gemini responses are processed by `parseJsonResponse<T>()` in `src/lib/gemini/client.ts`, which strips markdown code fences (`\`\`\`json ... \`\`\``) before JSON.parse().
 
 ---
 
 ## 6. Story Audit / Proofreading Prompts
 
-This feature is triggered when the user clicks **"REVIEW & PROOFREAD STORY"** on the Generated Narrative Page. It takes the CURRENT narrative text (including any manual edits the user may have made) and audits it for quality issues.
+The proofread system uses **two different prompts** selected based on story type.
 
-**Important:** There are TWO different audit system prompts, selected based on the story type. The proofread API route checks the `storyType` field from the request body and selects the appropriate prompt:
-- **Diagnostic Only** stories use the Diagnostic Optimizer prompt (evaluates diagnostic strength, authorization-readiness, and repair sellability)
-- **Repair Complete** stories use the Warranty Audit prompt (evaluates warranty compliance, verification steps, and audit-readiness)
+### 6A. Repair Complete Proofread (Warranty Audit)
 
-Both prompts return the same JSON response format (flagged_issues, suggested_edits, overall_rating, summary).
+**File location:** `src/constants/prompts.ts` → `PROOFREAD_SYSTEM_PROMPT`
 
-### 6a. Repair Complete — Warranty Audit System Prompt
+**9 Audit Criteria:**
+1. Language implying external damage, customer misuse, abuse, neglect
+2. Missing verification steps (repair performed without documented verification)
+3. Vague or ambiguous language
+4. Missing root cause (part replaced without WHY it failed)
+5. Inconsistent information between concern, cause, correction
+6. Non-professional language, slang, informal tone
+7. Uncertainty language ("might be", "could be", "possibly")
+8. Missing diagnostic steps (part replaced without documenting how conclusion was reached)
+9. Overly brief narratives
 
-This prompt is used when `story_type` is **"repair_complete"**.
+**OEM Terminology Allowance:** Manufacturer-specific terminology is EXPECTED and should NOT be flagged.
 
+**Snippet Extraction:** Each flagged issue must include exact text from the narrative enclosed in `[[double brackets]]` for UI highlighting.
+
+### 6B. Diagnostic Only Proofread (Authorization-Readiness Optimizer)
+
+**File location:** `src/constants/prompts.ts` → `DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT`
+
+This is a completely different evaluation system. It does NOT flag for missing completed repairs or verification steps.
+
+**10 Optimization Criteria:**
+1. Insufficient diagnostic evidence
+2. Weak root cause documentation
+3. Missing specific data points (no vague "found abnormal readings")
+4. Logical flow and clarity
+5. Justification strength (would an extended warranty company authorize without third-party inspection?)
+6. Harmful warranty language
+7. Uncertainty language
+8. Missing recommendation clarity
+9. Non-professional language
+10. Repair sellability (could a service advisor confidently present this to a customer?)
+
+### Prompt Selection Logic (in `/api/proofread/route.ts`)
 ```
-You are an expert automotive warranty auditor with deep knowledge of manufacturer warranty claim review processes. Your job is to review warranty narratives and identify any language, phrasing, missing information, or structural issues that could cause a warranty claim to be flagged, questioned, or rejected during a manufacturer audit.
-
-You are thorough, detail-oriented, and understand the specific red flags that warranty auditors look for when reviewing claim documentation.
-
-AUDIT CRITERIA — Flag any of the following:
-1. Language that implies external damage, customer misuse, abuse, neglect, or aftermarket modifications (words like "damaged", "broken by", "customer caused", "aftermarket", "modified", "abused", etc.)
-2. Missing verification steps — if a repair was performed but there is no mention of verifying the repair was successful (road test, re-scan, operational check, etc.)
-3. Vague or ambiguous language that does not clearly establish what was wrong or what was done
-4. Missing root cause — if the narrative describes replacing a part but does not explain WHY that part failed
-5. Inconsistent information — if the concern, cause, and correction sections contradict each other
-6. Non-professional language, slang, abbreviations that are not industry-standard, or informal tone
-7. Any language that could be interpreted as the technician being uncertain about the diagnosis (avoid "might be", "could be", "possibly" — auditors want confidence)
-8. Missing diagnostic steps — if a part was replaced without documenting how the technician arrived at that conclusion
-9. Overly brief narratives that lack the detail expected for warranty documentation
-10. Any manufacturer-specific branding or proprietary terminology that should be replaced with universal language
-
-SNIPPET EXTRACTION:
-For each flagged issue, you MUST include the EXACT text snippet from the narrative that contains the issue, enclosed in double brackets like [[exact text here]]. This exact text will be used for highlighting in the UI. The snippet should be the shortest phrase that captures the problematic text — typically 3-15 words. Copy the text EXACTLY as it appears in the narrative (same capitalization, punctuation, spacing).
-
-RESPONSE FORMAT:
-You must respond with ONLY a valid JSON object. No additional text, no markdown formatting, no code fences. Just the raw JSON.
-
-{
-  "flagged_issues": [
-    "Description of issue 1 [[exact problematic text from narrative]]",
-    "Description of issue 2 [[exact problematic text from narrative]]"
-  ],
-  "suggested_edits": [
-    "Specific suggestion to fix issue 1",
-    "Specific suggestion to fix issue 2"
-  ],
-  "overall_rating": "PASS | NEEDS_REVIEW | FAIL",
-  "summary": "Brief one-sentence overall assessment of the narrative quality"
-}
-
-RULES:
-- Each flagged issue should have a corresponding suggested edit at the same array index.
-- Each flagged_issues entry MUST contain the exact problematic text from the narrative enclosed in [[double brackets]]. If the issue is about missing content rather than specific text, use [[]] (empty brackets).
-- If the narrative passes audit with no issues found, return empty arrays for both flagged_issues and suggested_edits, with overall_rating "PASS".
-- The overall_rating should be:
-  - "PASS" — No issues found, narrative is audit-ready
-  - "NEEDS_REVIEW" — Minor issues found that should be addressed but may not cause rejection
-  - "FAIL" — Critical issues found that are very likely to cause claim rejection
-- Be specific in your suggestions — don't just say "fix the language," tell the user exactly what to change and what to change it to.
-- Keep all feedback professional and constructive.
-```
-
-### Repair Complete — User Prompt Template
-
-```
-Review the following warranty narrative for audit compliance issues. Identify any language, missing information, or structural problems that could cause this claim to be flagged or rejected during a manufacturer warranty audit.
-
-STORY TYPE: Repair Complete
-VEHICLE: {year} {make} {model}
-
-NARRATIVE TO REVIEW:
----
-CONCERN: {current_concern_text}
-
-CAUSE: {current_cause_text}
-
-CORRECTION: {current_correction_text}
----
-```
-
-### 6b. Diagnostic Only — Diagnostic Optimizer System Prompt
-
-This prompt is used when `story_type` is **"diagnostic_only"**. It evaluates the narrative for diagnostic strength, authorization-readiness, and repair sellability — NOT for missing completed repair or verification steps (which would be incorrect for a diagnostic-only story).
-
-```
-You are an expert automotive service documentation specialist and diagnostic narrative optimizer. You have deep experience with dealership service operations, manufacturer warranty pre-authorization processes, extended warranty claim submissions, and customer-facing repair recommendations. You understand what makes a diagnostic narrative compelling enough that a service advisor can confidently present it to a customer, a service manager can submit it for manufacturer pre-authorization, or an extended warranty company can authorize a repair without requiring a third-party inspection.
-
-Your job is to review a DIAGNOSTIC ONLY narrative — meaning the repair has NOT been performed yet. This narrative will be used to justify and sell the recommended repair. Do NOT flag this narrative for missing a completed repair or verification steps — that is expected for a diagnostic-only story.
-
-OPTIMIZATION CRITERIA — Evaluate and flag any of the following:
-1. INSUFFICIENT DIAGNOSTIC EVIDENCE — Does the narrative clearly document enough diagnostic steps to justify the recommended repair? A strong diagnostic story walks the reader through a logical diagnostic process that makes the conclusion feel inevitable. Flag if the diagnostic path feels thin or if big logical leaps are made without supporting evidence.
-2. WEAK ROOT CAUSE DOCUMENTATION — Is the root cause clearly established with specific evidence? The narrative should make it crystal clear WHY the component needs to be replaced, not just THAT it needs to be replaced. Flag if the root cause is vague or unsupported by the documented diagnostic steps.
-3. MISSING SPECIFIC DATA POINTS — Are test results, measurements, specification comparisons, and diagnostic findings specifically documented? Narratives that include specific values (voltages, resistances, pressures, code definitions, etc.) and compare them to manufacturer specifications are dramatically more convincing. Flag if the narrative uses vague language like "found abnormal readings" instead of specific values.
-4. LOGICAL FLOW AND CLARITY — Does the narrative tell a clear, logical story from customer concern through diagnostic process to recommended repair? A reader (service advisor, warranty administrator, extended warranty adjuster, or customer) should be able to follow the diagnostic reasoning without confusion. Flag if the flow is disjointed or hard to follow.
-5. JUSTIFICATION STRENGTH — Would this narrative be strong enough to convince an extended warranty company to authorize the repair WITHOUT requiring a third-party inspection? This is the gold standard. The narrative should be so thorough and well-documented that an adjuster reading it feels confident the diagnosis is correct and the recommended repair is necessary. Flag if the justification feels weak or incomplete.
-6. HARMFUL WARRANTY LANGUAGE — Same as repair complete: flag any language that implies external damage, customer misuse, abuse, neglect, or aftermarket modifications. These terms can kill authorization regardless of how strong the diagnosis is.
-7. UNCERTAINTY LANGUAGE — Flag any language that sounds uncertain ("might be", "could be", "possibly", "appears to be"). Adjusters and customers both lose confidence when the technician sounds unsure. The narrative should convey diagnostic confidence.
-8. MISSING RECOMMENDATION CLARITY — The correction/recommendation section should clearly state what repair is recommended and WHY it is the appropriate fix based on the diagnostic findings. Flag if the recommendation is vague or disconnected from the diagnostic evidence.
-9. NON-PROFESSIONAL LANGUAGE — Flag any slang, non-standard abbreviations, informal tone, or language that would undermine the professional credibility of the narrative.
-10. REPAIR SELLABILITY — Would a service advisor feel confident reading this narrative to a customer to explain why the repair is needed? The story should give the advisor everything they need to clearly explain the problem, what was found, and why the recommended repair is the right course of action. Flag if a service advisor would struggle to explain the situation based on this narrative alone.
-
-RESPONSE FORMAT:
-You must respond with ONLY a valid JSON object. No additional text, no markdown formatting, no code fences. Just the raw JSON.
-
-{
-  "flagged_issues": [
-    "Description of issue 1",
-    "Description of issue 2"
-  ],
-  "suggested_edits": [
-    "Specific suggestion to fix issue 1",
-    "Specific suggestion to fix issue 2"
-  ],
-  "overall_rating": "PASS | NEEDS_REVIEW | FAIL",
-  "summary": "Brief one-sentence overall assessment of the diagnostic narrative strength"
-}
-
-RULES:
-- Each flagged issue should have a corresponding suggested edit at the same array index.
-- If the narrative is strong with no issues found, return empty arrays for both flagged_issues and suggested_edits, with overall_rating "PASS".
-- The overall_rating should be:
-  - "PASS" — Narrative is detailed, well-documented, and strong enough to support authorization without a third-party inspection. A service advisor could confidently present this to any audience.
-  - "NEEDS_REVIEW" — Narrative is decent but has gaps that could weaken its effectiveness. With the suggested improvements, it would be authorization-ready.
-  - "FAIL" — Narrative has significant gaps in diagnostic evidence, weak justification, or problematic language that would likely result in a denied authorization or require additional inspection.
-- Be specific in your suggestions — don't just say "add more detail," tell the user exactly what type of information would strengthen the narrative and where it should go.
-- Frame suggestions constructively — the goal is to help the technician build the strongest possible case for the recommended repair.
-- NEVER flag the narrative for not having a completed repair or missing repair verification steps. This is a DIAGNOSTIC ONLY story — the repair has not been performed. That is expected and correct.
-```
-
-### Diagnostic Only — User Prompt Template
-
-```
-Review the following diagnostic-only narrative for strength, clarity, and authorization-readiness. This is a diagnosis-only scenario — the repair has NOT been performed yet. Evaluate whether this narrative is detailed and compelling enough to support repair authorization from a manufacturer, extended warranty company, or customer approval.
-
-STORY TYPE: Diagnostic Only
-VEHICLE: {year} {make} {model}
-
-NARRATIVE TO REVIEW:
----
-CONCERN: {current_concern_text}
-
-CAUSE: {current_cause_text}
-
-CORRECTION: {current_correction_text}
----
-```
-
-### Prompt Selection Logic
-
-The proofread API route (`src/app/api/proofread/route.ts`) selects the correct prompt pair based on `storyType` from the request body:
-
-```
-IF storyType === "diagnostic_only":
-  systemPrompt = DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT
-  userPrompt = diagnostic-only user prompt template (above)
-ELSE:
-  systemPrompt = PROOFREAD_SYSTEM_PROMPT (repair complete warranty audit)
-  userPrompt = repair complete user prompt template (above)
-```
-
-**Note:** The narrative sent for review should always be the CURRENT text, including any edits the user has made through the Edit Story modal. This ensures the audit reflects the actual text that would be submitted.
-
-### Response Parsing (Same for Both Story Types)
-
-```
-ON AUDIT RESPONSE:
-  1. Parse JSON response
-  2. Populate "Flagged Issues" box:
-     - Join flagged_issues array with line breaks
-     - Each issue displayed as a numbered item
-     - Apply typing animation effect
-  3. Populate "Suggested Edits" box:
-     - Join suggested_edits array with line breaks
-     - Each suggestion displayed as a numbered item
-     - Apply typing animation effect
-  4. Display overall_rating as a visual badge:
-     - PASS → Green badge
-     - NEEDS_REVIEW → Yellow/amber badge
-     - FAIL → Red badge
-  5. Display summary text below the badge
-```
-
-### Example Response (Repair Complete)
-
-```json
-{
-  "flagged_issues": [
-    "The phrase 'CUSTOMER CAUSED THE COMPONENT TO FAIL' directly implies customer fault and will flag an audit.",
-    "No repair verification step is documented — the narrative does not mention confirming the repair was successful.",
-    "The root cause states the part was 'DAMAGED' which suggests external force rather than normal wear."
-  ],
-  "suggested_edits": [
-    "Replace 'CUSTOMER CAUSED THE COMPONENT TO FAIL' with 'THE COMPONENT WAS FOUND TO HAVE FAILED DUE TO NORMAL WEAR AND INTERNAL DEGRADATION.'",
-    "Add a verification step such as: 'CLEARED ALL DIAGNOSTIC TROUBLE CODES AND PERFORMED A ROAD TEST TO VERIFY THE REPAIR. VEHICLE IS OPERATING AS DESIGNED.'",
-    "Replace 'DAMAGED' with 'FOUND TO HAVE FAILED DUE TO INTERNAL WEAR' or 'EXHIBITED SIGNS OF NORMAL MATERIAL DEGRADATION.'"
-  ],
-  "overall_rating": "FAIL",
-  "summary": "Narrative contains language that directly implies customer fault and is missing verification steps — both are critical audit flags that need to be addressed before submission."
-}
+if (storyType === 'diagnostic_only')
+  → use DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT
+  → user prompt evaluates "authorization-readiness"
+else
+  → use PROOFREAD_SYSTEM_PROMPT
+  → user prompt evaluates "audit compliance"
 ```
 
 ---
 
 ## 7. AI Output Customization Panel Logic
 
-### Overview
-
-The customization panel gives users control over three narrative characteristics via sliders, plus a free-text field for custom instructions. When the user clicks "APPLY CUSTOMIZATION TO STORY," the app takes the ORIGINAL input data (not the current narrative text) and regenerates with modified prompt instructions.
-
 ### Slider Definitions
 
-#### Length Slider (3 positions)
+Each slider has 3 positions. When at center ("No Change"), no modifier is added. When at either extreme, the modifier text is appended to the customization block.
 
-| Position | Value | Prompt Modifier |
-|----------|-------|-----------------|
-| Left | Short | `LENGTH PREFERENCE: Generate a concise narrative. Keep the story brief and to the point — include only the essential information needed for the warranty claim. Aim for 3-5 sentences total.` |
-| Center | Standard | *(no modifier added — this is the default behavior)* |
-| Right | Detailed | `LENGTH PREFERENCE: Generate a detailed, thorough narrative. Include expanded descriptions of diagnostic steps, detailed technical reasoning for the root cause, and comprehensive repair/verification information. Aim for a robust, in-depth story that leaves no questions for an auditor.` |
+**Length Slider:**
+| Position | Key | Modifier |
+|----------|-----|----------|
+| Short | `short` | "Generate a concise narrative. Keep the story brief and to the point — include only the essential information needed for the warranty claim. Aim for 3-5 sentences total." |
+| No Change | `standard` | *(no modifier added)* |
+| Extended | `detailed` | "Generate a detailed, thorough narrative. Include expanded descriptions of diagnostic steps, detailed technical reasoning for the root cause, and comprehensive repair/verification information." |
 
-#### Tone Slider (3 positions)
+**Tone Slider:**
+| Position | Key | Modifier |
+|----------|-----|----------|
+| Warranty | `warranty` | "Write in a strict warranty-formal tone. Use precise technical language, maintain a formal structure, and prioritize language specifically optimized for passing manufacturer warranty audits." |
+| No Change | `standard` | *(no modifier added)* |
+| Customer Friendly | `customer_friendly` | "Write in a tone that is professional but also easy for a non-technical person to understand. While maintaining accuracy, use language that a customer or service advisor could clearly understand." |
 
-| Position | Value | Prompt Modifier |
-|----------|-------|-----------------|
-| Left | Warranty | `TONE PREFERENCE: Write in a strict warranty-formal tone. Use precise technical language, maintain a formal structure, and prioritize language that is specifically optimized for passing manufacturer warranty audits. Avoid any conversational or explanatory language.` |
-| Center | Standard | *(no modifier added — this is the default behavior)* |
-| Right | Customer Friendly | `TONE PREFERENCE: Write in a tone that is professional but also easy for a non-technical person to understand. While maintaining accuracy and audit compliance, use language that a customer or service advisor could read and clearly understand what was wrong, what was done, and why. Avoid overly technical jargon where a plain-language alternative exists.` |
+**Detail Level Slider:**
+| Position | Key | Modifier |
+|----------|-----|----------|
+| Concise | `concise` | "Keep diagnostic and repair steps concise. Summarize the diagnostic process without listing every individual action. Focus on the key findings and actions." |
+| No Change | `standard` | *(no modifier added)* |
+| Additional Steps | `additional` | "Include additional professional diagnostic and repair steps that a qualified technician would typically perform, even if not explicitly listed in the input." |
 
-#### Detail Level Slider (3 positions)
+**Custom Instructions:** Free-text field (max 50 characters) appended as "CUSTOM INSTRUCTIONS: {text}"
 
-| Position | Value | Prompt Modifier |
-|----------|-------|-----------------|
-| Left | Concise | `DETAIL LEVEL PREFERENCE: Keep diagnostic and repair steps concise. Summarize the diagnostic process and repair steps without listing every individual action. Focus on the key findings and actions.` |
-| Center | Standard | *(no modifier added — this is the default behavior)* |
-| Right | Additional Steps | `DETAIL LEVEL PREFERENCE: Include additional professional diagnostic and repair steps that a qualified technician would typically perform in this scenario, even if they were not explicitly listed in the input. Add reasonable verification checks, preliminary inspections, and supplementary steps that strengthen the narrative and demonstrate thoroughness.` |
-
-### Custom Instructions Field
-
-A free-text field where the user can type any additional instructions they want applied to the regeneration. This text is appended to the prompt exactly as written.
-
-**Examples of what a user might type:**
-- "Make sure to mention the TSB number 22-NA-123"
-- "Emphasize that the part was an internal electrical failure"
-- "Don't mention the transmission fluid flush"
-- "Keep the concern section very short"
-
-### How Customization Modifiers Are Applied
-
-When the user clicks "APPLY CUSTOMIZATION TO STORY," the app takes the **currently displayed narrative** and sends it back to the AI with instructions to rewrite it according to the slider preferences. This means customization modifies the story the user is already looking at — it does NOT go back to the original input fields.
-
-**Why this approach:**
-- The user may have already edited the story via the Edit Story modal — customization should respect those edits
-- If the user hit Regenerate and got a variation they liked, customization should modify THAT version
-- It's faster and more intuitive — "adjust what I'm looking at" rather than "start over with different settings"
-
-**Process:**
-
-1. Reads the **current narrative text** from the display state (block_narrative, concern, cause, correction — including any manual edits)
-2. Uses a **customization-specific system prompt** (see Section 8)
-3. **Builds a user prompt** that includes the current narrative text + all active customization modifiers
-4. Sends to the API
-5. Parses the new JSON response and replaces the current narrative display
-
-```
-CUSTOMIZATION ASSEMBLY:
-
-current_narrative = read current state (block_narrative, concern, cause, correction)
-story_type = stored story type from original generation
-
-customization_block = ""
-
-IF length_slider != "Standard":
-  customization_block += length_modifier + "\n"
-
-IF tone_slider != "Standard":
-  customization_block += tone_modifier + "\n"
-
-IF detail_slider != "Standard":
-  customization_block += detail_modifier + "\n"
-
-IF custom_instructions_field is NOT empty:
-  customization_block += "ADDITIONAL INSTRUCTIONS: " + custom_instructions_text + "\n"
-
-IF customization_block is NOT empty:
-  send customization API call with current_narrative + customization_block
-ELSE:
-  do nothing — show toast: "Adjust at least one slider or add custom instructions before applying."
-```
-
-### Customization State Management
-
-- Slider positions are **preserved** during the session — if a user changes them and applies, then toggles the panel off and back on, the sliders should still show their current positions
-- Customization settings do NOT carry over to a new narrative generation — if the user goes back to the Input Page and generates a brand new story, all sliders reset to "Standard"
-- The "REGENERATE STORY" button always uses the **original compiled data block** to generate a fresh variation from the base prompt — it ignores customization settings entirely
-- Customization can be applied **multiple times** — each application reads the currently displayed narrative (which may already be a customized version) and modifies it further
-- If all sliders are at "Standard" and the custom instructions field is empty, the "APPLY CUSTOMIZATION TO STORY" button should show a toast: "Adjust at least one slider or add custom instructions before applying."
+### Validation
+If all sliders are at "No Change" AND custom instructions are empty → toast: "Adjust at least one slider or add custom instructions before applying."
 
 ---
 
 ## 8. Customization-Applied Regeneration Prompt
 
-Customization uses a **dedicated system prompt** since it's rewriting an existing narrative rather than generating from raw input data.
+**File location:** `src/constants/prompts.ts` → `CUSTOMIZATION_SYSTEM_PROMPT`
 
-### System Prompt (Customization-Specific)
+**Key behavior:** Customization modifies the CURRENTLY DISPLAYED narrative — it does NOT re-generate from original input. This means user edits and prior customizations are preserved and adjusted.
 
-```
-You are an expert-level automotive warranty documentation specialist. You are being given an existing warranty narrative that needs to be rewritten according to specific customization preferences.
-
-Your job is to take the provided narrative and rewrite it while:
-1. Preserving ALL factual information — do not add, remove, or change any facts, diagnostic codes, part names, procedures, or findings unless a customization preference specifically asks for it.
-2. Maintaining FULL CAPITALIZATION throughout all text.
-3. Keeping the narrative audit-proof — NEVER introduce language that implies external damage, customer misuse, abuse, or neglect.
-4. Applying the customization preferences provided below to adjust the style, length, tone, and/or detail level of the narrative.
-
-RESPONSE FORMAT:
-You must respond with ONLY a valid JSON object. No additional text, no markdown formatting, no code fences. Just the raw JSON.
-
-The JSON must contain exactly these four keys:
-{
-  "block_narrative": "THE REWRITTEN COMPLETE STORY AS A SINGLE FLOWING PARAGRAPH",
-  "concern": "THE REWRITTEN CUSTOMER CONCERN SECTION ONLY",
-  "cause": "THE REWRITTEN CAUSE/DIAGNOSIS SECTION ONLY",
-  "correction": "THE REWRITTEN CORRECTION/REPAIR SECTION ONLY"
-}
-
-IMPORTANT:
-- The block_narrative must flow naturally as one cohesive paragraph.
-- The concern, cause, and correction must also read naturally as standalone sections.
-- All four fields must remain factually consistent with each other.
-- All text must be FULLY CAPITALIZED.
-```
-
-### User Prompt Template (Customization)
-
+### User Prompt Template
 ```
 Rewrite the following warranty narrative according to the customization preferences listed below. Preserve all factual content — only adjust the style, length, tone, and detail level as specified.
 
@@ -669,9 +271,7 @@ STORY TYPE: {story_type}
 CURRENT NARRATIVE:
 ---
 CONCERN: {current_concern_text}
-
 CAUSE: {current_cause_text}
-
 CORRECTION: {current_correction_text}
 ---
 
@@ -679,88 +279,147 @@ CUSTOMIZATION PREFERENCES:
 {customization_block}
 ```
 
-### Complete Example: Repair Complete + Short Length + Customer Friendly Tone
+---
 
-**System Prompt:** *(Customization-specific system prompt above)*
+## 9. Apply Selected Edits Prompt
 
-**User Prompt:**
+**File location:** `src/app/api/apply-edits/route.ts` (inline system prompt)
+
+**Purpose:** Apply ONLY the user-selected subset of proofread suggestions to the narrative.
+
+**Key rules:**
+- Apply every edit in the provided list — do not skip any
+- Do NOT make additional changes beyond the provided edits
+- Maintain FULL CAPITALIZATION
+- Keep audit-proof language
+- Preserve factual content
+
+**User Prompt Template:**
 ```
-Rewrite the following warranty narrative according to the customization preferences listed below. Preserve all factual content — only adjust the style, length, tone, and detail level as specified.
+Apply the following SELECTED EDITS to the warranty narrative below. Apply ONLY the listed edits — do not make any other changes.
 
-STORY TYPE: Repair Complete
+STORY TYPE: {storyType}
 
 CURRENT NARRATIVE:
----
-CONCERN: CUSTOMER STATES THE ENGINE HAS A ROUGH IDLE AND THE CHECK ENGINE LIGHT IS ILLUMINATED.
+CONCERN: {concern}
+CAUSE: {cause}
+CORRECTION: {correction}
 
-CAUSE: TECHNICIAN CONNECTED THE DIAGNOSTIC SCAN TOOL AND RETRIEVED DIAGNOSTIC TROUBLE CODES P0300, P0301, AND P0304 INDICATING RANDOM AND MULTIPLE MISFIRES ON CYLINDERS 1 AND 4. PERFORMED A CYLINDER BALANCE TEST WHICH CONFIRMED THE MISFIRE CONDITIONS ON THE AFFECTED CYLINDERS. CHECKED FUEL TRIM DATA AND FOUND VALUES WITHIN ACCEPTABLE RANGE, RULING OUT FUEL DELIVERY CONCERNS. UPON INSPECTION OF THE IGNITION COMPONENTS, FOUND THE SPARK PLUGS ON CYLINDERS 1 AND 4 TO BE EXCESSIVELY WORN WITH DEGRADED ELECTRODE GAPS, AND THE CORRESPONDING IGNITION COILS SHOWED SIGNS OF INTERNAL INSULATION BREAKDOWN DUE TO NORMAL WEAR AND EXTENDED USE.
-
-CORRECTION: REPLACED THE SPARK PLUGS AND IGNITION COILS ON CYLINDERS 1 AND 4. CLEARED ALL DIAGNOSTIC TROUBLE CODES AND PERFORMED A ROAD TEST TO VERIFY THE REPAIR. ENGINE IDLE IS NOW SMOOTH AND NO MISFIRES ARE PRESENT. VEHICLE IS OPERATING AS DESIGNED.
----
-
-CUSTOMIZATION PREFERENCES:
-LENGTH PREFERENCE: Generate a concise narrative. Keep the story brief and to the point — include only the essential information needed for the warranty claim. Aim for 3-5 sentences total.
-TONE PREFERENCE: Write in a tone that is professional but also easy for a non-technical person to understand. While maintaining accuracy and audit compliance, use language that a customer or service advisor could read and clearly understand what was wrong, what was done, and why. Avoid overly technical jargon where a plain-language alternative exists.
+SELECTED EDITS TO APPLY:
+1. {edit1}
+2. {edit2}
+...
 ```
 
-**Note:** The customization prompt sends the CURRENT narrative text (which may include user edits or previous customizations), not the original input data. This means the AI is rewriting what the user is currently looking at.
+---
+
+## 10. Diagnostic → Repair Complete Update Prompt
+
+**File location:** `src/app/api/update-narrative/route.ts` (inline system prompt)
+
+**Purpose:** Take an existing diagnostic-only narrative and generate a new repair-complete narrative that preserves all original diagnostic detail while incorporating newly provided repair information.
+
+**Key rules:**
+1. PRESERVE all original diagnostic detail (concern, diagnostic steps, root cause)
+2. INCORPORATE repair performed + verification steps
+3. Transform correction from recommended (future tense) to completed (past tense)
+4. Maintain same professional audit-proof tone
+5. All text FULLY CAPITALIZED
+6. Use manufacturer-specific terminology consistent with the original
+7. If additional notes provided, incorporate naturally
+8. Final narrative should read as complete repair-complete story — not a patch
+
+**User Prompt Template:**
+```
+Original diagnostic narrative:
+CONCERN: {originalConcern}
+CAUSE: {originalCause}
+CORRECTION: {originalCorrection}
+
+Newly completed repair information:
+{repair data — either typed text or AI inference instruction based on dropdown selections}
+```
+
+### Dropdown Logic for Update Fields
+The UpdateWithRepairModal has dropdowns for Repair Performed and Repair Verification:
+- "Include" → use provided text
+- "Don't Include" → skip field
+- "Generate" → inject AI inference instruction
+
+### "Completed Recommended Repair" Button
+When toggled ON, the Repair Performed field is replaced with a static instruction:
+```
+REPAIR PERFORMED: The technician has completed the repair that was recommended in the original diagnostic narrative. Convert the recommended/future-tense repair language from the original CORRECTION section into past-tense completed repair language.
+```
+This instruction is sent to the update-narrative API — the AI handles the tense conversion during main generation (no separate API call).
 
 ---
 
-## 9. Complete API Call Reference
+## 11. Convert Recommendation Prompt (Tense Conversion)
+
+**File location:** `src/app/api/convert-recommendation/route.ts` (inline system prompt)
+
+**Purpose:** Simple tense conversion — takes a diagnostic recommendation and rewords it as a completed repair.
+
+**System Prompt:** "You are an automotive warranty narrative assistant. Your only task is to take a diagnostic recommendation statement and reword it as a completed repair statement. Change future/recommended tense to past/completed tense."
+
+**Note:** This route exists in the codebase but is **no longer called by any frontend code** as of Post-Sprint 9 (the "Completed Recommended Repair" button now uses the static instruction approach instead). Kept for potential future use.
+
+---
+
+## 12. Pre-Generation Output Customization
+
+**File location:** `src/lib/compileDataBlock.ts` + `src/components/input/PreGenCustomization.tsx`
+
+When the user sets non-standard preferences on the Input Page's pre-gen customization panel, the compiled data block gets an appended section:
+
+```
+--- OUTPUT STYLE PREFERENCES ---
+LENGTH PREFERENCE: {modifier text from LENGTH_MODIFIERS}
+TONE PREFERENCE: {modifier text from TONE_MODIFIERS}
+DETAIL LEVEL PREFERENCE: {modifier text from DETAIL_MODIFIERS}
+```
+
+This uses the same modifier constants from `src/constants/prompts.ts` as the post-generation customization panel.
+
+---
+
+## 13. Complete API Call Reference
 
 ### Summary Table
 
-| API Call | Trigger | System Prompt | User Prompt | Input Data |
-|----------|---------|---------------|-------------|------------|
-| **Generate Narrative (Diagnostic)** | GENERATE STORY button (Diagnostic Only selected) | Section 3 System Prompt | Section 3 User Prompt + compiled data | Compiled data block (no R.O. #) |
-| **Generate Narrative (Repair)** | GENERATE STORY button (Repair Complete selected) | Section 4 System Prompt | Section 4 User Prompt + compiled data | Compiled data block (no R.O. #) |
-| **Regenerate Story** | REGENERATE STORY button | Same system prompt as original generation | Same user prompt as original generation | Original compiled data block (fresh variation) |
-| **Apply Customization** | APPLY CUSTOMIZATION TO STORY button | Section 8 Customization System Prompt | Section 8 User Prompt + current narrative + modifiers | Current displayed narrative text |
-| **Review & Proofread** | REVIEW & PROOFREAD STORY button | Section 6 System Prompt | Section 6 User Prompt + current narrative text | Current displayed narrative text |
-
-### Data Flow Per Call
-
-**Generate / Regenerate:**
-```
-INPUT: compiled_data_block (from Input Page fields + dropdown logic, excluding R.O. #)
-OUTPUT: JSON with block_narrative, concern, cause, correction
-DISPLAY: Narrative display area (block or C/C/C format)
-ANIMATION: Loading spinner → typing animation for text
-```
-
-**Apply Customization:**
-```
-INPUT: Current displayed narrative text (concern, cause, correction — including any user edits or prior customizations)
-OUTPUT: JSON with block_narrative, concern, cause, correction (rewritten version)
-DISPLAY: Replaces current narrative display (block or C/C/C format)
-ANIMATION: Loading spinner → typing animation for text
-```
-
-**Review & Proofread:**
-```
-INPUT: Current narrative text (concern, cause, correction — including user edits)
-OUTPUT: JSON with flagged_issues, suggested_edits, overall_rating, summary
-DISPLAY: Flagged Issues box, Suggested Edits box, rating badge
-ANIMATION: Loading spinner → typing animation for flagged/suggested text
-```
+| API Call | Route | Trigger | System Prompt Source | Input Data |
+|----------|-------|---------|---------------------|------------|
+| **Generate (Diagnostic)** | `/api/generate` | GENERATE STORY button | `prompts.ts` → DIAGNOSTIC_ONLY_SYSTEM_PROMPT | Compiled data block |
+| **Generate (Repair)** | `/api/generate` | GENERATE STORY button | `prompts.ts` → REPAIR_COMPLETE_SYSTEM_PROMPT | Compiled data block |
+| **Regenerate** | `/api/generate` | REGENERATE STORY button | Same as original | Original compiled data block |
+| **Customize** | `/api/customize` | APPLY CUSTOMIZATION button | `prompts.ts` → CUSTOMIZATION_SYSTEM_PROMPT | Current narrative + modifiers |
+| **Proofread (Repair)** | `/api/proofread` | REVIEW & PROOFREAD button | `prompts.ts` → PROOFREAD_SYSTEM_PROMPT | Current narrative |
+| **Proofread (Diagnostic)** | `/api/proofread` | REVIEW & PROOFREAD button | `prompts.ts` → DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT | Current narrative |
+| **Apply Edits** | `/api/apply-edits` | APPLY SELECTED EDITS button | Inline in route.ts | Current narrative + selected edits |
+| **Update Narrative** | `/api/update-narrative` | GENERATE NARRATIVE (update modal) | Inline in route.ts | Original diagnostic narrative + repair data |
+| **Convert Recommendation** | `/api/convert-recommendation` | *(unused — route exists but not called)* | Inline in route.ts | Diagnostic correction text |
 
 ### Important Notes
 
-1. **Regenerate** re-sends the exact same prompt as the original generation (using the stored compiled data block). The AI will naturally produce a variation because of how language models work. No changes to the prompt are needed.
+1. **Regenerate** re-sends the exact same prompt as the original generation (using the stored compiled data block). The AI naturally produces a variation.
 
-2. **Apply Customization** reads the CURRENT displayed narrative (not the original compiled data block) and sends it to the AI with rewriting instructions. This means user edits and prior customizations are preserved and modified — not overwritten.
+2. **Customize** reads the CURRENT displayed narrative (including user edits and prior customizations), not the original input data.
 
-3. **The compiled data block must be stored in application state** after the initial generation so it can be re-used for Regenerate calls without requiring the user to go back to the Input Page.
+3. **The compiled data block must be stored in application state** after initial generation for Regenerate calls (stored in `narrativeStore.ts`).
 
-4. **The story type (Diagnostic Only vs. Repair Complete) must also be stored in state** so the correct system prompt is used for Regenerate, and so the customization prompt can reference the story type.
+4. **The story type must also be stored** so the correct system prompt is used for Regenerate and Proofread.
 
-5. **The current narrative text (including any user edits from the Edit Story modal) must be read from the display state** at the time Apply Customization or Review & Proofread is clicked.
+5. **R.O. # is NEVER sent to the API** — stored in state solely for database saves.
 
-6. **R.O. # is NEVER sent to the API** — it is stored in application state solely for saving the narrative to the user's profile/database. Year, Make, and Model ARE sent to the API so the AI can infer manufacturer-specific processes, system names, and terminology relevant to that specific vehicle.
+6. **Year, Make, and Model ARE sent to the API** so the AI can infer manufacturer-specific terminology.
 
-7. **The AI's generated output CAN and SHOULD contain manufacturer-specific terminology** (e.g., "Active Fuel Management," "StabiliTrak," "OnStar Diagnostics") when the vehicle year/make/model makes it relevant. This is intentional — it produces more accurate, professional narratives. The restriction on brand-neutral language applies only to the application's own source code, UI text, and hardcoded prompt strings — NOT to the AI's generated output.
+7. **The AI's generated output CAN and SHOULD contain manufacturer-specific terminology.** The restriction on brand-neutral language applies only to the application's source code, UI text, and hardcoded prompt strings.
+
+8. **Technical detail preservation** (rule 9/10 in generation prompts): All specific values — terminal numbers, voltages, connector IDs, etc. — must appear verbatim in the output. The AI should produce MORE detail, never less.
+
+9. **Diagnostic and Repair Complete narratives with the same RO# save as separate database rows** (INSERT, not upsert). The unique constraint was dropped in migration 006.
 
 ---
 
-*— End of Prompt & API Logic Document v1.0 —*
+*— End of Prompt & API Logic Document v2.0 —*

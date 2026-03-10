@@ -47,6 +47,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 5 Sprint 8:** COMPLETE — Role hierarchy restructure from 2-tier (admin/user) to 3-tier (owner/admin/user). Owner = platform owner, Admin = Group Manager, User = standard. All access gates, API routes, badges, promote/demote logic updated.
 **Stage 5 Sprint 9:** COMPLETE — Group management database schema, API routes, and signup integration
 **Stage 5 Sprint 10:** COMPLETE — Group Manager Dashboard UI and Owner Dashboard group management
+**Documentation Refresh:** COMPLETE — All 6 project reference files updated to v2.0 reflecting current application state
 **Next Task:** TBD
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
@@ -2696,6 +2697,21 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] **Task 5:** Enforced access restrictions — Admin role users do NOT see "Owner Dashboard" link (only owner role). Added "Group Dashboard" link with Users icon to UserPopup dropdown for admin-role users, positioned after Dashboard link. Owner Dashboard link remains owner-only in both UserPopup and Dashboard page. — **2026-03-10**
 - [x] **Task 6:** Added "Groups" tab to Owner Dashboard — view all groups with access codes, member counts, active/inactive status badges. Create new group form (name, access_code with auto-generate button using GROUPNAME-XXXX-XXXX pattern, description). Edit existing groups (name, access_code, description). View group members in modal (name, email, role, position, narratives). Toggle group active/inactive. — **2026-03-10**
 - [x] **Task 7:** Styled everything to match premium dark automotive tech aesthetic — same LiquidCard styling, same framer-motion animations (spring transitions, tab variants, AnimatePresence), same color scheme (CSS variables), same responsive patterns. Group Dashboard is a "lite" version of Owner Dashboard with fewer tabs focused on team management. Added `group_id` to useAuth UserProfile interface. Build verified clean with `npm run build`. — **2026-03-10**
+
+---
+
+## DOCUMENTATION REFRESH — PROJECT REFERENCE FILES v2.0 (2026-03-10)
+
+**Status:** COMPLETE
+
+All 6 project reference documents manually updated to v2.0 to accurately reflect the current application state after completing Phases 0–10 and all improvement sprints through Stage 5 Sprint 10.
+
+- [x] **CLAUDE_CODE_BUILD_INSTRUCTIONS.md** — Updated architecture reference, folder structure, database schema, technology stack versions, and sprint execution playbook to reflect current state
+- [x] **PRE_BUILD_SETUP_CHECKLIST.md** — Updated service accounts table, Gemini model reference (gemini-3-flash-preview), Resend integration, Cloudflare DNS notes
+- [x] **ServiceDraft_AI_Project_Instructions_v1_3.md** — Updated to v2.0 with current tech stack, complete feature set, role hierarchy (owner/admin/user), group management system
+- [x] **ServiceDraft_AI_Prompt_Logic_v1.md** — Updated to v2.0 with all prompt sections including story-type-aware proofreading, diagnostic optimizer, apply selected edits, diagnostic→repair update, convert recommendation, and pre-generation customization
+- [x] **ServiceDraft_AI_Spec_v1_3.md** — Updated to Version 2.0 (March 2026) with complete page specifications, database schema (5 tables including groups), API route inventory, and feature matrix
+- [x] **ServiceDraft_AI_UI_Design_Spec_v1.md** — Updated to v2.0 with complete design system documentation including dynamic theming, 9 accent colors, modal system, card system, and all visual enhancement specifications
 
 ---
 
