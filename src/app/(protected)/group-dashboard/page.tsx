@@ -1,0 +1,816 @@
+'use client';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Shield, Users, Search, RefreshCw, Crown,
+  ChevronDown, ChevronUp, ArrowUp, ArrowDown,
+  FileText, Activity, UserCog, UserCheck,
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useAuth } from '@/hooks/useAuth';
+import LiquidCard from '@/components/ui/LiquidCard';
+import Button from '@/components/ui/Button';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import Modal from '@/components/ui/Modal';
+
+// ─── Interfaces ──────────────────────────────────────────
+interface GroupInfo {
+  id: string;
+  name: string;
+  access_code: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface GroupMember {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  role: 'user' | 'admin' | 'owner';
+  position: string | null;
+  narrative_count: number;
+  last_active: string | null;
+}
+
+// ─── Role Badges ─────────────────────────────────────────
+const ROLE_BADGE: Record<string, { bg: string; text: string; label: string }> = {
+  owner: { bg: 'rgba(168,85,247,0.15)', text: '#a855f7', label: 'Owner' },
+  admin: { bg: 'rgba(234,179,8,0.15)', text: '#eab308', label: 'Admin' },
+  user: { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af', label: 'User' },
+};
+
+type MemberSortColumn = 'name' | 'email' | 'position' | 'role' | 'narrative_count' | 'last_active';
+
+// ─── Date formatting ─────────────────────────────────────
+function formatDateTimeStacked(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  return { date: `${mm}/${dd}/${yyyy}`, time: `${hours}:${minutes} ${ampm}` };
+}
+
+const springTransition = { type: 'spring' as const, stiffness: 400, damping: 25 };
+
+const tabVariants = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -12 },
+};
+
+type TabKey = 'overview' | 'members';
+
+export default function GroupDashboardPage() {
+  const router = useRouter();
+  const { profile, loading: authLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabKey>('overview');
+
+  // Group info
+  const [group, setGroup] = useState<GroupInfo | null>(null);
+  const [groupLoading, setGroupLoading] = useState(true);
+
+  // Members
+  const [members, setMembers] = useState<GroupMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+
+  // Table state
+  const [memberSearch, setMemberSearch] = useState('');
+  const [sortCol, setSortCol] = useState<MemberSortColumn>('name');
+  const [sortAsc, setSortAsc] = useState(true);
+  const [expandedMemberId, setExpandedMemberId] = useState<string | null>(null);
+
+  // Role management
+  const [promoteTarget, setPromoteTarget] = useState<{ id: string; name: string; currentRole: string } | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Title spotlight
+  const titleRef = useRef<HTMLDivElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isHoveringTitle, setIsHoveringTitle] = useState(false);
+
+  const handleTitleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!titleRef.current) return;
+    const rect = titleRef.current.getBoundingClientRect();
+    setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }, []);
+
+  // ─── Route protection ──────────────────────────────────
+  useEffect(() => {
+    if (!authLoading && profile) {
+      if (profile.role === 'user') {
+        toast.error('Access denied. Group Dashboard is for admin users only.');
+        router.replace('/dashboard');
+      }
+    }
+  }, [authLoading, profile, router]);
+
+  // ─── Fetch Group Info ──────────────────────────────────
+  const fetchGroup = useCallback(async () => {
+    setGroupLoading(true);
+    try {
+      const res = await fetch('/api/groups');
+      const json = await res.json();
+      if (json.success && json.data) {
+        // Admin gets single group, owner gets array — handle both
+        if (Array.isArray(json.data)) {
+          // Owner viewing — pick the first group or their assigned group
+          if (profile?.group_id) {
+            const match = json.data.find((g: GroupInfo) => g.id === profile.group_id);
+            setGroup(match || json.data[0] || null);
+          } else {
+            setGroup(json.data[0] || null);
+          }
+        } else {
+          setGroup(json.data);
+        }
+      }
+    } catch (err) {
+      console.error('Group fetch error:', err);
+    } finally {
+      setGroupLoading(false);
+    }
+  }, [profile?.group_id]);
+
+  useEffect(() => {
+    if (profile && (profile.role === 'admin' || profile.role === 'owner')) {
+      fetchGroup();
+    }
+  }, [profile, fetchGroup]);
+
+  // ─── Fetch Members ─────────────────────────────────────
+  const fetchMembers = useCallback(async () => {
+    if (!group) return;
+    setMembersLoading(true);
+    try {
+      const res = await fetch(`/api/groups/members?group_id=${group.id}`);
+      const json = await res.json();
+      if (json.success) {
+        setMembers(json.data || []);
+      }
+    } catch (err) {
+      console.error('Members fetch error:', err);
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [group]);
+
+  useEffect(() => {
+    if (group) {
+      fetchMembers();
+    }
+  }, [group, fetchMembers]);
+
+  // ─── Overview Stats ────────────────────────────────────
+  const memberCount = members.length;
+  const totalNarratives = members.reduce((sum, m) => sum + m.narrative_count, 0);
+
+  // Active this week: members with last_active within 7 days
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const activeMembersThisWeek = members.filter(
+    (m) => m.last_active && new Date(m.last_active) >= oneWeekAgo
+  ).length;
+
+  // Narratives today: approximate from activity (we'll show total for now since
+  // we don't have daily breakdown per group — the count is still useful)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const activeMembersToday = members.filter(
+    (m) => m.last_active && new Date(m.last_active) >= today
+  ).length;
+
+  // ─── Table Filtering / Sorting ─────────────────────────
+  const filteredMembers = members.filter((m) => {
+    if (!memberSearch.trim()) return true;
+    const q = memberSearch.toLowerCase();
+    const name = [m.first_name, m.last_name].filter(Boolean).join(' ').toLowerCase();
+    return name.includes(q) || m.email.toLowerCase().includes(q);
+  });
+
+  const sortedMembers = [...filteredMembers].sort((a, b) => {
+    const dir = sortAsc ? 1 : -1;
+    switch (sortCol) {
+      case 'name': {
+        const aName = [a.first_name, a.last_name].filter(Boolean).join(' ');
+        const bName = [b.first_name, b.last_name].filter(Boolean).join(' ');
+        return aName.localeCompare(bName) * dir;
+      }
+      case 'email':
+        return a.email.localeCompare(b.email) * dir;
+      case 'position':
+        return (a.position || '').localeCompare(b.position || '') * dir;
+      case 'role':
+        return a.role.localeCompare(b.role) * dir;
+      case 'narrative_count':
+        return (a.narrative_count - b.narrative_count) * dir;
+      case 'last_active': {
+        const aTime = a.last_active ? new Date(a.last_active).getTime() : 0;
+        const bTime = b.last_active ? new Date(b.last_active).getTime() : 0;
+        return (aTime - bTime) * dir;
+      }
+      default:
+        return 0;
+    }
+  });
+
+  const toggleSort = (col: MemberSortColumn) => {
+    if (sortCol === col) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortCol(col);
+      setSortAsc(true);
+    }
+  };
+
+  // ─── Role Management ───────────────────────────────────
+  const handlePromoteToggle = async () => {
+    if (!promoteTarget) return;
+
+    const isPromoting = promoteTarget.currentRole === 'user';
+
+    setActionLoading(`promote-${promoteTarget.id}`);
+    try {
+      const res = await fetch('/api/groups/members', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: promoteTarget.id,
+          newRole: isPromoting ? 'admin' : 'user',
+        }),
+      });
+      const json = await res.json();
+
+      if (json.success) {
+        toast.success(
+          isPromoting
+            ? `${promoteTarget.name} promoted to Admin`
+            : `${promoteTarget.name} demoted to User`
+        );
+        setMembers((prev) =>
+          prev.map((m) =>
+            m.id === promoteTarget.id
+              ? { ...m, role: isPromoting ? 'admin' : 'user' }
+              : m
+          )
+        );
+      } else {
+        toast.error(json.error || 'Failed to change role');
+      }
+    } catch {
+      toast.error('Failed to change role');
+    } finally {
+      setActionLoading(null);
+      setPromoteTarget(null);
+    }
+  };
+
+  // Can the current user manage this member's role?
+  const canManageRole = (member: GroupMember): { allowed: boolean; reason?: string } => {
+    if (!profile) return { allowed: false };
+
+    // Owner can do anything
+    if (profile.role === 'owner') return { allowed: true };
+
+    // Cannot change own role
+    if (member.id === profile.id) return { allowed: false, reason: 'Cannot change your own role' };
+
+    // Cannot change another admin's role
+    if (member.role === 'admin') return { allowed: false, reason: 'Contact the Owner to modify other admin roles' };
+
+    // Cannot change an owner's role
+    if (member.role === 'owner') return { allowed: false, reason: 'Cannot modify owner role' };
+
+    // Admin can promote user to admin
+    if (member.role === 'user') return { allowed: true };
+
+    return { allowed: false };
+  };
+
+  // ─── Loading / Auth guards ─────────────────────────────
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <LoadingSpinner size="large" message="Loading..." />
+      </div>
+    );
+  }
+
+  if (!profile || profile.role === 'user') {
+    return null;
+  }
+
+  if (groupLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <LoadingSpinner size="large" message="Loading group..." />
+      </div>
+    );
+  }
+
+  if (!group) {
+    return (
+      <div className="max-w-[90vw] mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <LiquidCard size="standard" className="!rounded-[16px]">
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <Users size={40} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+            <p className="text-[var(--text-secondary)] text-base text-center">
+              You are not assigned to any group yet.
+            </p>
+            <p className="text-[var(--text-muted)] text-sm text-center">
+              Contact the platform owner to be assigned to a group.
+            </p>
+            <Button variant="secondary" size="medium" onClick={() => router.push('/dashboard')}>
+              Back to Dashboard
+            </Button>
+          </div>
+        </LiquidCard>
+      </div>
+    );
+  }
+
+  // ─── Overview Cards ────────────────────────────────────
+  const overviewCards = [
+    { label: 'Team Members', value: memberCount, icon: Users, color: 'var(--accent-bright)', sub: 'in this group' },
+    { label: 'Active This Week', value: activeMembersThisWeek, icon: Activity, color: '#16a34a', sub: 'last 7 days' },
+    { label: 'Total Narratives', value: totalNarratives, icon: FileText, color: 'var(--accent-primary)', sub: 'generated by group' },
+    { label: 'Active Today', value: activeMembersToday, icon: UserCheck, color: '#f59e0b', sub: 'members active today' },
+  ];
+
+  const tabs: { key: TabKey; label: string; icon: typeof Users }[] = [
+    { key: 'overview', label: 'Overview', icon: Users },
+    { key: 'members', label: 'Team Members', icon: UserCog },
+  ];
+
+  return (
+    <div className="max-w-[90vw] mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        {/* Header — Group Name with premium styling */}
+        <div className="flex items-center justify-center mb-6 sm:mb-8">
+          <div
+            ref={titleRef}
+            className="relative overflow-hidden rounded-[16px] px-6 sm:px-10 py-4 sm:py-5 cursor-default select-none"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid var(--accent-20)',
+            }}
+            onMouseMove={handleTitleMouseMove}
+            onMouseEnter={() => setIsHoveringTitle(true)}
+            onMouseLeave={() => setIsHoveringTitle(false)}
+          >
+            {/* Spotlight overlay */}
+            <div
+              className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+              style={{
+                opacity: isHoveringTitle ? 1 : 0,
+                background: `radial-gradient(circle 150px at ${mousePos.x}px ${mousePos.y}px, rgba(255,255,255,0.08), transparent)`,
+                borderRadius: 'inherit',
+              }}
+            />
+            {/* Title content */}
+            <div className="relative z-10 flex items-center justify-center gap-3 sm:gap-4">
+              <Shield
+                size={36}
+                className="sm:hidden"
+                style={{
+                  color: 'var(--accent-bright)',
+                  filter: 'drop-shadow(0 0 10px var(--accent-primary)) drop-shadow(0 0 20px var(--accent-primary))',
+                }}
+              />
+              <Shield
+                size={44}
+                className="hidden sm:block"
+                style={{
+                  color: 'var(--accent-bright)',
+                  filter: 'drop-shadow(0 0 10px var(--accent-primary)) drop-shadow(0 0 20px var(--accent-primary))',
+                }}
+              />
+              <h1
+                className="text-2xl sm:text-4xl font-bold uppercase tracking-widest"
+                style={{
+                  color: 'transparent',
+                  WebkitTextStroke: '2px var(--accent-bright)',
+                  textShadow: '0 0 10px var(--accent-primary), 0 0 20px var(--accent-primary), 0 0 40px var(--accent-primary), 0 0 80px var(--accent-primary)',
+                }}
+              >
+                {group.name}
+              </h1>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex justify-center gap-2 sm:gap-4 mb-6 sm:mb-8 flex-wrap">
+          {tabs.map(({ key, label, icon: Icon }) => (
+            <motion.button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              transition={springTransition}
+              className={`flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-6 py-2 sm:py-3 rounded-xl text-sm sm:text-base font-semibold transition-all duration-200 cursor-pointer ${
+                activeTab === key
+                  ? 'bg-[var(--accent-primary)] text-white border border-[var(--accent-primary)] shadow-[var(--shadow-glow-sm)]'
+                  : 'bg-[var(--accent-10)] text-[var(--text-secondary)] border border-[var(--accent-border)] hover:bg-[var(--accent-20)] hover:text-[var(--accent-bright)]'
+              }`}
+            >
+              <Icon size={18} />
+              <span className="hidden sm:inline">{label}</span>
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <AnimatePresence mode="wait">
+          {/* ═══════════════════════════════════════════════════
+              OVERVIEW TAB
+             ═══════════════════════════════════════════════════ */}
+          {activeTab === 'overview' && (
+            <motion.div
+              key="overview"
+              variants={tabVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="space-y-6"
+            >
+              {membersLoading && members.length === 0 ? (
+                <LiquidCard size="standard">
+                  <div className="py-12">
+                    <LoadingSpinner size="medium" message="Loading group data..." />
+                  </div>
+                </LiquidCard>
+              ) : (
+                <>
+                  {/* Metric Cards */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {overviewCards.map(({ label, value, icon: Icon, color, sub }) => (
+                      <LiquidCard key={label} size="compact" className="!rounded-[16px] relative overflow-hidden">
+                        <div className="relative z-10">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs sm:text-sm text-[var(--text-muted)] uppercase tracking-wider font-medium">{label}</p>
+                            <Icon size={22} style={{ color, opacity: 0.6 }} />
+                          </div>
+                          <p className="text-2xl sm:text-4xl font-bold" style={{ color }}>{value.toLocaleString()}</p>
+                          <p className="text-[var(--text-muted)] text-xs sm:text-sm mt-1">{sub}</p>
+                        </div>
+                      </LiquidCard>
+                    ))}
+                  </div>
+
+                  {/* Group Info Card */}
+                  {group.description && (
+                    <LiquidCard size="standard" className="!rounded-[16px]">
+                      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">About This Group</h3>
+                      <p className="text-[var(--text-secondary)] text-sm">{group.description}</p>
+                    </LiquidCard>
+                  )}
+
+                  {/* Quick Member List Preview */}
+                  <LiquidCard size="standard" className="!rounded-[16px]">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-[var(--text-primary)]">Team Members</h3>
+                      <Button variant="ghost" size="small" onClick={() => setActiveTab('members')}>
+                        View All
+                      </Button>
+                    </div>
+                    {members.length === 0 ? (
+                      <p className="text-[var(--text-muted)] text-sm text-center py-8">No members in this group yet.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {members.slice(0, 5).map((member) => {
+                          const name = [member.first_name, member.last_name].filter(Boolean).join(' ') || 'No name';
+                          const roleBadge = ROLE_BADGE[member.role] || ROLE_BADGE.user;
+                          return (
+                            <div
+                              key={member.id}
+                              className="flex items-center justify-between p-3 rounded-lg bg-[var(--accent-5)] hover:bg-[var(--accent-10)] transition-colors"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div>
+                                  <p className="text-[var(--text-primary)] font-medium text-sm">{name}</p>
+                                  <p className="text-[var(--text-muted)] text-xs">{member.position || 'No position'}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-[var(--text-muted)] text-sm">{member.narrative_count} narratives</span>
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                                  style={{ background: roleBadge.bg, color: roleBadge.text }}
+                                >
+                                  {member.role === 'admin' && <Crown size={10} />}
+                                  {roleBadge.label}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {members.length > 5 && (
+                          <p className="text-[var(--text-muted)] text-sm text-center pt-2">
+                            + {members.length - 5} more members
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </LiquidCard>
+                </>
+              )}
+            </motion.div>
+          )}
+
+          {/* ═══════════════════════════════════════════════════
+              TEAM MEMBERS TAB
+             ═══════════════════════════════════════════════════ */}
+          {activeTab === 'members' && (
+            <motion.div
+              key="members"
+              variants={tabVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+            >
+              <LiquidCard size="standard" className="!rounded-[16px]">
+                {/* Search & Sort Controls */}
+                <div className="flex flex-col sm:flex-row gap-3 mb-5 items-center">
+                  <div className="relative w-full sm:w-[35%]">
+                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                    <input
+                      type="text"
+                      placeholder="Search by name or email..."
+                      value={memberSearch}
+                      onChange={(e) => setMemberSearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-[var(--text-muted)] whitespace-nowrap">Sort by:</span>
+                    <select
+                      value={sortCol}
+                      onChange={(e) => {
+                        setSortCol(e.target.value as MemberSortColumn);
+                        setSortAsc(e.target.value === 'name' || e.target.value === 'email');
+                      }}
+                      className="px-3 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] text-sm cursor-pointer focus:outline-none focus:border-[var(--accent-hover)] appearance-none transition-all"
+                    >
+                      <option value="name">Name</option>
+                      <option value="email">Email</option>
+                      <option value="position">Position</option>
+                      <option value="role">Role</option>
+                      <option value="narrative_count">Narratives</option>
+                      <option value="last_active">Last Active</option>
+                    </select>
+                    <button
+                      onClick={() => setSortAsc(!sortAsc)}
+                      className="flex items-center gap-1.5 px-3 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-secondary)] text-sm hover:border-[var(--accent-hover)] transition-all cursor-pointer whitespace-nowrap"
+                      title={sortAsc ? 'Ascending' : 'Descending'}
+                    >
+                      {sortAsc ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+                      {sortAsc ? 'A\u2192Z' : 'Z\u2192A'}
+                    </button>
+                  </div>
+                  <div className="ml-auto">
+                    <Button variant="ghost" size="small" onClick={fetchMembers} disabled={membersLoading}>
+                      <RefreshCw size={16} className={membersLoading ? 'animate-spin' : ''} />
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
+
+                <p className="text-sm text-[var(--text-muted)] mb-3">
+                  {filteredMembers.length} {filteredMembers.length === 1 ? 'member' : 'members'}
+                  {memberSearch.trim() ? ' matching' : ' total'}
+                </p>
+
+                {membersLoading ? (
+                  <div className="py-12">
+                    <LoadingSpinner size="medium" message="Loading team members..." />
+                  </div>
+                ) : sortedMembers.length === 0 ? (
+                  <p className="text-center text-[var(--text-muted)] py-12 text-base">No members found.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-center text-[var(--text-muted)] text-sm uppercase tracking-wider border-b border-[var(--accent-15)]">
+                          {([
+                            ['name', 'Name'],
+                            ['email', 'Email'],
+                            ['position', 'Position'],
+                            ['role', 'Role'],
+                            ['narrative_count', 'Narratives'],
+                            ['last_active', 'Last Active'],
+                          ] as [MemberSortColumn, string][]).map(([col, label]) => (
+                            <th
+                              key={col}
+                              className={`pb-3 pr-3 text-center cursor-pointer hover:text-[var(--text-secondary)] transition-colors select-none whitespace-nowrap ${
+                                col === 'email' || col === 'position' ? 'hidden md:table-cell' : ''
+                              } ${col === 'last_active' ? 'hidden lg:table-cell' : ''}`}
+                              onClick={() => toggleSort(col)}
+                            >
+                              <span className="inline-flex items-center justify-center gap-1">
+                                {label}
+                                {sortCol === col && (
+                                  sortAsc ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                                )}
+                              </span>
+                            </th>
+                          ))}
+                          <th className="pb-3 text-center whitespace-nowrap">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedMembers.map((member) => {
+                          const memberName = [member.first_name, member.last_name].filter(Boolean).join(' ') || 'No name';
+                          const roleBadge = ROLE_BADGE[member.role] || ROLE_BADGE.user;
+                          const roleAccess = canManageRole(member);
+                          const isExpanded = expandedMemberId === member.id;
+
+                          return (
+                            <AnimatePresence key={member.id}>
+                              <motion.tr
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="border-b border-[var(--accent-10)] hover:bg-[var(--accent-10)] transition-colors cursor-pointer text-sm"
+                                onClick={() => setExpandedMemberId(isExpanded ? null : member.id)}
+                              >
+                                <td className="py-3 pr-3 text-[var(--text-primary)] font-medium whitespace-nowrap">
+                                  {memberName}
+                                </td>
+                                <td className="py-3 pr-3 text-[var(--text-muted)] whitespace-nowrap hidden md:table-cell">
+                                  {member.email}
+                                </td>
+                                <td className="py-3 pr-3 text-[var(--text-muted)] whitespace-nowrap hidden md:table-cell">
+                                  {member.position || '\u2014'}
+                                </td>
+                                <td className="py-3 pr-3 whitespace-nowrap">
+                                  <span
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-sm font-medium"
+                                    style={{ background: roleBadge.bg, color: roleBadge.text }}
+                                  >
+                                    {member.role === 'admin' && <Crown size={12} />}
+                                    {roleBadge.label}
+                                  </span>
+                                </td>
+                                <td className="py-3 pr-3 text-[var(--text-secondary)] text-center whitespace-nowrap">
+                                  {member.narrative_count}
+                                </td>
+                                <td className="py-3 pr-3 whitespace-nowrap hidden lg:table-cell">
+                                  {member.last_active ? (() => {
+                                    const { date, time } = formatDateTimeStacked(member.last_active);
+                                    return (
+                                      <div className="flex flex-col">
+                                        <span className="text-[var(--text-secondary)]">{date}</span>
+                                        <span className="text-[var(--text-muted)] text-xs">{time}</span>
+                                      </div>
+                                    );
+                                  })() : '\u2014'}
+                                </td>
+                                <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center justify-center">
+                                    {roleAccess.allowed ? (
+                                      <button
+                                        onClick={() =>
+                                          setPromoteTarget({
+                                            id: member.id,
+                                            name: memberName,
+                                            currentRole: member.role,
+                                          })
+                                        }
+                                        disabled={actionLoading === `promote-${member.id}`}
+                                        className="p-2.5 rounded-lg hover:bg-[var(--accent-15)] text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-all cursor-pointer disabled:opacity-50"
+                                        title={member.role === 'user' ? 'Promote to Admin' : 'Demote to User'}
+                                      >
+                                        <UserCog size={20} />
+                                      </button>
+                                    ) : (
+                                      <div
+                                        className="p-2.5 text-[var(--text-muted)] opacity-30 cursor-not-allowed"
+                                        title={roleAccess.reason || 'Cannot modify role'}
+                                      >
+                                        <UserCog size={20} />
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </motion.tr>
+
+                              {/* Expanded Member Details */}
+                              {isExpanded && (
+                                <motion.tr
+                                  key={`${member.id}-detail`}
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                >
+                                  <td colSpan={7} className="p-4 bg-[var(--bg-elevated)]">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                      <div>
+                                        <p className="text-[var(--text-muted)] text-sm">Full Name</p>
+                                        <p className="text-[var(--text-secondary)] font-medium">{memberName}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[var(--text-muted)] text-sm">Email</p>
+                                        <p className="text-[var(--text-secondary)] font-mono text-sm break-all">{member.email}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[var(--text-muted)] text-sm">Position</p>
+                                        <p className="text-[var(--text-secondary)]">{member.position || 'Not set'}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[var(--text-muted)] text-sm">Role</p>
+                                        <span
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                                          style={{ background: roleBadge.bg, color: roleBadge.text }}
+                                        >
+                                          {member.role === 'admin' && <Crown size={10} />}
+                                          {roleBadge.label}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <p className="text-[var(--text-muted)] text-sm">Narratives Generated</p>
+                                        <p className="text-[var(--accent-bright)] font-bold text-lg">{member.narrative_count}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[var(--text-muted)] text-sm">Last Active</p>
+                                        <p className="text-[var(--text-secondary)]">
+                                          {member.last_active
+                                            ? (() => {
+                                                const { date, time } = formatDateTimeStacked(member.last_active);
+                                                return `${date} at ${time}`;
+                                              })()
+                                            : 'Never'}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[var(--text-muted)] text-sm">Member ID</p>
+                                        <p className="text-[var(--text-secondary)] font-mono text-xs break-all">{member.id}</p>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </motion.tr>
+                              )}
+                            </AnimatePresence>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </LiquidCard>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Promote/Demote Confirmation Modal */}
+        <Modal
+          isOpen={!!promoteTarget}
+          onClose={() => setPromoteTarget(null)}
+          title={promoteTarget?.currentRole === 'user' ? 'Promote to Admin' : 'Demote to User'}
+          width="max-w-[460px]"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <Crown
+              size={28}
+              style={{
+                color: promoteTarget?.currentRole === 'user' ? '#eab308' : '#9ca3af',
+              }}
+            />
+            <p className="text-[var(--text-secondary)] text-sm">
+              {promoteTarget?.currentRole === 'user'
+                ? `Promote ${promoteTarget?.name} to Group Admin? They will gain access to this Group Dashboard and team management features.`
+                : `Demote ${promoteTarget?.name} from Admin to User? They will lose access to the Group Dashboard.`}
+            </p>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="ghost" size="small" onClick={() => setPromoteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="small"
+              onClick={handlePromoteToggle}
+              disabled={!!actionLoading}
+            >
+              {promoteTarget?.currentRole === 'user' ? 'Promote to Admin' : 'Demote to User'}
+            </Button>
+          </div>
+        </Modal>
+      </motion.div>
+    </div>
+  );
+}

@@ -16,6 +16,7 @@ interface UserProfile {
   subscription_status: string;
   role: 'user' | 'admin' | 'owner';
   is_restricted: boolean;
+  group_id?: string | null;
 }
 
 interface UseAuthReturn {

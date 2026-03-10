@@ -11,7 +11,8 @@ import {
   CheckCircle, BookOpen, ShieldCheck, ArrowUp, ArrowDown,
   Database, Clock, Server, Download, Copy, Key, Globe, Info,
   UserCog, UserCheck, UserX, Crown,
-  AlertTriangle, DollarSign,
+  AlertTriangle, DollarSign, Plus, Edit3, Eye, EyeOff, Shuffle,
+  Users as UsersIcon,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -30,7 +31,7 @@ import TokenCalculator from '@/components/admin/TokenCalculator';
 // ─── Protected user — cannot be deleted or restricted ────────
 const PROTECTED_EMAIL = 'hvcadip@gmail.com';
 
-type TabKey = 'overview' | 'activity' | 'users' | 'analytics' | 'costs' | 'settings';
+type TabKey = 'overview' | 'activity' | 'users' | 'analytics' | 'costs' | 'groups' | 'settings';
 
 const ACTION_FILTERS = [
   { value: 'all', label: 'All Actions' },
@@ -218,6 +219,27 @@ export default function AdminPage() {
   // Settings state
   const [accessCode, setAccessCode] = useState<string>('');
   const [accessCodeLoading, setAccessCodeLoading] = useState(false);
+
+  // Groups management state
+  interface GroupData {
+    id: string;
+    name: string;
+    access_code: string;
+    description: string | null;
+    is_active: boolean;
+    created_at: string;
+    member_count: number;
+  }
+  const [groups, setGroups] = useState<GroupData[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<GroupData | null>(null);
+  const [viewingGroupMembers, setViewingGroupMembers] = useState<{ id: string; name: string } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [groupMembers, setGroupMembers] = useState<any[]>([]);
+  const [groupMembersLoading, setGroupMembersLoading] = useState(false);
+  const [newGroup, setNewGroup] = useState({ name: '', access_code: '', description: '' });
+  const [groupActionLoading, setGroupActionLoading] = useState(false);
 
   // Title spotlight state
   const titleRef = useRef<HTMLDivElement>(null);
@@ -740,6 +762,164 @@ export default function AdminPage() {
     toast.success('Analytics report exported');
   };
 
+  // ─── Groups Management ─────────────────────────────────
+  const fetchGroups = useCallback(async () => {
+    setGroupsLoading(true);
+    try {
+      const res = await fetch('/api/groups');
+      const json = await res.json();
+      if (json.success) {
+        setGroups(Array.isArray(json.data) ? json.data : json.data ? [json.data] : []);
+      }
+    } catch (err) {
+      console.error('Groups fetch error:', err);
+    } finally {
+      setGroupsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'groups' && profile?.role === 'owner' && groups.length === 0 && !groupsLoading) {
+      fetchGroups();
+    }
+  }, [activeTab, profile, groups.length, groupsLoading, fetchGroups]);
+
+  const generateGroupAccessCode = (groupName: string) => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const seg1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const seg2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const prefix = groupName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8) || 'GROUP';
+    return `${prefix}-${seg1}-${seg2}`;
+  };
+
+  const handleCreateGroup = async () => {
+    if (!newGroup.name.trim() || !newGroup.access_code.trim()) {
+      toast.error('Group name and access code are required');
+      return;
+    }
+    setGroupActionLoading(true);
+    try {
+      const res = await fetch('/api/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newGroup),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success('Group created successfully');
+        setGroups((prev) => [{ ...json.data, member_count: 0 }, ...prev]);
+        setNewGroup({ name: '', access_code: '', description: '' });
+        setShowCreateGroup(false);
+      } else {
+        toast.error(json.error || 'Failed to create group');
+      }
+    } catch {
+      toast.error('Failed to create group');
+    } finally {
+      setGroupActionLoading(false);
+    }
+  };
+
+  const handleEditGroup = async () => {
+    if (!editingGroup) return;
+    setGroupActionLoading(true);
+    try {
+      const res = await fetch('/api/groups', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingGroup.id,
+          name: editingGroup.name,
+          access_code: editingGroup.access_code,
+          description: editingGroup.description,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success('Group updated successfully');
+        setGroups((prev) =>
+          prev.map((g) => (g.id === editingGroup.id ? { ...g, ...json.data } : g))
+        );
+        setEditingGroup(null);
+      } else {
+        toast.error(json.error || 'Failed to update group');
+      }
+    } catch {
+      toast.error('Failed to update group');
+    } finally {
+      setGroupActionLoading(false);
+    }
+  };
+
+  const handleToggleGroupActive = async (group: GroupData) => {
+    if (!group.is_active) {
+      // Re-activate: use PUT to set is_active back (we'll update name to trigger save)
+      setGroupActionLoading(true);
+      try {
+        const res = await fetch('/api/groups', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: group.id, name: group.name }),
+        });
+        const json = await res.json();
+        if (json.success) {
+          toast.success('Group reactivated');
+          fetchGroups();
+        } else {
+          toast.error(json.error || 'Failed to reactivate group');
+        }
+      } catch {
+        toast.error('Failed to reactivate group');
+      } finally {
+        setGroupActionLoading(false);
+      }
+      return;
+    }
+    // Deactivate
+    setGroupActionLoading(true);
+    try {
+      const res = await fetch('/api/groups', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: group.id }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success('Group deactivated');
+        setGroups((prev) =>
+          prev.map((g) => (g.id === group.id ? { ...g, is_active: false } : g))
+        );
+      } else {
+        toast.error(json.error || 'Failed to deactivate group');
+      }
+    } catch {
+      toast.error('Failed to deactivate group');
+    } finally {
+      setGroupActionLoading(false);
+    }
+  };
+
+  const fetchGroupMembers = useCallback(async (groupId: string) => {
+    setGroupMembersLoading(true);
+    try {
+      const res = await fetch(`/api/groups/members?group_id=${groupId}`);
+      const json = await res.json();
+      if (json.success) {
+        setGroupMembers(json.data || []);
+      }
+    } catch (err) {
+      console.error('Group members fetch error:', err);
+    } finally {
+      setGroupMembersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (viewingGroupMembers) {
+      fetchGroupMembers(viewingGroupMembers.id);
+    }
+  }, [viewingGroupMembers, fetchGroupMembers]);
+
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -771,6 +951,7 @@ export default function AdminPage() {
     { key: 'users', label: 'User Management', icon: Users },
     { key: 'analytics', label: 'Analytics', icon: BarChart3 },
     { key: 'costs', label: 'Cost Calculator', icon: DollarSign },
+    { key: 'groups', label: 'Groups', icon: UsersIcon },
     { key: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -2026,6 +2207,142 @@ export default function AdminPage() {
             </motion.div>
           )}
 
+          {/* ═══════════════════════════════════════════════════════════
+              GROUPS TAB
+             ═══════════════════════════════════════════════════════════ */}
+          {activeTab === 'groups' && (
+            <motion.div
+              key="groups"
+              variants={tabVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="space-y-6"
+            >
+              {/* Header with Create button */}
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-[var(--text-muted)]">
+                  {groups.length} {groups.length === 1 ? 'group' : 'groups'} total
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="small" onClick={fetchGroups} disabled={groupsLoading}>
+                    <RefreshCw size={16} className={groupsLoading ? 'animate-spin' : ''} />
+                    Refresh
+                  </Button>
+                  <Button variant="primary" size="small" onClick={() => setShowCreateGroup(true)}>
+                    <Plus size={16} className="mr-1" />
+                    New Group
+                  </Button>
+                </div>
+              </div>
+
+              {groupsLoading && groups.length === 0 ? (
+                <LiquidCard size="standard">
+                  <div className="py-12">
+                    <LoadingSpinner size="medium" message="Loading groups..." />
+                  </div>
+                </LiquidCard>
+              ) : groups.length === 0 ? (
+                <LiquidCard size="standard" className="!rounded-[16px]">
+                  <div className="flex flex-col items-center justify-center py-12 gap-4">
+                    <UsersIcon size={40} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+                    <p className="text-[var(--text-secondary)] text-base text-center">No groups created yet.</p>
+                    <p className="text-[var(--text-muted)] text-sm text-center">
+                      Create a group to start organizing users into teams.
+                    </p>
+                  </div>
+                </LiquidCard>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {groups.map((g) => (
+                    <LiquidCard key={g.id} size="standard" className="!rounded-[16px]">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">{g.name}</h3>
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                                g.is_active
+                                  ? 'bg-green-500/15 text-green-400 border border-green-500/30'
+                                  : 'bg-red-500/15 text-red-400 border border-red-500/30'
+                              }`}
+                            >
+                              {g.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                          {g.description && (
+                            <p className="text-[var(--text-muted)] text-sm mb-2">{g.description}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Access Code */}
+                      <div className="flex items-center gap-2 mb-3 p-2.5 rounded-lg bg-[var(--accent-5)]">
+                        <Key size={16} style={{ color: 'var(--accent-hover)', opacity: 0.7 }} />
+                        <span className="text-sm text-[var(--text-muted)]">Access Code:</span>
+                        <span className="font-mono text-sm text-[var(--accent-bright)] tracking-wider select-all">
+                          {g.access_code}
+                        </span>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(g.access_code);
+                            toast.success('Access code copied');
+                          }}
+                          className="ml-auto p-1.5 rounded hover:bg-[var(--accent-15)] text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-all cursor-pointer"
+                          title="Copy access code"
+                        >
+                          <Copy size={14} />
+                        </button>
+                      </div>
+
+                      {/* Stats */}
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="flex items-center gap-1.5">
+                          <Users size={16} style={{ color: 'var(--accent-bright)', opacity: 0.6 }} />
+                          <span className="text-sm font-medium text-[var(--text-primary)]">{g.member_count}</span>
+                          <span className="text-sm text-[var(--text-muted)]">members</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Clock size={16} style={{ color: 'var(--text-muted)', opacity: 0.6 }} />
+                          <span className="text-xs text-[var(--text-muted)]">
+                            Created {formatDateShort(g.created_at)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 pt-3 border-t border-[var(--accent-15)]">
+                        <button
+                          onClick={() => setViewingGroupMembers({ id: g.id, name: g.name })}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-10)] hover:text-[var(--accent-bright)] transition-all cursor-pointer"
+                        >
+                          <Eye size={15} />
+                          Members
+                        </button>
+                        <button
+                          onClick={() => setEditingGroup({ ...g })}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-10)] hover:text-[var(--accent-bright)] transition-all cursor-pointer"
+                        >
+                          <Edit3 size={15} />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleToggleGroupActive(g)}
+                          disabled={groupActionLoading}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-10)] hover:text-[var(--accent-bright)] transition-all cursor-pointer disabled:opacity-50 ml-auto"
+                        >
+                          {g.is_active ? <EyeOff size={15} /> : <Eye size={15} />}
+                          {g.is_active ? 'Deactivate' : 'Reactivate'}
+                        </button>
+                      </div>
+                    </LiquidCard>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {activeTab === 'settings' && (
             <motion.div
               key="settings"
@@ -2288,6 +2605,216 @@ export default function AdminPage() {
                 </button>
               </div>
             </>
+          )}
+        </Modal>
+
+        {/* Create Group Modal */}
+        <Modal
+          isOpen={showCreateGroup}
+          onClose={() => setShowCreateGroup(false)}
+          title="Create New Group"
+          width="max-w-[520px]"
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-[var(--text-muted)] mb-1.5">Group Name *</label>
+              <input
+                type="text"
+                value={newGroup.name}
+                onChange={(e) => setNewGroup((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g. Downtown Service Center"
+                className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-[var(--text-muted)] mb-1.5">Access Code *</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newGroup.access_code}
+                  onChange={(e) => setNewGroup((prev) => ({ ...prev, access_code: e.target.value }))}
+                  placeholder="e.g. DOWNTOWN-A1B2-C3D4"
+                  className="flex-1 px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm font-mono focus:outline-none focus:border-[var(--accent-hover)] transition-all"
+                />
+                <button
+                  onClick={() =>
+                    setNewGroup((prev) => ({
+                      ...prev,
+                      access_code: generateGroupAccessCode(prev.name),
+                    }))
+                  }
+                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-[var(--accent-10)] border border-[var(--accent-border)] text-[var(--accent-bright)] hover:bg-[var(--accent-20)] transition-all cursor-pointer text-sm whitespace-nowrap"
+                  title="Generate random code"
+                >
+                  <Shuffle size={16} />
+                  Generate
+                </button>
+              </div>
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                Users will enter this code during signup to join this group.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm text-[var(--text-muted)] mb-1.5">Description</label>
+              <textarea
+                value={newGroup.description}
+                onChange={(e) => setNewGroup((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Optional description of the group..."
+                rows={3}
+                className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3 justify-end pt-2">
+              <Button variant="ghost" size="small" onClick={() => setShowCreateGroup(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="small"
+                onClick={handleCreateGroup}
+                disabled={groupActionLoading || !newGroup.name.trim() || !newGroup.access_code.trim()}
+              >
+                {groupActionLoading ? 'Creating...' : 'Create Group'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Edit Group Modal */}
+        <Modal
+          isOpen={!!editingGroup}
+          onClose={() => setEditingGroup(null)}
+          title="Edit Group"
+          width="max-w-[520px]"
+        >
+          {editingGroup && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-[var(--text-muted)] mb-1.5">Group Name</label>
+                <input
+                  type="text"
+                  value={editingGroup.name}
+                  onChange={(e) =>
+                    setEditingGroup((prev) => (prev ? { ...prev, name: e.target.value } : null))
+                  }
+                  className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-[var(--text-muted)] mb-1.5">Access Code</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={editingGroup.access_code}
+                    onChange={(e) =>
+                      setEditingGroup((prev) => (prev ? { ...prev, access_code: e.target.value } : null))
+                    }
+                    className="flex-1 px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] text-sm font-mono focus:outline-none focus:border-[var(--accent-hover)] transition-all"
+                  />
+                  <button
+                    onClick={() =>
+                      setEditingGroup((prev) =>
+                        prev ? { ...prev, access_code: generateGroupAccessCode(prev.name) } : null
+                      )
+                    }
+                    className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-[var(--accent-10)] border border-[var(--accent-border)] text-[var(--accent-bright)] hover:bg-[var(--accent-20)] transition-all cursor-pointer text-sm whitespace-nowrap"
+                    title="Generate new code"
+                  >
+                    <Shuffle size={16} />
+                    Generate
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-[var(--text-muted)] mb-1.5">Description</label>
+                <textarea
+                  value={editingGroup.description || ''}
+                  onChange={(e) =>
+                    setEditingGroup((prev) => (prev ? { ...prev, description: e.target.value } : null))
+                  }
+                  rows={3}
+                  className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all resize-none"
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end pt-2">
+                <Button variant="ghost" size="small" onClick={() => setEditingGroup(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  size="small"
+                  onClick={handleEditGroup}
+                  disabled={groupActionLoading}
+                >
+                  {groupActionLoading ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* View Group Members Modal */}
+        <Modal
+          isOpen={!!viewingGroupMembers}
+          onClose={() => {
+            setViewingGroupMembers(null);
+            setGroupMembers([]);
+          }}
+          title={`${viewingGroupMembers?.name || 'Group'} — Members`}
+          width="max-w-[700px]"
+        >
+          {groupMembersLoading ? (
+            <div className="py-8">
+              <LoadingSpinner size="medium" message="Loading members..." />
+            </div>
+          ) : groupMembers.length === 0 ? (
+            <p className="text-center text-[var(--text-muted)] py-8 text-sm">No members in this group yet.</p>
+          ) : (
+            <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-[var(--text-muted)] text-xs uppercase tracking-wider border-b border-[var(--accent-15)]">
+                    <th className="pb-2 pr-3">Name</th>
+                    <th className="pb-2 pr-3">Email</th>
+                    <th className="pb-2 pr-3">Role</th>
+                    <th className="pb-2 pr-3">Position</th>
+                    <th className="pb-2 text-right">Narratives</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  {groupMembers.map((m: any) => {
+                    const mName = [m.first_name, m.last_name].filter(Boolean).join(' ') || 'No name';
+                    const mBadge = ROLE_BADGE[m.role] || ROLE_BADGE.user;
+                    return (
+                      <tr key={m.id} className="border-b border-[var(--accent-10)] text-sm">
+                        <td className="py-2.5 pr-3 text-[var(--text-primary)] font-medium">{mName}</td>
+                        <td className="py-2.5 pr-3 text-[var(--text-muted)]">{m.email}</td>
+                        <td className="py-2.5 pr-3">
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{ background: mBadge.bg, color: mBadge.text }}
+                          >
+                            {m.role === 'admin' && <Crown size={10} />}
+                            {mBadge.label}
+                          </span>
+                        </td>
+                        <td className="py-2.5 pr-3 text-[var(--text-muted)]">{m.position || '\u2014'}</td>
+                        <td className="py-2.5 text-right text-[var(--accent-bright)] font-mono font-medium">
+                          {m.narrative_count || 0}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </Modal>
       </motion.div>
