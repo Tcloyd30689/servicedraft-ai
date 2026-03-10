@@ -45,6 +45,7 @@ function SignupContent() {
 
   // Step 2: Payment / Access Code
   const [accessCode, setAccessCode] = useState('');
+  const [pendingGroupId, setPendingGroupId] = useState<string | null>(null);
 
   // Step 3: Profile
   const [firstName, setFirstName] = useState('');
@@ -167,19 +168,25 @@ function SignupContent() {
       return;
     }
 
+    // Store group_id if the access code belongs to a group
+    const groupId = data.group_id || null;
+    setPendingGroupId(groupId);
+
     // Update subscription status — upsert to handle missing profile row
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const upsertData: any = {
+        id: user.id,
+        email: user.email || email,
+        subscription_status: 'bypass',
+      };
+      if (groupId) {
+        upsertData.group_id = groupId;
+      }
       await supabase
         .from('users')
-        .upsert(
-          {
-            id: user.id,
-            email: user.email || email,
-            subscription_status: 'bypass',
-          },
-          { onConflict: 'id' },
-        );
+        .upsert(upsertData, { onConflict: 'id' });
     }
 
     setLoading(false);

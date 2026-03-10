@@ -1,5 +1,15 @@
 import { NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe/client';
+import { createClient } from '@supabase/supabase-js';
+
+function createServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    throw new Error('Missing Supabase service role configuration');
+  }
+  return createClient(url, serviceKey);
+}
 
 export async function POST(request: Request) {
   const { accessCode, mode, userId } = await request.json();
@@ -14,8 +24,26 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check master access code first (owner/direct users — no group assignment)
     if (accessCode === validCode) {
       return NextResponse.json({ success: true, method: 'access_code' });
+    }
+
+    // Check if the code matches any group's access_code
+    try {
+      const svc = createServiceClient();
+      const { data: group } = await svc
+        .from('groups')
+        .select('id')
+        .eq('access_code', accessCode)
+        .eq('is_active', true)
+        .single();
+
+      if (group) {
+        return NextResponse.json({ success: true, method: 'access_code', group_id: group.id });
+      }
+    } catch {
+      // Group lookup failed — fall through to invalid code
     }
 
     return NextResponse.json(

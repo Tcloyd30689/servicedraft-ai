@@ -45,7 +45,8 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 5 Sprint 6:** COMPLETE — Full SavedRepairsModal with template list/create/edit/delete, narrative table row hover glow, wider dashboard container (max-w-7xl)
 **Stage 5 Sprint 7:** COMPLETE — Owner Dashboard AI token usage pricing calculator with model selector, token inputs, proofread/customization toggles, and real-time cost estimates
 **Stage 5 Sprint 8:** COMPLETE — Role hierarchy restructure from 2-tier (admin/user) to 3-tier (owner/admin/user). Owner = platform owner, Admin = Group Manager, User = standard. All access gates, API routes, badges, promote/demote logic updated.
-**Next Task:** Vercel production deployment
+**Stage 5 Sprint 9:** COMPLETE — Group management database schema, API routes, and signup integration
+**Next Task:** Group management UI (admin dashboard group panel)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
@@ -2666,6 +2667,19 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] **Task 3:** Updated promote/demote functions — added owner protection in API (`demote_to_user` checks target role and rejects if owner, `promote_to_admin` checks and rejects if already owner). Frontend `handlePromoteToggle` blocks owner role changes. Owner rows in user table show as Protected (no action buttons). Promote/demote labels updated to "Group Manager" terminology. — **2026-03-10**
 - [x] **Task 4:** Updated role badge display — added `owner` entry to `ROLE_BADGE` with purple accent (`#a855f7`) and "Owner" label with ShieldCheck icon. Renamed `admin` badge label from "Admin" to "Group Manager" (keeps gold color with Crown icon). User badge unchanged (gray). — **2026-03-10**
 - [x] **Task 5:** Added SQL migration comment in `src/app/api/admin/route.ts`: `UPDATE public.users SET role = 'owner' WHERE role = 'admin' AND email = '<owner_email>'`. Build verified clean with `npm run build`. Full codebase audit confirmed all remaining `'admin'` references are intentional Group Manager role references. — **2026-03-10**
+
+---
+
+## STAGE 5 SPRINT 9 — GROUP MANAGEMENT: DATABASE & API
+*Build the backend infrastructure for the group management system. Groups allow dealership managers (admin role) to monitor and manage their team members.*
+
+**Status:** COMPLETE
+
+- [x] **Task 1:** Created Supabase migration file `supabase/migrations/007_create_groups_table.sql` — groups table (id, name, access_code UNIQUE, description, created_by FK, created_at, is_active), `group_id` column added to users table with FK to groups, indexes on access_code and group_id, RLS policies for owner full access, admin view own group, user view own group. Includes manual execution instructions for Supabase SQL Editor. — **2026-03-10**
+- [x] **Task 2:** Created `src/app/api/groups/route.ts` — full CRUD API for group management. GET returns all groups with member counts (owner) or user's own group (admin/user). POST creates a new group (owner only) with master code collision check and unique constraint handling. PUT updates group fields (owner only). DELETE soft-deletes via is_active=false (owner only). All routes verify auth via server Supabase client. — **2026-03-10**
+- [x] **Task 3:** Created `src/app/api/groups/members/route.ts` — GET lists group members enriched with narrative_count and last_active (owner can query any group via query param, admin restricted to own group). PUT updates member role (admin can promote user→admin in own group, owner can change any non-owner role). Includes target user validation and group boundary enforcement. — **2026-03-10**
+- [x] **Task 4:** Updated `src/app/api/stripe/route.ts` — access code validation now checks group access codes after master code. If code matches an active group, returns `group_id` in response. Updated `src/app/(auth)/signup/page.tsx` to capture `group_id` from response and include it in the user upsert during Step 2. Master access code users are not assigned to any group. — **2026-03-10**
+- [x] **Task 5:** Updated `src/types/database.ts` — added `Group` interface (id, name, access_code, description, created_by, created_at, is_active) and added `group_id?: string` to `UserProfile` interface. Build verified clean with `npm run build`. — **2026-03-10**
 
 ---
 

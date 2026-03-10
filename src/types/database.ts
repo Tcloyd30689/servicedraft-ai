@@ -28,8 +28,19 @@ export interface UserProfile {
   role: 'user' | 'admin' | 'owner';
   is_restricted: boolean;
   preferences?: UserPreferences;
+  group_id?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  access_code: string;
+  description?: string;
+  created_by: string;
+  created_at: string;
+  is_active: boolean;
 }
 
 export interface ActivityLog {
