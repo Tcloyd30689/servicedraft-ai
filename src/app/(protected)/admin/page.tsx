@@ -26,12 +26,12 @@ import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
-import TokenCalculator from '@/components/admin/TokenCalculator';
+// TokenCalculator removed — replaced by live API Usage tracker
 
 // ─── Protected user — cannot be deleted or restricted ────────
 const PROTECTED_EMAIL = 'hvcadip@gmail.com';
 
-type TabKey = 'overview' | 'activity' | 'users' | 'analytics' | 'costs' | 'teams' | 'settings';
+type TabKey = 'overview' | 'activity' | 'users' | 'analytics' | 'usage' | 'teams' | 'settings';
 
 const ACTION_FILTERS = [
   { value: 'all', label: 'All Actions' },
@@ -240,6 +240,25 @@ export default function AdminPage() {
   const [teamMembersLoading, setTeamMembersLoading] = useState(false);
   const [newTeam, setNewTeam] = useState({ name: '', access_code: '', description: '' });
   const [teamActionLoading, setTeamActionLoading] = useState(false);
+
+  // API Usage tracker state
+  interface UsageData {
+    totalPromptTokens: number;
+    totalCompletionTokens: number;
+    totalTokens: number;
+    totalEstimatedCost: number;
+    totalRequests: number;
+    currentMonthCost: number;
+    averageCostPerRequest: number;
+    usageByDay: Array<{ date: string; promptTokens: number; completionTokens: number; totalTokens: number; cost: number; requestCount: number }>;
+    usageByAction: Array<{ actionType: string; promptTokens: number; completionTokens: number; totalTokens: number; cost: number; count: number }>;
+    usageByUser: Array<{ userId: string; userName: string; promptTokens: number; completionTokens: number; cost: number; count: number }>;
+  }
+  const [usageData, setUsageData] = useState<UsageData | null>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
+  const [usageRange, setUsageRange] = useState<'7' | '30' | '90' | 'all'>('30');
+  const [usageLastUpdated, setUsageLastUpdated] = useState<Date | null>(null);
+  const [usageSecondsAgo, setUsageSecondsAgo] = useState(0);
 
   // Title spotlight state
   const titleRef = useRef<HTMLDivElement>(null);
@@ -920,6 +939,41 @@ export default function AdminPage() {
     }
   }, [viewingTeamMembers, fetchTeamMembers]);
 
+  // ─── API Usage Tracker ────────────────────────────────────────
+  const fetchUsageData = useCallback(async () => {
+    setUsageLoading(true);
+    try {
+      const res = await fetch(`/api/admin/usage?range=${usageRange}`);
+      const json = await res.json();
+      if (json.success) {
+        setUsageData(json.data);
+        setUsageLastUpdated(new Date());
+        setUsageSecondsAgo(0);
+      } else {
+        console.error('Failed to fetch usage data:', json.error);
+      }
+    } catch (err) {
+      console.error('Usage data fetch error:', err);
+    } finally {
+      setUsageLoading(false);
+    }
+  }, [usageRange]);
+
+  useEffect(() => {
+    if (activeTab === 'usage' && profile?.role === 'owner') {
+      fetchUsageData();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, profile, usageRange]);
+
+  useEffect(() => {
+    if (activeTab !== 'usage' || !usageLastUpdated) return;
+    const ticker = setInterval(() => {
+      setUsageSecondsAgo(Math.floor((Date.now() - usageLastUpdated.getTime()) / 1000));
+    }, 1000);
+    return () => clearInterval(ticker);
+  }, [activeTab, usageLastUpdated]);
+
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -950,7 +1004,7 @@ export default function AdminPage() {
     { key: 'activity', label: 'Activity Log', icon: Activity },
     { key: 'users', label: 'User Management', icon: Users },
     { key: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { key: 'costs', label: 'Cost Calculator', icon: DollarSign },
+    { key: 'usage', label: 'API Usage', icon: DollarSign },
     { key: 'teams', label: 'Teams', icon: UsersIcon },
     { key: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -2201,18 +2255,284 @@ export default function AdminPage() {
           )}
 
           {/* ═══════════════════════════════════════════════════════════
-              SETTINGS TAB
+              API USAGE TAB
              ═══════════════════════════════════════════════════════════ */}
-          {activeTab === 'costs' && (
+          {activeTab === 'usage' && (
             <motion.div
-              key="costs"
+              key="usage"
               variants={tabVariants}
               initial="initial"
               animate="animate"
               exit="exit"
               transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="space-y-6"
             >
-              <TokenCalculator />
+              {/* Header with time range selector + refresh */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <p className="text-sm text-[var(--text-muted)]">
+                  {usageLastUpdated
+                    ? `Last updated: ${usageSecondsAgo < 5 ? 'just now' : `${usageSecondsAgo}s ago`}`
+                    : 'Loading...'}
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {([
+                    { value: '7' as const, label: 'Last 7 Days' },
+                    { value: '30' as const, label: 'Last 30 Days' },
+                    { value: '90' as const, label: 'Last 90 Days' },
+                    { value: 'all' as const, label: 'All Time' },
+                  ]).map(({ value, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => setUsageRange(value)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                        usageRange === value
+                          ? 'bg-[var(--accent-20)] text-[var(--accent-bright)] border border-[var(--accent-50)]'
+                          : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--accent-10)] border border-transparent'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  <button
+                    onClick={fetchUsageData}
+                    disabled={usageLoading}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:text-[var(--accent-bright)] hover:bg-[var(--accent-10)] transition-all cursor-pointer disabled:opacity-50"
+                    title="Refresh usage data"
+                  >
+                    <RefreshCw size={16} className={usageLoading ? 'animate-spin' : ''} />
+                    Refresh
+                  </button>
+                </div>
+              </div>
+
+              {/* Model Info Callout */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--accent-5)] border border-[var(--accent-15)]">
+                <Info size={18} className="flex-shrink-0" style={{ color: 'var(--accent-hover)' }} />
+                <p className="text-sm text-[var(--text-muted)]">
+                  <span className="font-medium text-[var(--accent-bright)]">Model: gemini-2.0-flash</span>
+                  {' | Input: $0.10/1M tokens | Output: $0.40/1M tokens'}
+                </p>
+              </div>
+
+              {usageLoading && !usageData ? (
+                <LiquidCard size="standard">
+                  <div className="py-12">
+                    <LoadingSpinner size="medium" message="Loading API usage data..." />
+                  </div>
+                </LiquidCard>
+              ) : usageData ? (
+                <>
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {[
+                      { label: 'Total Requests', value: usageData.totalRequests.toLocaleString(), icon: Zap, color: '#f59e0b' },
+                      { label: 'Input Tokens', value: usageData.totalPromptTokens.toLocaleString(), icon: ArrowUp, color: '#3b82f6' },
+                      { label: 'Output Tokens', value: usageData.totalCompletionTokens.toLocaleString(), icon: ArrowDown, color: '#16a34a' },
+                      { label: 'Total Tokens', value: usageData.totalTokens.toLocaleString(), icon: Activity, color: 'var(--accent-primary)' },
+                      { label: 'Estimated Cost', value: `$${usageData.totalEstimatedCost.toFixed(2)}`, icon: DollarSign, color: '#ef4444' },
+                      { label: 'Current Month', value: `$${usageData.currentMonthCost.toFixed(2)}`, icon: DollarSign, color: '#f59e0b' },
+                      { label: 'Avg Cost/Request', value: `$${usageData.averageCostPerRequest.toFixed(4)}`, icon: TrendingUp, color: 'var(--accent-bright)' },
+                    ].map(({ label, value, icon: Icon, color }) => (
+                      <LiquidCard key={label} size="compact" className="!rounded-[16px] relative overflow-hidden">
+                        <div className="relative z-10">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs sm:text-sm text-[var(--text-muted)] uppercase tracking-wider font-medium">{label}</p>
+                            <Icon size={22} style={{ color, opacity: 0.6 }} />
+                          </div>
+                          <p className="text-xl sm:text-2xl font-bold" style={{ color }}>{value}</p>
+                        </div>
+                      </LiquidCard>
+                    ))}
+                  </div>
+
+                  {/* Token Usage Over Time Chart */}
+                  <LiquidCard size="standard" className="!rounded-[16px]">
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+                      Token Usage Over Time ({usageRange === 'all' ? 'All Time' : `Last ${usageRange} Days`})
+                    </h3>
+                    {usageData.usageByDay.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={280}>
+                        <AreaChart data={usageData.usageByDay} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--accent-15)" />
+                          <XAxis
+                            dataKey="date"
+                            tickFormatter={(d: string) => {
+                              const dt = new Date(d + 'T12:00:00');
+                              return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            }}
+                            stroke="var(--text-muted)"
+                            tick={{ fontSize: 11 }}
+                            interval="preserveStartEnd"
+                          />
+                          <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
+                          <Tooltip
+                            contentStyle={{
+                              background: 'var(--bg-elevated)',
+                              border: '1px solid var(--accent-30)',
+                              borderRadius: '8px',
+                              color: 'var(--text-primary)',
+                              fontSize: 13,
+                            }}
+                            labelFormatter={(d) => {
+                              const dt = new Date(String(d) + 'T12:00:00');
+                              return dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                            }}
+                            formatter={(value: number) => value.toLocaleString()}
+                          />
+                          <Legend wrapperStyle={{ color: 'var(--text-secondary)', fontSize: 13 }} />
+                          <Area type="monotone" dataKey="promptTokens" name="Input Tokens" stackId="tokens" fill="#3b82f6" stroke="#3b82f6" fillOpacity={0.5} />
+                          <Area type="monotone" dataKey="completionTokens" name="Output Tokens" stackId="tokens" fill="#16a34a" stroke="#16a34a" fillOpacity={0.5} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <p className="text-[var(--text-muted)] text-base text-center py-8">No usage data for this period.</p>
+                    )}
+                  </LiquidCard>
+
+                  {/* Cost Over Time BarChart */}
+                  <LiquidCard size="standard" className="!rounded-[16px]">
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+                      Cost Over Time ({usageRange === 'all' ? 'All Time' : `Last ${usageRange} Days`})
+                    </h3>
+                    {usageData.usageByDay.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={280}>
+                        <BarChart data={usageData.usageByDay} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--accent-15)" />
+                          <XAxis
+                            dataKey="date"
+                            tickFormatter={(d: string) => {
+                              const dt = new Date(d + 'T12:00:00');
+                              return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            }}
+                            stroke="var(--text-muted)"
+                            tick={{ fontSize: 11 }}
+                            interval="preserveStartEnd"
+                          />
+                          <YAxis
+                            stroke="var(--text-muted)"
+                            tick={{ fontSize: 11 }}
+                            tickFormatter={(v: number) => `$${v.toFixed(3)}`}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              background: 'var(--bg-elevated)',
+                              border: '1px solid var(--accent-30)',
+                              borderRadius: '8px',
+                              color: 'var(--text-primary)',
+                              fontSize: 13,
+                            }}
+                            labelFormatter={(d) => {
+                              const dt = new Date(String(d) + 'T12:00:00');
+                              return dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                            }}
+                            formatter={(value: number) => [`$${value.toFixed(4)}`, 'Cost']}
+                          />
+                          <Bar dataKey="cost" name="Cost (USD)" fill="var(--accent-primary)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <p className="text-[var(--text-muted)] text-base text-center py-8">No cost data for this period.</p>
+                    )}
+                  </LiquidCard>
+
+                  {/* Usage by Action Type */}
+                  <LiquidCard size="standard" className="!rounded-[16px]">
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Usage by Action Type</h3>
+                    {usageData.usageByAction.length > 0 ? (() => {
+                      const barData = usageData.usageByAction.map((a) => ({
+                        name: a.actionType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+                        tokens: a.totalTokens,
+                        cost: a.cost,
+                        fill: ACTION_BORDER_COLORS[a.actionType] || 'var(--accent-30)',
+                      }));
+                      return (
+                        <ResponsiveContainer width="100%" height={Math.max(barData.length * 45, 200)}>
+                          <BarChart data={barData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--accent-15)" horizontal={false} />
+                            <XAxis type="number" stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
+                            <YAxis dataKey="name" type="category" width={130} stroke="var(--text-muted)" tick={{ fontSize: 12 }} />
+                            <Tooltip
+                              contentStyle={{
+                                background: 'var(--bg-elevated)',
+                                border: '1px solid var(--accent-30)',
+                                borderRadius: '8px',
+                                color: 'var(--text-primary)',
+                                fontSize: 13,
+                              }}
+                              formatter={(value: number) => value.toLocaleString()}
+                            />
+                            <Bar dataKey="tokens" name="Total Tokens" radius={[0, 4, 4, 0]}>
+                              {barData.map((entry, idx) => (
+                                <Cell key={idx} fill={entry.fill} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      );
+                    })() : (
+                      <p className="text-[var(--text-muted)] text-base text-center py-8">No usage data.</p>
+                    )}
+                  </LiquidCard>
+
+                  {/* Top Users by Token Usage */}
+                  <LiquidCard size="standard" className="!rounded-[16px]">
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Top Users by Token Usage</h3>
+                    {usageData.usageByUser.length === 0 ? (
+                      <p className="text-[var(--text-muted)] text-base text-center py-8">No usage data yet.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="text-center text-[var(--text-muted)] text-sm uppercase tracking-wider border-b border-[var(--accent-15)]">
+                              <th className="pb-3 pr-4 w-16 text-center">Rank</th>
+                              <th className="pb-3 pr-4 text-center">Name</th>
+                              <th className="pb-3 pr-4 text-center">Requests</th>
+                              <th className="pb-3 pr-4 text-center">Input Tokens</th>
+                              <th className="pb-3 pr-4 text-center">Output Tokens</th>
+                              <th className="pb-3 text-center">Est. Cost</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {usageData.usageByUser.map((u, idx) => {
+                              const rankColors: Record<number, string> = { 0: '#fbbf24', 1: '#9ca3af', 2: '#cd7f32' };
+                              const rankColor = rankColors[idx];
+                              return (
+                                <tr key={u.userId} className="border-b border-[var(--accent-10)] text-center">
+                                  <td className="py-3 pr-4 text-center">
+                                    <span
+                                      className="inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold"
+                                      style={rankColor ? {
+                                        background: `${rankColor}20`,
+                                        color: rankColor,
+                                        border: `1px solid ${rankColor}40`,
+                                      } : { color: 'var(--text-muted)' }}
+                                    >
+                                      {idx + 1}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 pr-4 text-[var(--text-primary)] font-medium text-center">{u.userName}</td>
+                                  <td className="py-3 pr-4 text-[var(--text-secondary)] text-center">{u.count.toLocaleString()}</td>
+                                  <td className="py-3 pr-4 text-[var(--text-secondary)] font-mono text-center">{u.promptTokens.toLocaleString()}</td>
+                                  <td className="py-3 pr-4 text-[var(--text-secondary)] font-mono text-center">{u.completionTokens.toLocaleString()}</td>
+                                  <td className="py-3 text-[var(--accent-bright)] font-mono font-semibold text-center">${u.cost.toFixed(4)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </LiquidCard>
+                </>
+              ) : (
+                <LiquidCard size="standard" className="!rounded-[16px]">
+                  <div className="flex flex-col items-center justify-center py-12 gap-4">
+                    <DollarSign size={40} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
+                    <p className="text-[var(--text-secondary)] text-base text-center">No API usage data available.</p>
+                    <p className="text-[var(--text-muted)] text-sm text-center">Usage will be tracked as users generate narratives.</p>
+                  </div>
+                </LiquidCard>
+              )}
             </motion.div>
           )}
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateWithGemini, parseJsonResponse } from '@/lib/gemini/client';
+import { logTokenUsage } from '@/lib/usageLogger';
 
 interface NarrativeResponse {
   block_narrative: string;
@@ -78,8 +79,11 @@ CORRECTION: ${correction}
 SELECTED EDITS TO APPLY:
 ${editsFormatted}`;
 
-    const rawResponse = await generateWithGemini(APPLY_EDITS_SYSTEM_PROMPT, userPrompt, 8192);
-    const parsed = parseJsonResponse<NarrativeResponse>(rawResponse);
+    const geminiResult = await generateWithGemini(APPLY_EDITS_SYSTEM_PROMPT, userPrompt, 8192);
+    const parsed = parseJsonResponse<NarrativeResponse>(geminiResult.text);
+
+    // Fire-and-forget token usage logging
+    logTokenUsage(user.id, 'apply_edits', geminiResult.usage);
 
     if (!parsed.block_narrative || !parsed.concern || !parsed.cause || !parsed.correction) {
       throw new Error('Response missing required keys');

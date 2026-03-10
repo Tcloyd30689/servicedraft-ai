@@ -24,7 +24,9 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-10
-**Current Phase:** Pre-Deployment Audit Complete — Ready for Vercel Deployment
+**Current Phase:** Stage 6 Sprint B — In Progress (Task 1 complete, Tasks 2-6 pending)
+**Stage 6 Sprint B (Task 1):** COMPLETE — Gemini API Usage Tracker: modified Gemini client to return token usage metadata, created api_usage_log table migration, added server-side usage logger utility, instrumented all 6 API routes (generate, customize, proofread, apply-edits, update-narrative, convert-recommendation), built /api/admin/usage endpoint with aggregated stats, replaced Cost Calculator tab with live API Usage tab featuring summary cards, token/cost charts, action breakdown, and top users leaderboard
+**Stage 6 Sprint B (Tasks 2-6):** PENDING — Email column truncation, center alignment for all table cells, glowing row hover effect, activity detail popup modal, owner team assignment
 **Stage 4 Sprint 1:** COMPLETE — Font rendering fix, sidebar positioning, button relocation, template rename, access code update
 **Stage 4 Sprint 2:** COMPLETE — Clear form button, story type switching preservation, ProofreadResults render bug fix
 **Stage 4 Sprint 3:** COMPLETE — Refactored repair templates to save only 5 core repair fields (codes_present, diagnostics_performed, root_cause, repair_performed, repair_verification), removing vehicle info and non-core fields from save/display/edit flows
@@ -2784,6 +2786,60 @@ Main menu role-based dashboard buttons, team dashboard activity log tab, refresh
   - On failure: shows error toast with message from API
 
 - **Build:** Verified clean with `npm run build` — all routes compiled successfully
+
+---
+
+## STAGE 6 SPRINT B — TASK 1: GEMINI API USAGE TRACKER (2026-03-10)
+
+**Status:** COMPLETE (Task 1 of 6)
+
+Replaced the static Cost Calculator tab with a real-time Gemini API Usage Tracker that monitors actual token usage and calculates real costs from every Gemini API call.
+
+- [x] **Step 1: Modify Gemini client return type** — **2026-03-10**
+  - Changed `generateWithGemini` return type from `Promise<string>` to `Promise<GeminiResponse>` (`{ text: string, usage: GeminiUsageMetadata | null }`)
+  - Added `GeminiUsageMetadata` and `GeminiResponse` exported interfaces
+  - Extracts `usageMetadata` from Gemini SDK response object (promptTokenCount, candidatesTokenCount, totalTokenCount)
+  - Updated ALL 6 callers to use `geminiResult.text` instead of raw string:
+    - `src/app/api/generate/route.ts`
+    - `src/app/api/customize/route.ts`
+    - `src/app/api/proofread/route.ts`
+    - `src/app/api/apply-edits/route.ts`
+    - `src/app/api/update-narrative/route.ts`
+    - `src/app/api/convert-recommendation/route.ts`
+
+- [x] **Step 2: Create api_usage_log table migration** — **2026-03-10**
+  - Created `supabase/migrations/009_api_usage_log.sql`
+  - Columns: id (uuid PK), user_id (FK to public.users), action_type (text), prompt_tokens, completion_tokens, total_tokens, model_name (default 'gemini-2.0-flash'), estimated_cost_usd (numeric(10,6)), created_at (timestamptz)
+  - Indexes on created_at (DESC) and user_id
+  - RLS: Owner can SELECT all, users can SELECT own, authenticated can INSERT
+
+- [x] **Step 3: Log token usage from every API route** — **2026-03-10**
+  - Created `src/lib/usageLogger.ts` — server-side fire-and-forget logger
+  - Calculates estimated cost using gemini-2.0-flash rates: Input $0.10/1M tokens, Output $0.40/1M tokens
+  - Added `logTokenUsage(userId, actionType, usage)` call in all 6 API routes after Gemini response
+  - Uses same fire-and-forget async IIFE pattern as activity logger — never blocks user requests
+
+- [x] **Step 4: Create /api/admin/usage endpoint** — **2026-03-10**
+  - Created `src/app/api/admin/usage/route.ts` — owner-only GET endpoint
+  - Accepts `?range=` query param (7, 30, 90, all)
+  - Returns aggregated data: totalPromptTokens, totalCompletionTokens, totalTokens, totalEstimatedCost, totalRequests, currentMonthCost, averageCostPerRequest
+  - Returns breakdowns: usageByDay (for charting), usageByAction (by action type), usageByUser (top 10 with names)
+
+- [x] **Step 5: Build API Usage tab in Owner Dashboard** — **2026-03-10**
+  - Replaced 'costs' tab (Cost Calculator / TokenCalculator component) with 'usage' tab (API Usage)
+  - Updated TabKey type: 'costs' → 'usage'
+  - Added usage state: usageData, usageLoading, usageRange, usageLastUpdated, usageSecondsAgo
+  - Added fetchUsageData callback with useEffect triggers on tab activation and range change
+  - Summary cards (7): Total Requests, Input Tokens, Output Tokens, Total Tokens, Estimated Cost, Current Month Cost, Avg Cost/Request
+  - Token Usage Over Time: recharts AreaChart with stacked Input/Output token lines
+  - Cost Over Time: recharts BarChart with daily cost bars
+  - Usage by Action Type: recharts horizontal BarChart with color-coded bars per action
+  - Top Users by Token Usage: table with Rank (gold/silver/bronze badges), Name, Requests, Input Tokens, Output Tokens, Est. Cost
+  - Time range selector: Last 7/30/90 Days + All Time buttons
+  - Refresh button with RefreshCw spin animation
+  - "Last updated: Xs ago" ticker
+  - Model info callout showing pricing context
+  - Removed TokenCalculator import (component file preserved but no longer referenced)
 
 ---
 

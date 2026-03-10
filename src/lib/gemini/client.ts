@@ -2,11 +2,22 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
+export interface GeminiUsageMetadata {
+  promptTokenCount: number;
+  candidatesTokenCount: number;
+  totalTokenCount: number;
+}
+
+export interface GeminiResponse {
+  text: string;
+  usage: GeminiUsageMetadata | null;
+}
+
 export async function generateWithGemini(
   systemPrompt: string,
   userPrompt: string,
   maxOutputTokens: number = 8192,
-): Promise<string> {
+): Promise<GeminiResponse> {
   const model = genAI.getGenerativeModel({
     model: 'gemini-3-flash-preview',
     systemInstruction: systemPrompt,
@@ -17,7 +28,19 @@ export async function generateWithGemini(
 
   const result = await model.generateContent(userPrompt);
   const response = result.response;
-  return response.text();
+
+  // Extract usage metadata if available
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawUsage = (response as any).usageMetadata;
+  const usage: GeminiUsageMetadata | null = rawUsage
+    ? {
+        promptTokenCount: rawUsage.promptTokenCount ?? 0,
+        candidatesTokenCount: rawUsage.candidatesTokenCount ?? 0,
+        totalTokenCount: rawUsage.totalTokenCount ?? 0,
+      }
+    : null;
+
+  return { text: response.text(), usage };
 }
 
 export function parseJsonResponse<T>(rawText: string): T {

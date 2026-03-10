@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateWithGemini, parseJsonResponse } from '@/lib/gemini/client';
 import { PROOFREAD_SYSTEM_PROMPT, DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT } from '@/constants/prompts';
+import { logTokenUsage } from '@/lib/usageLogger';
 
 interface RawProofreadResponse {
   flagged_issues: string[];
@@ -73,8 +74,11 @@ CAUSE: ${cause}
 CORRECTION: ${correction}
 ---`;
 
-    const rawResponse = await generateWithGemini(systemPrompt, userPrompt);
-    const parsed = parseJsonResponse<RawProofreadResponse>(rawResponse);
+    const geminiResult = await generateWithGemini(systemPrompt, userPrompt);
+    const parsed = parseJsonResponse<RawProofreadResponse>(geminiResult.text);
+
+    // Fire-and-forget token usage logging
+    logTokenUsage(user.id, 'proofread', geminiResult.usage);
 
     if (!parsed.overall_rating || !parsed.summary) {
       throw new Error('Response missing required keys');

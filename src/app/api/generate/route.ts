@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { generateWithGemini, parseJsonResponse } from '@/lib/gemini/client';
 import { DIAGNOSTIC_ONLY_SYSTEM_PROMPT, REPAIR_COMPLETE_SYSTEM_PROMPT } from '@/constants/prompts';
 import { rateLimit } from '@/lib/rateLimit';
+import { logTokenUsage } from '@/lib/usageLogger';
 
 interface NarrativeResponse {
   block_narrative: string;
@@ -70,8 +71,11 @@ export async function POST(request: Request) {
         ? `Generate an audit-proof warranty narrative based on the following diagnostic-only repair order information. This is a diagnosis-only scenario — the repair has NOT been performed yet. The correction section should describe what repair is RECOMMENDED.\n\nVEHICLE & REPAIR ORDER INFORMATION:\n---\n${compiledDataBlock}\n---`
         : `Generate an audit-proof warranty narrative based on the following completed repair order information. This repair has been fully completed and verified.\n\nVEHICLE & REPAIR ORDER INFORMATION:\n---\n${compiledDataBlock}\n---`;
 
-    const rawResponse = await generateWithGemini(systemPrompt, userPrompt);
-    const parsed = parseJsonResponse<NarrativeResponse>(rawResponse);
+    const geminiResult = await generateWithGemini(systemPrompt, userPrompt);
+    const parsed = parseJsonResponse<NarrativeResponse>(geminiResult.text);
+
+    // Fire-and-forget token usage logging
+    logTokenUsage(user.id, 'generate', geminiResult.usage);
 
     // Validate required keys
     if (!parsed.block_narrative || !parsed.concern || !parsed.cause || !parsed.correction) {
