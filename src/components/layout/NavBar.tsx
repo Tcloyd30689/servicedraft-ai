@@ -40,7 +40,7 @@ export default function NavBar() {
       {/* CENTER SECTION: App version label */}
       <div className="hidden md:block absolute left-1/2 -translate-x-1/2">
         <span className="text-sm font-medium text-[var(--accent-bright)]">
-          v1.0.0-beta
+          v1.0.1-beta
         </span>
       </div>
 

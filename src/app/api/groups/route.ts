@@ -103,12 +103,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'name and access_code are required' }, { status: 400 });
     }
 
-    // Ensure access code doesn't match the master access code
-    const masterCode = process.env.ACCESS_CODE;
-    if (masterCode && access_code.trim() === masterCode) {
-      return NextResponse.json({ error: 'Access code cannot match the master access code' }, { status: 400 });
-    }
-
     const svc = createServiceClient();
 
     const { data: group, error } = await svc
@@ -148,14 +142,6 @@ export async function PUT(request: Request) {
 
     if (!id) {
       return NextResponse.json({ error: 'Group id is required' }, { status: 400 });
-    }
-
-    // Ensure access code doesn't match the master access code
-    if (access_code) {
-      const masterCode = process.env.ACCESS_CODE;
-      if (masterCode && access_code.trim() === masterCode) {
-        return NextResponse.json({ error: 'Access code cannot match the master access code' }, { status: 400 });
-      }
     }
 
     const svc = createServiceClient();

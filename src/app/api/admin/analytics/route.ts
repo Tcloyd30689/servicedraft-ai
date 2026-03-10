@@ -260,7 +260,7 @@ export async function GET(request: NextRequest) {
         saved_repairs: savedTemplatesRes.count ?? 0,
       },
       lastActivityTimestamp,
-      appVersion: 'v1.0.0-beta',
+      appVersion: 'v1.0.1-beta',
     };
 
     return NextResponse.json({
