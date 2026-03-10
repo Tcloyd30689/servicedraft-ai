@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Users, Search, RefreshCw, Crown,
-  ChevronDown, ChevronUp, ArrowUp, ArrowDown,
-  FileText, Activity, UserCog, UserCheck,
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  ArrowUp, ArrowDown,
+  FileText, Activity, UserCog, UserCheck, UserMinus,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,6 +44,49 @@ const ROLE_BADGE: Record<string, { bg: string; text: string; label: string }> = 
   user: { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af', label: 'User' },
 };
 
+// ─── Activity Log Constants ──────────────────────────────
+const ACTION_FILTERS = [
+  { value: 'all', label: 'All Actions' },
+  { value: 'generate', label: 'Generate' },
+  { value: 'regenerate', label: 'Regenerate' },
+  { value: 'save', label: 'Save' },
+  { value: 'export_copy', label: 'Export (Copy)' },
+  { value: 'export_print', label: 'Export (Print)' },
+  { value: 'export_pdf', label: 'Export (PDF)' },
+  { value: 'export_docx', label: 'Export (DOCX)' },
+  { value: 'login', label: 'Login' },
+  { value: 'customize', label: 'Customize' },
+  { value: 'proofread', label: 'Proofread' },
+];
+
+const ACTION_BORDER_COLORS: Record<string, string> = {
+  generate: 'var(--accent-primary)',
+  regenerate: 'var(--accent-primary)',
+  save: '#16a34a',
+  export_copy: '#3b82f6',
+  export_print: '#3b82f6',
+  export_pdf: '#3b82f6',
+  export_docx: '#3b82f6',
+  login: '#6b7280',
+  customize: 'var(--accent-hover)',
+  proofread: '#f59e0b',
+};
+
+interface ActivityRow {
+  id: string;
+  user_id: string;
+  action_type: string;
+  story_type: string | null;
+  input_data: Record<string, unknown> | null;
+  output_preview: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  user_name: string;
+  user_email: string;
+}
+
+const ACTIVITY_PAGE_SIZE = 25;
+
 type MemberSortColumn = 'name' | 'email' | 'position' | 'role' | 'narrative_count' | 'last_active';
 
 // ─── Date formatting ─────────────────────────────────────
@@ -66,7 +110,7 @@ const tabVariants = {
   exit: { opacity: 0, y: -12 },
 };
 
-type TabKey = 'overview' | 'members';
+type TabKey = 'overview' | 'members' | 'activity';
 
 export default function TeamDashboardPage() {
   const router = useRouter();
@@ -89,7 +133,18 @@ export default function TeamDashboardPage() {
 
   // Role management
   const [promoteTarget, setPromoteTarget] = useState<{ id: string; name: string; currentRole: string } | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Activity log state
+  const [activityLogs, setActivityLogs] = useState<ActivityRow[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityTotalCount, setActivityTotalCount] = useState(0);
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityFilter, setActivityFilter] = useState('all');
+  const [activitySearch, setActivitySearch] = useState('');
+  const [activitySortAsc, setActivitySortAsc] = useState(false);
+  const [activityExpandedRow, setActivityExpandedRow] = useState<string | null>(null);
 
   // Title spotlight
   const titleRef = useRef<HTMLDivElement>(null);
@@ -167,6 +222,65 @@ export default function TeamDashboardPage() {
       fetchMembers();
     }
   }, [team, fetchMembers]);
+
+  // ─── Fetch Activity Logs ──────────────────────────────
+  const fetchActivityLogs = useCallback(async () => {
+    if (!team) return;
+    setActivityLoading(true);
+    try {
+      const params = new URLSearchParams({
+        team_id: team.id,
+        page: String(activityPage),
+        filter: activityFilter,
+        search: activitySearch,
+        sort: activitySortAsc ? 'asc' : 'desc',
+      });
+      const res = await fetch(`/api/teams/activity?${params}`);
+      const json = await res.json();
+      if (json.success) {
+        setActivityLogs(json.data || []);
+        setActivityTotalCount(json.totalCount ?? 0);
+      } else {
+        console.error('Activity fetch error:', json.error);
+        setActivityLogs([]);
+        setActivityTotalCount(0);
+      }
+    } catch (err) {
+      console.error('Activity log fetch error:', err);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [team, activityPage, activityFilter, activitySearch, activitySortAsc]);
+
+  useEffect(() => {
+    if (activeTab === 'activity' && team) {
+      fetchActivityLogs();
+    }
+  }, [activeTab, team, fetchActivityLogs]);
+
+  useEffect(() => {
+    setActivityPage(1);
+  }, [activityFilter, activitySearch]);
+
+  const activityTotalPages = Math.max(1, Math.ceil(activityTotalCount / ACTIVITY_PAGE_SIZE));
+
+  const formatActionLabel = (action: string) => {
+    return action
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+  const formatDateReadable = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
 
   // ─── Overview Stats ────────────────────────────────────
   const memberCount = members.length;
@@ -294,6 +408,47 @@ export default function TeamDashboardPage() {
     return { allowed: false };
   };
 
+  // Can the current user remove this member from the team?
+  const canRemoveMember = (member: TeamMember): boolean => {
+    if (!profile) return false;
+    // Cannot remove yourself
+    if (member.id === profile.id) return false;
+    // Cannot remove an owner
+    if (member.role === 'owner') return false;
+    // Owner can remove anyone else
+    if (profile.role === 'owner') return true;
+    // Admin can remove users (not other admins)
+    if (profile.role === 'admin' && member.role === 'user') return true;
+    return false;
+  };
+
+  // ─── Remove Member ───────────────────────────────────
+  const handleRemoveMember = async () => {
+    if (!removeTarget || !team) return;
+
+    setActionLoading(`remove-${removeTarget.id}`);
+    try {
+      const res = await fetch('/api/teams/members', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: removeTarget.id }),
+      });
+      const json = await res.json();
+
+      if (json.success) {
+        toast.success(`${removeTarget.name} has been removed from the team`);
+        setMembers((prev) => prev.filter((m) => m.id !== removeTarget.id));
+      } else {
+        toast.error(json.error || 'Failed to remove member');
+      }
+    } catch {
+      toast.error('Failed to remove member');
+    } finally {
+      setActionLoading(null);
+      setRemoveTarget(null);
+    }
+  };
+
   // ─── Loading / Auth guards ─────────────────────────────
   if (authLoading) {
     return (
@@ -347,6 +502,7 @@ export default function TeamDashboardPage() {
   const tabs: { key: TabKey; label: string; icon: typeof Users }[] = [
     { key: 'overview', label: 'Overview', icon: Users },
     { key: 'members', label: 'Team Members', icon: UserCog },
+    { key: 'activity', label: 'Activity Log', icon: Activity },
   ];
 
   return (
@@ -681,7 +837,7 @@ export default function TeamDashboardPage() {
                                   })() : '\u2014'}
                                 </td>
                                 <td className="py-3" onClick={(e) => e.stopPropagation()}>
-                                  <div className="flex items-center justify-center">
+                                  <div className="flex items-center justify-center gap-1">
                                     {roleAccess.allowed ? (
                                       <button
                                         onClick={() =>
@@ -703,6 +859,28 @@ export default function TeamDashboardPage() {
                                         title={roleAccess.reason || 'Cannot modify role'}
                                       >
                                         <UserCog size={20} />
+                                      </div>
+                                    )}
+                                    {canRemoveMember(member) ? (
+                                      <button
+                                        onClick={() =>
+                                          setRemoveTarget({
+                                            id: member.id,
+                                            name: memberName,
+                                          })
+                                        }
+                                        disabled={actionLoading === `remove-${member.id}`}
+                                        className="p-2.5 rounded-lg hover:bg-[rgba(239,68,68,0.15)] text-[var(--text-muted)] hover:text-[#ef4444] transition-all cursor-pointer disabled:opacity-50"
+                                        title="Remove from Team"
+                                      >
+                                        <UserMinus size={20} />
+                                      </button>
+                                    ) : (
+                                      <div
+                                        className="p-2.5 text-[var(--text-muted)] opacity-30 cursor-not-allowed"
+                                        title="Cannot remove this member"
+                                      >
+                                        <UserMinus size={20} />
                                       </div>
                                     )}
                                   </div>
@@ -774,6 +952,201 @@ export default function TeamDashboardPage() {
               </LiquidCard>
             </motion.div>
           )}
+          {/* ═══════════════════════════════════════════════════
+              ACTIVITY LOG TAB
+             ═══════════════════════════════════════════════════ */}
+          {activeTab === 'activity' && (
+            <motion.div
+              key="activity"
+              variants={tabVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+            >
+              <LiquidCard size="standard" className="!rounded-[16px]">
+                <div className="flex flex-col sm:flex-row gap-3 mb-5">
+                  <div className="relative flex-1">
+                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                    <input
+                      type="text"
+                      placeholder="Search by name or email..."
+                      value={activitySearch}
+                      onChange={(e) => setActivitySearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
+                    />
+                  </div>
+                  <select
+                    value={activityFilter}
+                    onChange={(e) => setActivityFilter(e.target.value)}
+                    className="px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] text-sm cursor-pointer focus:outline-none focus:border-[var(--accent-hover)] appearance-none transition-all"
+                  >
+                    {ACTION_FILTERS.map((f) => (
+                      <option key={f.value} value={f.value}>{f.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setActivitySortAsc(!activitySortAsc)}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-secondary)] text-sm hover:border-[var(--accent-hover)] transition-all cursor-pointer whitespace-nowrap"
+                  >
+                    {activitySortAsc ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    {activitySortAsc ? 'Oldest First' : 'Newest First'}
+                  </button>
+                  <button
+                    onClick={fetchActivityLogs}
+                    disabled={activityLoading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:text-[var(--accent-bright)] hover:bg-[var(--accent-10)] transition-all cursor-pointer disabled:opacity-50"
+                    title="Refresh activity log"
+                  >
+                    <RefreshCw size={16} className={activityLoading ? 'animate-spin' : ''} />
+                    Refresh
+                  </button>
+                </div>
+
+                <p className="text-sm text-[var(--text-muted)] mb-3">
+                  {activityTotalCount} {activityTotalCount === 1 ? 'entry' : 'entries'} found
+                </p>
+
+                {activityLoading ? (
+                  <div className="py-12">
+                    <LoadingSpinner size="medium" message="Loading activity logs..." />
+                  </div>
+                ) : activityLogs.length === 0 ? (
+                  <p className="text-center text-[var(--text-muted)] py-12 text-base">No activity logs found.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-left text-[var(--text-muted)] text-sm uppercase tracking-wider border-b border-[var(--accent-15)]">
+                          <th className="pb-3 pr-4">Date/Time</th>
+                          <th className="pb-3 pr-4">User</th>
+                          <th className="pb-3 pr-4 hidden md:table-cell">Email</th>
+                          <th className="pb-3 pr-4">Action</th>
+                          <th className="pb-3 pr-4 hidden lg:table-cell">Story Type</th>
+                          <th className="pb-3 hidden lg:table-cell">Preview</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {activityLogs.map((log) => (
+                          <AnimatePresence key={log.id}>
+                            <motion.tr
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="border-b border-[var(--accent-10)] hover:bg-[var(--accent-10)] transition-colors cursor-pointer text-sm"
+                              onClick={() => setActivityExpandedRow(activityExpandedRow === log.id ? null : log.id)}
+                              style={{
+                                borderLeft: `3px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}`,
+                              }}
+                            >
+                              <td className="py-3 pr-4 text-[var(--text-secondary)] whitespace-nowrap">
+                                {formatDateReadable(log.created_at)}
+                              </td>
+                              <td className="py-3 pr-4 text-[var(--text-primary)] font-medium">
+                                {log.user_name}
+                              </td>
+                              <td className="py-3 pr-4 text-[var(--text-muted)] hidden md:table-cell">
+                                {log.user_email}
+                              </td>
+                              <td className="py-3 pr-4">
+                                <span
+                                  className="inline-block px-2.5 py-1 rounded-full text-sm font-medium"
+                                  style={{
+                                    background: `${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}20`,
+                                    color: ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-bright)',
+                                    border: `1px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}40`,
+                                  }}
+                                >
+                                  {formatActionLabel(log.action_type)}
+                                </span>
+                              </td>
+                              <td className="py-3 pr-4 text-[var(--text-muted)] capitalize hidden lg:table-cell">
+                                {log.story_type?.replace(/_/g, ' ') || '\u2014'}
+                              </td>
+                              <td className="py-3 text-[var(--text-muted)] max-w-[200px] truncate hidden lg:table-cell">
+                                {log.output_preview || '\u2014'}
+                              </td>
+                            </motion.tr>
+
+                            {activityExpandedRow === log.id && (
+                              <motion.tr
+                                key={`${log.id}-detail`}
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                              >
+                                <td colSpan={6} className="p-4 bg-[var(--bg-elevated)]">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                      <p className="text-[var(--text-muted)] text-sm uppercase mb-1">User ID</p>
+                                      <p className="text-[var(--text-secondary)] font-mono text-sm break-all">{log.user_id}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Timestamp</p>
+                                      <p className="text-[var(--text-secondary)]">{new Date(log.created_at).toISOString()}</p>
+                                    </div>
+                                    {log.output_preview && (
+                                      <div className="md:col-span-2">
+                                        <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Output Preview</p>
+                                        <p className="text-[var(--text-secondary)] whitespace-pre-wrap">{log.output_preview}</p>
+                                      </div>
+                                    )}
+                                    {log.input_data && Object.keys(log.input_data).length > 0 && (
+                                      <div className="md:col-span-2">
+                                        <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Input Data</p>
+                                        <pre className="text-[var(--text-secondary)] text-sm bg-[var(--bg-input)] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
+                                          {JSON.stringify(log.input_data, null, 2)}
+                                        </pre>
+                                      </div>
+                                    )}
+                                    {log.metadata && Object.keys(log.metadata).length > 0 && (
+                                      <div className="md:col-span-2">
+                                        <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Metadata</p>
+                                        <pre className="text-[var(--text-secondary)] text-sm bg-[var(--bg-input)] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
+                                          {JSON.stringify(log.metadata, null, 2)}
+                                        </pre>
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              </motion.tr>
+                            )}
+                          </AnimatePresence>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {activityTotalPages > 1 && (
+                  <div className="flex items-center justify-between mt-5 pt-4 border-t border-[var(--accent-15)]">
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      onClick={() => setActivityPage(Math.max(1, activityPage - 1))}
+                      disabled={activityPage <= 1}
+                      className="flex items-center gap-1"
+                    >
+                      <ChevronLeft size={16} />
+                      Previous
+                    </Button>
+                    <span className="text-sm text-[var(--text-muted)]">
+                      Page {activityPage} of {activityTotalPages}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      onClick={() => setActivityPage(Math.min(activityTotalPages, activityPage + 1))}
+                      disabled={activityPage >= activityTotalPages}
+                      className="flex items-center gap-1"
+                    >
+                      Next
+                      <ChevronRight size={16} />
+                    </Button>
+                  </div>
+                )}
+              </LiquidCard>
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Promote/Demote Confirmation Modal */}
@@ -807,6 +1180,37 @@ export default function TeamDashboardPage() {
               disabled={!!actionLoading}
             >
               {promoteTarget?.currentRole === 'user' ? 'Promote to Admin' : 'Demote to User'}
+            </Button>
+          </div>
+        </Modal>
+        {/* Remove from Team Confirmation Modal */}
+        <Modal
+          isOpen={!!removeTarget}
+          onClose={() => setRemoveTarget(null)}
+          title="Remove from Team"
+          width="max-w-[460px]"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <UserMinus
+              size={28}
+              style={{ color: '#ef4444' }}
+            />
+            <p className="text-[var(--text-secondary)] text-sm">
+              Remove <strong>{removeTarget?.name}</strong> from <strong>{team?.name}</strong>? They will lose access to the team and its features.
+            </p>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="ghost" size="small" onClick={() => setRemoveTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="small"
+              onClick={handleRemoveMember}
+              disabled={!!actionLoading}
+              className="!bg-[#ef4444] !border-[#ef4444] hover:!bg-[#dc2626]"
+            >
+              Remove
             </Button>
           </div>
         </Modal>

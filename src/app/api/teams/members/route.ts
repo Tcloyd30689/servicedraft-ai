@@ -183,3 +183,78 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// DELETE: Remove a member from their team
+// Admin can remove users from their own team. Owner can remove anyone.
+export async function DELETE(request: Request) {
+  try {
+    const authUser = await getAuthUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (authUser.role !== 'owner' && authUser.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized — admin or owner only' }, { status: 403 });
+    }
+
+    const { userId } = await request.json();
+
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    }
+
+    const svc = createServiceClient();
+
+    // Get the target user's current info
+    const { data: targetUser } = await svc
+      .from('users')
+      .select('role, team_id')
+      .eq('id', userId)
+      .single();
+
+    if (!targetUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Cannot remove an owner
+    if (targetUser.role === 'owner') {
+      return NextResponse.json({ error: 'Cannot remove the owner from a team' }, { status: 403 });
+    }
+
+    // Cannot remove yourself
+    if (userId === authUser.userId) {
+      return NextResponse.json({ error: 'Cannot remove yourself from the team' }, { status: 403 });
+    }
+
+    // Admin can only remove users from their own team
+    if (authUser.role === 'admin') {
+      if (!authUser.teamId || targetUser.team_id !== authUser.teamId) {
+        return NextResponse.json({ error: 'You can only remove members from your own team' }, { status: 403 });
+      }
+      // Admin can only remove regular users, not other admins
+      if (targetUser.role === 'admin') {
+        return NextResponse.json({ error: 'Admins cannot remove other admins. Contact the Owner.' }, { status: 403 });
+      }
+    }
+
+    // Clear team_id to remove from team; if they were an admin, demote to user
+    const updates: Record<string, string | null> = { team_id: null };
+    if (targetUser.role === 'admin') {
+      updates.role = 'user';
+    }
+
+    const { error } = await svc
+      .from('users')
+      .update(updates)
+      .eq('id', userId);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error('Team members DELETE error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

@@ -49,7 +49,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 5 Sprint 10:** COMPLETE — Team Manager Dashboard UI and Owner Dashboard team management
 **Documentation Refresh:** COMPLETE — All 6 project reference files updated to v2.0 reflecting current application state
 **Stage 6 Sprint A (Task 1):** COMPLETE — Group→Team rename across entire codebase
-**Next Task:** Stage 6 Sprint A Tasks 2-5 (main menu buttons, activity log tab, refresh button, remove member function)
+**Stage 6 Sprint A (Tasks 2-5):** COMPLETE — Main menu dashboard buttons, team dashboard activity log + refresh, remove member function
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
@@ -2736,10 +2736,54 @@ Comprehensive rename of all "group" references to "team" across the entire codeb
   - Created migration `supabase/migrations/008_rename_groups_to_teams.sql`: Renames `groups` table → `teams`, `group_id` column → `team_id`, recreates indexes and RLS policies with new names
   - Build verified clean with `npm run build` — all routes correctly show `/team-dashboard`, `/api/teams`, `/api/teams/members`
 
-- [ ] **Task 2: Add conditional dashboard buttons to main menu** — Pending (next session)
-- [ ] **Task 3: Add Activity Log tab to Team Dashboard** — Pending (next session)
-- [ ] **Task 4: Add refresh button to Activity Log tabs** — Pending (next session)
-- [ ] **Task 5: Add remove-from-team function to Team Member table** — Pending (next session)
+- [x] **Task 2: Add conditional dashboard buttons to main menu** — **2026-03-10**
+- [x] **Task 3: Add Activity Log tab to Team Dashboard** — **2026-03-10**
+- [x] **Task 4: Add refresh button to Activity Log tabs** — **2026-03-10**
+- [x] **Task 5: Add remove-from-team function to Team Member table** — **2026-03-10**
+
+---
+
+## STAGE 6 SPRINT A — TASKS 2-5 (2026-03-10)
+
+**Status:** COMPLETE
+
+Main menu role-based dashboard buttons, team dashboard activity log tab, refresh buttons on activity log tabs, and remove-from-team member function.
+
+- [x] **Task 2: Add conditional dashboard buttons to main menu** — **2026-03-10**
+  - Updated `src/app/(protected)/main-menu/page.tsx` to conditionally show dashboard buttons between USER DASHBOARD and LOG OUT
+  - Owner role (`profile.role === 'owner'`): Shows "OWNER DASHBOARD" button with Shield icon, navigates to `/admin`
+  - Admin role (`profile.role === 'admin'`): Shows "TEAM DASHBOARD" button with Users icon, navigates to `/team-dashboard`
+  - Regular users see no extra dashboard buttons
+  - Buttons use same variant ('secondary'), icon sizing (size={20}), and Framer Motion animation patterns as existing buttons
+
+- [x] **Task 3: Add Activity Log tab to Team Dashboard** — **2026-03-10**
+  - Added "Activity Log" tab with Activity icon to team dashboard tab navigation
+  - Created server-side API route `src/app/api/teams/activity/route.ts` for team-filtered activity logs
+  - API fetches team member IDs, then queries `activity_log` filtered by those user IDs
+  - Supports pagination (25 rows/page), action_type filtering dropdown (same 11 action types as Owner Dashboard), search by name/email, sort order toggle
+  - Table columns: Date/Time, User, Email (hidden on mobile), Action (with color-coded badges), Story Type, Preview
+  - Expandable rows showing User ID, Timestamp, Output Preview, Input Data (JSON), Metadata (JSON)
+  - Previous/Next pagination with page counter — identical to Owner Dashboard activity log pattern
+  - Added `ACTION_FILTERS`, `ACTION_BORDER_COLORS`, `ActivityRow` interface, and helper functions to team dashboard
+
+- [x] **Task 4: Add refresh button to Activity Log tabs** — **2026-03-10**
+  - Team Dashboard Activity Log: RefreshCw button with `animate-spin` while loading, positioned in controls bar
+  - Owner Dashboard Activity Log (`src/app/(protected)/admin/page.tsx`): Added matching RefreshCw refresh button to activity tab controls (was missing — other tabs already had refresh buttons)
+
+- [x] **Task 5: Add remove-from-team function to Team Member table** — **2026-03-10**
+  - Added DELETE handler to `src/app/api/teams/members/route.ts`
+    - Authenticates requesting user (must be admin or owner)
+    - Validates: cannot remove owner, cannot remove yourself, admin can only remove users (not other admins)
+    - Clears `users.team_id` to null; if target was admin, demotes role to 'user'
+  - Added UserMinus icon button in team members table Actions column (alongside existing UserCog role button)
+    - Red hover state (`hover:text-[#ef4444]`), p-2.5 padding, rounded-lg, size 20 icon
+    - `canRemoveMember()` helper determines visibility: owner can remove anyone except self/owner, admin can remove users only
+  - Confirmation modal: "Remove [Name] from [Team Name]?" with UserMinus icon, Cancel and Remove buttons
+    - Remove button styled with red background (`!bg-[#ef4444]`)
+  - On success: removes member from local state, shows success toast "[Name] has been removed from the team"
+  - On failure: shows error toast with message from API
+
+- **Build:** Verified clean with `npm run build` — all routes compiled successfully
 
 ---
 

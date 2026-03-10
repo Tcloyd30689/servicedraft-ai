@@ -1264,6 +1264,15 @@ export default function AdminPage() {
                     {sortAsc ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     {sortAsc ? 'Oldest First' : 'Newest First'}
                   </button>
+                  <button
+                    onClick={fetchLogs}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:text-[var(--accent-bright)] hover:bg-[var(--accent-10)] transition-all cursor-pointer disabled:opacity-50"
+                    title="Refresh activity log"
+                  >
+                    <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                    Refresh
+                  </button>
                 </div>
 
                 <p className="text-sm text-[var(--text-muted)] mb-3">

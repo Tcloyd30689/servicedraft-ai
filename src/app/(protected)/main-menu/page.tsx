@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Sparkles, LayoutDashboard, LogOut, HelpCircle, MessageSquare, FileText } from 'lucide-react';
+import { Sparkles, LayoutDashboard, LogOut, HelpCircle, MessageSquare, FileText, Shield, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import LiquidCard from '@/components/ui/LiquidCard';
@@ -71,6 +71,24 @@ export default function MainMenuPage() {
       onClick: () => router.push('/dashboard'),
       variant: 'secondary' as const,
     },
+    // Owner-level: Owner Dashboard button
+    ...(profile.role === 'owner'
+      ? [{
+          label: 'OWNER DASHBOARD',
+          icon: <Shield size={20} />,
+          onClick: () => router.push('/admin'),
+          variant: 'secondary' as const,
+        }]
+      : []),
+    // Admin-level: Team Dashboard button
+    ...(profile.role === 'admin'
+      ? [{
+          label: 'TEAM DASHBOARD',
+          icon: <Users size={20} />,
+          onClick: () => router.push('/team-dashboard'),
+          variant: 'secondary' as const,
+        }]
+      : []),
     {
       label: 'LOG OUT',
       icon: <LogOut size={20} />,
