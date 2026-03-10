@@ -41,6 +41,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 5 Sprint 2:** COMPLETE — Loading spinner size increase (xlarge variant ~2x) and full viewport centering below NavBar
 **Stage 5 Sprint 3:** COMPLETE — NavBar glowing purple hover animations on all interactive elements (Main Menu, theme toggle, user button, dropdown items)
 **Stage 5 Sprint 4:** COMPLETE — Signup page updates: AccentColorPicker added to Step 3 profile creation, Location text input replaced with US state dropdown (all 50 states), accent color persists via existing ThemeProvider (localStorage + Supabase preferences)
+**Stage 5 Sprint 5:** COMPLETE — Dashboard split preferences into App Appearance modal and My Saved Repairs placeholder modal, added Owner Dashboard button for admin users with gold/amber accent
 **Next Task:** Vercel production deployment
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
@@ -2594,6 +2595,18 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] **Task 5:** Changed MAX_RECIPIENTS from 3 to 10 in EmailExportModal.tsx
 - [x] **Task 6:** Changed loading spinner text from "Generating your warranty narrative..." to "Generating narrative..." in narrative/page.tsx
 - [x] **Task 7:** Added centered "v1.0.0-beta" version label to NavBar.tsx — accent-bright color (reactive to user theme), text-sm font-medium (matches UserPopup display name styling), hidden on mobile (hidden md:block)
+
+---
+
+## STAGE 5 — SPRINT 5: DASHBOARD SPLIT PREFERENCES & APPEARANCE MODAL (2026-03-09)
+
+**Status:** COMPLETE
+
+- [x] **Task 1:** Removed old "Preferences" button, showPreferences state, and PreferencesPanel slide-out component from dashboard page
+- [x] **Task 2:** Added two new buttons ("APP APPEARANCE" with Palette icon, "MY SAVED REPAIRS" with Wrench icon) centered below ProfileSection — styled to match existing secondary buttons with accent-vivid border/text, glowing hover animation (hover:shadow-[0_0_15px_rgba(168,85,247,0.4)] transition-all duration-300)
+- [x] **Task 3:** Created AppearanceModal component (src/components/dashboard/AppearanceModal.tsx) using existing Modal component — contains AccentColorPicker, Theme toggle (renamed from "Display Mode"), and Background Animation toggle, all reused from PreferencesPanel logic
+- [x] **Task 4:** Added showSavedRepairs state and placeholder Modal with "My Saved Repairs" title and "Coming in Sprint 6" message
+- [x] **Task 5:** Added "OWNER DASHBOARD" button in header for admin-role users — gold/amber accent (#f59e0b border/text), Shield icon, navigates to /admin, hover glow with amber shadow
 
 ---
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Settings, Trash2, AlertTriangle } from 'lucide-react';
+import { Palette, Wrench, Trash2, AlertTriangle, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import Button from '@/components/ui/Button';
@@ -12,13 +12,14 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ProfileSection from '@/components/dashboard/ProfileSection';
 import EditProfileModal from '@/components/dashboard/EditProfileModal';
 import NarrativeHistory from '@/components/dashboard/NarrativeHistory';
-import PreferencesPanel from '@/components/dashboard/PreferencesPanel';
+import AppearanceModal from '@/components/dashboard/AppearanceModal';
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, profile, loading, refreshProfile } = useAuth();
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const [showPreferences, setShowPreferences] = useState(false);
+  const [showAppearance, setShowAppearance] = useState(false);
+  const [showSavedRepairs, setShowSavedRepairs] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -56,19 +57,20 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">User Dashboard</h1>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowPreferences(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors"
-              style={{
-                backgroundColor: 'var(--bg-input)',
-                border: '1px solid var(--accent-vivid)',
-                color: 'var(--accent-vivid)',
-                fontWeight: 600,
-              }}
-            >
-              <Settings size={16} />
-              Preferences
-            </button>
+            {profile.role === 'admin' && (
+              <button
+                onClick={() => router.push('/admin')}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-300 cursor-pointer hover:shadow-[0_0_15px_rgba(245,158,11,0.4)]"
+                style={{
+                  backgroundColor: 'var(--bg-input)',
+                  border: '1px solid #f59e0b',
+                  color: '#f59e0b',
+                }}
+              >
+                <Shield size={16} />
+                OWNER DASHBOARD
+              </button>
+            )}
             <Button
               variant="secondary"
               size="medium"
@@ -84,6 +86,34 @@ export default function DashboardPage() {
           profile={profile}
           onUpdate={() => setEditProfileOpen(true)}
         />
+
+        {/* Appearance & Saved Repairs Buttons */}
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => setShowAppearance(true)}
+            className="flex items-center gap-2 px-5 py-3 rounded-lg text-[15px] font-semibold transition-all duration-300 cursor-pointer hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]"
+            style={{
+              backgroundColor: 'transparent',
+              border: '1px solid var(--accent-vivid)',
+              color: 'var(--accent-vivid)',
+            }}
+          >
+            <Palette size={16} />
+            APP APPEARANCE
+          </button>
+          <button
+            onClick={() => setShowSavedRepairs(true)}
+            className="flex items-center gap-2 px-5 py-3 rounded-lg text-[15px] font-semibold transition-all duration-300 cursor-pointer hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]"
+            style={{
+              backgroundColor: 'transparent',
+              border: '1px solid var(--accent-vivid)',
+              color: 'var(--accent-vivid)',
+            }}
+          >
+            <Wrench size={16} />
+            MY SAVED REPAIRS
+          </button>
+        </div>
 
         {/* Narrative History */}
         <NarrativeHistory userId={user.id} senderName={[profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username || ''} />
@@ -112,11 +142,29 @@ export default function DashboardPage() {
         onSaved={refreshProfile}
       />
 
-      {/* Preferences Panel */}
-      <PreferencesPanel
-        isOpen={showPreferences}
-        onClose={() => setShowPreferences(false)}
+      {/* Appearance Modal */}
+      <AppearanceModal
+        isOpen={showAppearance}
+        onClose={() => setShowAppearance(false)}
       />
+
+      {/* Saved Repairs Placeholder Modal */}
+      <Modal
+        isOpen={showSavedRepairs}
+        onClose={() => setShowSavedRepairs(false)}
+        title="My Saved Repairs"
+        width="max-w-[480px]"
+      >
+        <div className="flex flex-col items-center justify-center py-10">
+          <Wrench size={40} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
+          <p
+            className="text-center mt-4"
+            style={{ color: 'var(--text-muted)', fontSize: 14 }}
+          >
+            Coming in Sprint 6
+          </p>
+        </div>
+      </Modal>
 
       {/* Delete Account Confirmation Modal */}
       <Modal
