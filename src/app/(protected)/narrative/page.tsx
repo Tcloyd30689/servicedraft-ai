@@ -445,8 +445,8 @@ export default function NarrativePage() {
   // Show loading while generating initially
   if (isGenerating && !state.narrative) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="large" message="Generating narrative..." />
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
+        <LoadingSpinner size="xlarge" message="GENERATING NARRATIVE..." />
       </div>
     );
   }

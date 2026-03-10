@@ -38,6 +38,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 4 Sprint 8:** COMPLETE — Admin management tools, export, polish, and dashboard refinement
 **Pre-Deployment Audit:** COMPLETE — Security hardening, auth on all API routes, rate limiting, CSP headers, env validation, code cleanup
 **Stage 5 Sprint 1:** COMPLETE — Quick text/label fixes: Owner Dashboard rename, slider label updates, custom instructions maxLength, MAX_RECIPIENTS=10, loading spinner text, NavBar version label
+**Stage 5 Sprint 2:** COMPLETE — Loading spinner size increase (xlarge variant ~2x) and full viewport centering below NavBar
 **Stage 5 Sprint 3:** COMPLETE — NavBar glowing purple hover animations on all interactive elements (Main Menu, theme toggle, user button, dropdown items)
 **Next Task:** Vercel production deployment
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
@@ -2603,6 +2604,15 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] **Task 2:** Added glowing purple hover effect to UserPopup trigger button — border shifts to accent-primary, dual-layer purple box-shadow glow on hover, 300ms transition
 - [x] **Task 3:** Added glowing purple hover effect to Light/Dark mode toggle icon — soft purple glow shadow behind icon on hover, text brightens to white, 300ms transition
 - [x] **Task 4:** Added hover effects to ALL UserPopup dropdown menu items (Dashboard, Owner Dashboard, Log Out) — accent-tinted background (rgba(168,85,247,0.1)), text shifts to accent-bright, left-border glow accent-primary on hover, 300ms transition
+
+---
+
+## STAGE 5 — SPRINT 2: LOADING SPINNER SIZE INCREASE & VIEWPORT CENTERING (2026-03-09)
+
+**Status:** COMPLETE
+
+- [x] **Task 1:** Added `xlarge` size variant to LoadingSpinner component (w-32 h-32, border-4, text-2xl) — approximately 2x the `large` variant (w-16 h-16). Added per-size text sizing via textSizeMap. Added optional className prop for external styling.
+- [x] **Task 2:** Updated narrative page initial generation loading state to use `xlarge` spinner with `min-h-[calc(100vh-64px)]` flex centering — spinner now owns the full viewport below the NavBar. Updated message text to uppercase "GENERATING NARRATIVE..." for consistency.
 
 ---
 
