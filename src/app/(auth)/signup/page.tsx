@@ -16,7 +16,9 @@ import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import TermsOfUse from '@/components/layout/TermsOfUse';
 import { setLoginTimestamp } from '@/hooks/useSessionExpiry';
+import AccentColorPicker from '@/components/ui/AccentColorPicker';
 import { POSITION_OPTIONS } from '@/constants/positions';
+import { US_STATES } from '@/constants/states';
 
 type Step = 1 | 2 | 3;
 
@@ -423,13 +425,15 @@ function SignupContent() {
                     onChange={(e) => setLastName(e.target.value)}
                     required
                   />
-                  <Input
+                  <Select
                     id="location"
                     label="Location"
-                    type="text"
-                    placeholder="e.g., Rock Springs, WY"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
+                    options={[
+                      { value: '', label: 'Select Your State' },
+                      ...US_STATES.map((state) => ({ value: state, label: state })),
+                    ]}
                   />
                   <Select
                     id="position"
@@ -442,6 +446,12 @@ function SignupContent() {
                     ]}
                     required
                   />
+                  <div className="mb-5">
+                    <label className="block text-[var(--text-secondary)] text-sm font-medium mb-2">
+                      Choose Your Accent Color
+                    </label>
+                    <AccentColorPicker />
+                  </div>
                   <Button type="submit" size="fullWidth">
                     COMPLETE SETUP
                   </Button>
