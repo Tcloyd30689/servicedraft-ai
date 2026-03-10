@@ -25,7 +25,7 @@ export interface UserProfile {
   profile_picture_url: string | null;
   subscription_status: 'active' | 'trial' | 'expired' | 'bypass';
   stripe_customer_id: string | null;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'owner';
   is_restricted: boolean;
   preferences?: UserPreferences;
   created_at: string;

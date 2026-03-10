@@ -87,7 +87,7 @@ export default function UserPopup() {
               <LayoutDashboard size={16} />
               Dashboard
             </Link>
-            {profile?.role === 'admin' && (
+            {profile?.role === 'owner' && (
               <>
                 <div className="border-t border-[var(--accent-15)] my-1" />
                 <Link

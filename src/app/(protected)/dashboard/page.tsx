@@ -58,7 +58,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">User Dashboard</h1>
           <div className="flex items-center gap-3">
-            {profile.role === 'admin' && (
+            {profile.role === 'owner' && (
               <motion.button
                 onClick={() => router.push('/admin')}
                 whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(245,158,11,0.4), 0 0 30px rgba(245,158,11,0.2)' }}

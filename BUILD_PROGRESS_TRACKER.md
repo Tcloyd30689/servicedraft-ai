@@ -44,6 +44,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 5 Sprint 5:** COMPLETE — Dashboard split preferences into App Appearance modal and My Saved Repairs placeholder modal, added Owner Dashboard button for admin users with gold/amber accent
 **Stage 5 Sprint 6:** COMPLETE — Full SavedRepairsModal with template list/create/edit/delete, narrative table row hover glow, wider dashboard container (max-w-7xl)
 **Stage 5 Sprint 7:** COMPLETE — Owner Dashboard AI token usage pricing calculator with model selector, token inputs, proofread/customization toggles, and real-time cost estimates
+**Stage 5 Sprint 8:** COMPLETE — Role hierarchy restructure from 2-tier (admin/user) to 3-tier (owner/admin/user). Owner = platform owner, Admin = Group Manager, User = standard. All access gates, API routes, badges, promote/demote logic updated.
 **Next Task:** Vercel production deployment
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
@@ -2652,6 +2653,19 @@ This file is a living document that Claude Code reads at the start of every sess
 - [x] **Task 1:** Created `src/components/admin/TokenCalculator.tsx` — self-contained pricing calculator component with: model selector dropdown (Gemini 2.0 Flash / 1.5 Flash / 1.5 Pro with hardcoded per-token pricing), average input tokens per narrative (default 1500), average output tokens per narrative (default 800), estimated narratives per month (default 100), proofread calls toggle (+50% API calls), customization calls toggle (+30% API calls). Output displays cost per narrative, monthly estimate, and annual estimate with accent-colored numbers. Includes disclaimer note about pricing variability. — **2026-03-10**
 - [x] **Task 2:** Added "Cost Calculator" tab to Owner Dashboard tab system — updated `TabKey` union type, added tab entry with `DollarSign` icon between Analytics and Settings tabs, added `motion.div` tab content rendering with `tabVariants` animation matching existing pattern. Imported `TokenCalculator` component. — **2026-03-10**
 - [x] **Task 3:** Styled calculator to match Owner Dashboard premium dark aesthetic — uses `LiquidCard` components with `!rounded-[16px]`, accent-colored cost numbers via `var(--accent-bright)`, custom toggle switches with `peer-checked:bg-[var(--accent-primary)]`, input fields with `bg-[var(--bg-input)]` and `border-[var(--accent-border)]`, cost output cards with `bg-[var(--accent-5)]` backgrounds and `border-[var(--accent-15)]` borders. Build verified clean with `npm run build`. — **2026-03-10**
+
+---
+
+## STAGE 5 SPRINT 8 — ROLE HIERARCHY RESTRUCTURE: OWNER / ADMIN / USER
+*Restructure from 2-tier (admin/user) to 3-tier (owner/admin/user) role system. Owner = platform owner with full dashboard access. Admin = Group Manager role (built in Sprint 9-10). User = standard user.*
+
+**Status:** COMPLETE
+
+- [x] **Task 1:** Updated TypeScript type definitions — changed `role` type from `'user' | 'admin'` to `'user' | 'admin' | 'owner'` in `src/types/database.ts` (UserProfile), `src/hooks/useAuth.ts` (UserProfile interface), and `src/app/(protected)/admin/page.tsx` (AdminUser interface). — **2026-03-10**
+- [x] **Task 2:** Updated all owner-level access checks from `role === 'admin'` to `role === 'owner'` across 8 locations: Owner Dashboard page guard/redirect, activity log fetch gate, user management fetch gate, analytics/overview fetch gate, settings fetch gate, render guard, admin API `verifyAdmin()`, analytics API `verifyAdmin()`, UserPopup "Owner Dashboard" link visibility, and Dashboard "OWNER DASHBOARD" button visibility. — **2026-03-10**
+- [x] **Task 3:** Updated promote/demote functions — added owner protection in API (`demote_to_user` checks target role and rejects if owner, `promote_to_admin` checks and rejects if already owner). Frontend `handlePromoteToggle` blocks owner role changes. Owner rows in user table show as Protected (no action buttons). Promote/demote labels updated to "Group Manager" terminology. — **2026-03-10**
+- [x] **Task 4:** Updated role badge display — added `owner` entry to `ROLE_BADGE` with purple accent (`#a855f7`) and "Owner" label with ShieldCheck icon. Renamed `admin` badge label from "Admin" to "Group Manager" (keeps gold color with Crown icon). User badge unchanged (gray). — **2026-03-10**
+- [x] **Task 5:** Added SQL migration comment in `src/app/api/admin/route.ts`: `UPDATE public.users SET role = 'owner' WHERE role = 'admin' AND email = '<owner_email>'`. Build verified clean with `npm run build`. Full codebase audit confirmed all remaining `'admin'` references are intentional Group Manager role references. — **2026-03-10**
 
 ---
 

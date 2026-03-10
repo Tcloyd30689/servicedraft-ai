@@ -14,7 +14,7 @@ interface UserProfile {
   position: string | null;
   profile_picture_url: string | null;
   subscription_status: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'owner';
   is_restricted: boolean;
 }
 

@@ -82,7 +82,7 @@ interface AdminUser {
   position: string | null;
   subscription_status: 'active' | 'trial' | 'expired' | 'bypass';
   is_restricted: boolean;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'owner';
   created_at: string;
   narrative_count: number;
   last_active: string | null;
@@ -130,7 +130,8 @@ const SUB_BADGE: Record<string, { bg: string; text: string }> = {
 };
 
 const ROLE_BADGE: Record<string, { bg: string; text: string; label: string }> = {
-  admin: { bg: 'rgba(234,179,8,0.15)', text: '#eab308', label: 'Admin' },
+  owner: { bg: 'rgba(168,85,247,0.15)', text: '#a855f7', label: 'Owner' },
+  admin: { bg: 'rgba(234,179,8,0.15)', text: '#eab308', label: 'Group Manager' },
   user: { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af', label: 'User' },
 };
 
@@ -229,9 +230,9 @@ export default function AdminPage() {
     setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   }, []);
 
-  // Redirect non-admin users
+  // Redirect non-owner users
   useEffect(() => {
-    if (!authLoading && profile && profile.role !== 'admin') {
+    if (!authLoading && profile && profile.role !== 'owner') {
       router.replace('/main-menu');
     }
   }, [authLoading, profile, router]);
@@ -326,7 +327,7 @@ export default function AdminPage() {
   }, [page, sortAsc, filterAction, searchQuery]);
 
   useEffect(() => {
-    if (activeTab === 'activity' && profile?.role === 'admin') {
+    if (activeTab === 'activity' && profile?.role === 'owner') {
       fetchLogs();
     }
   }, [activeTab, profile, fetchLogs]);
@@ -382,7 +383,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'users' && profile?.role === 'admin' && users.length === 0 && !usersLoading) {
+    if (activeTab === 'users' && profile?.role === 'owner' && users.length === 0 && !usersLoading) {
       fetchUsers();
     }
   }, [activeTab, profile, users.length, usersLoading, fetchUsers]);
@@ -471,13 +472,19 @@ export default function AdminPage() {
 
   const handlePromoteToggle = async () => {
     if (!promoteTarget) return;
-    const isPromoting = promoteTarget.currentRole !== 'admin';
+    // Owner role cannot be changed
+    if (promoteTarget.currentRole === 'owner') {
+      toast.error('Cannot change owner role');
+      setPromoteTarget(null);
+      return;
+    }
+    const isPromoting = promoteTarget.currentRole === 'user';
     const action = isPromoting ? 'promote_to_admin' : 'demote_to_user';
     setActionLoading(`promote-${promoteTarget.id}`);
     try {
       const json = await adminAction(action, { userId: promoteTarget.id });
       if (json.success) {
-        toast.success(isPromoting ? `${promoteTarget.name} promoted to Admin` : `${promoteTarget.name} demoted to User`);
+        toast.success(isPromoting ? `${promoteTarget.name} promoted to Group Manager` : `${promoteTarget.name} demoted to User`);
         setUsers((prev) =>
           prev.map((u) =>
             u.id === promoteTarget.id ? { ...u, role: isPromoting ? 'admin' : 'user' } : u,
@@ -592,7 +599,7 @@ export default function AdminPage() {
   }, [analyticsRange]);
 
   useEffect(() => {
-    if ((activeTab === 'analytics' || activeTab === 'overview') && profile?.role === 'admin') {
+    if ((activeTab === 'analytics' || activeTab === 'overview') && profile?.role === 'owner') {
       fetchAnalytics();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -628,7 +635,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'settings' && profile?.role === 'admin') {
+    if (activeTab === 'settings' && profile?.role === 'owner') {
       fetchAccessCode();
     }
   }, [activeTab, profile, fetchAccessCode]);
@@ -741,7 +748,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!profile || profile.role !== 'admin') {
+  if (!profile || profile.role !== 'owner') {
     return null;
   }
 
@@ -1365,7 +1372,7 @@ export default function AdminPage() {
                           const subBadge = SUB_BADGE[user.subscription_status] || SUB_BADGE.trial;
                           const roleBadge = ROLE_BADGE[user.role] || ROLE_BADGE.user;
                           const details = userDetails[user.id];
-                          const isProtected = user.email.toLowerCase() === PROTECTED_EMAIL;
+                          const isProtected = user.email.toLowerCase() === PROTECTED_EMAIL || user.role === 'owner';
 
                           return (
                             <AnimatePresence key={user.id}>
@@ -1388,6 +1395,7 @@ export default function AdminPage() {
                                     className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-sm font-medium"
                                     style={{ background: roleBadge.bg, color: roleBadge.text }}
                                   >
+                                    {user.role === 'owner' && <ShieldCheck size={12} />}
                                     {user.role === 'admin' && <Crown size={12} />}
                                     {roleBadge.label}
                                   </span>
@@ -1463,7 +1471,7 @@ export default function AdminPage() {
                                           }
                                           disabled={actionLoading === `promote-${user.id}`}
                                           className="p-2.5 rounded-lg hover:bg-[var(--accent-15)] text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-all cursor-pointer disabled:opacity-50"
-                                          title={user.role === 'admin' ? 'Demote to User' : 'Promote to Admin'}
+                                          title={user.role === 'admin' ? 'Demote to User' : 'Promote to Group Manager'}
                                         >
                                           <UserCog size={20} />
                                         </button>
@@ -2202,7 +2210,7 @@ export default function AdminPage() {
         <Modal
           isOpen={!!promoteTarget}
           onClose={() => setPromoteTarget(null)}
-          title={promoteTarget?.currentRole === 'admin' ? 'Demote to User' : 'Promote to Admin'}
+          title={promoteTarget?.currentRole === 'admin' ? 'Demote to User' : 'Promote to Group Manager'}
           width="max-w-[460px]"
         >
           <div className="flex items-center gap-3 mb-4">
@@ -2214,8 +2222,8 @@ export default function AdminPage() {
             />
             <p className="text-[var(--text-secondary)] text-sm">
               {promoteTarget?.currentRole === 'admin'
-                ? `Demote ${promoteTarget?.name} from Admin to User? They will lose access to this dashboard.`
-                : `Promote ${promoteTarget?.name} to Admin? They will have full access to this dashboard and all management tools.`}
+                ? `Demote ${promoteTarget?.name} from Group Manager to User? They will lose group management access.`
+                : `Promote ${promoteTarget?.name} to Group Manager? They will be able to manage their assigned group.`}
             </p>
           </div>
           <div className="flex gap-3 justify-end">
@@ -2228,7 +2236,7 @@ export default function AdminPage() {
               onClick={handlePromoteToggle}
               disabled={!!actionLoading}
             >
-              {promoteTarget?.currentRole === 'admin' ? 'Demote to User' : 'Promote to Admin'}
+              {promoteTarget?.currentRole === 'admin' ? 'Demote to User' : 'Promote to Group Manager'}
             </Button>
           </div>
         </Modal>

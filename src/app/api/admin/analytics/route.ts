@@ -22,7 +22,7 @@ async function verifyAdmin() {
     .eq('id', user.id)
     .single();
 
-  if (!profile || profile.role !== 'admin') return null;
+  if (!profile || profile.role !== 'owner') return null;
   return { userId: user.id };
 }
 

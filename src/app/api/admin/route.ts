@@ -11,6 +11,8 @@ function createServiceClient() {
   return createClient(url, serviceKey);
 }
 
+// NOTE: Run SQL to update owner role: UPDATE public.users SET role = 'owner' WHERE role = 'admin' AND email = '<owner_email>';
+
 async function verifyAdmin() {
   const supabase = await createServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -22,7 +24,7 @@ async function verifyAdmin() {
     .eq('id', user.id)
     .single();
 
-  if (!profile || profile.role !== 'admin') return null;
+  if (!profile || profile.role !== 'owner') return null;
   return { userId: user.id };
 }
 
@@ -194,6 +196,17 @@ export async function POST(request: Request) {
           return NextResponse.json({ success: false, error: 'userId is required' }, { status: 400 });
         }
 
+        // Prevent promoting an owner (already highest role)
+        const { data: promoteTargetUser } = await svc
+          .from('users')
+          .select('role')
+          .eq('id', promoteUserId)
+          .single();
+
+        if (promoteTargetUser?.role === 'owner') {
+          return NextResponse.json({ success: false, error: 'Cannot change owner role' }, { status: 403 });
+        }
+
         const { error: promoteError } = await svc
           .from('users')
           .update({ role: 'admin' })
@@ -210,6 +223,17 @@ export async function POST(request: Request) {
         const { userId: demoteUserId } = params;
         if (!demoteUserId) {
           return NextResponse.json({ success: false, error: 'userId is required' }, { status: 400 });
+        }
+
+        // Prevent demoting an owner
+        const { data: targetUser } = await svc
+          .from('users')
+          .select('role')
+          .eq('id', demoteUserId)
+          .single();
+
+        if (targetUser?.role === 'owner') {
+          return NextResponse.json({ success: false, error: 'Cannot demote an owner' }, { status: 403 });
         }
 
         const { error: demoteError } = await svc
