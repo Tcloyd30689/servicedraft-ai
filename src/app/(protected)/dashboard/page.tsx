@@ -59,9 +59,12 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">User Dashboard</h1>
           <div className="flex items-center gap-3">
             {profile.role === 'admin' && (
-              <button
+              <motion.button
                 onClick={() => router.push('/admin')}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-300 cursor-pointer hover:shadow-[0_0_15px_rgba(245,158,11,0.4)]"
+                whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(245,158,11,0.4), 0 0 30px rgba(245,158,11,0.2)' }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold cursor-pointer"
                 style={{
                   backgroundColor: 'var(--bg-input)',
                   border: '1px solid #f59e0b',
@@ -70,7 +73,7 @@ export default function DashboardPage() {
               >
                 <Shield size={16} />
                 OWNER DASHBOARD
-              </button>
+              </motion.button>
             )}
             <Button
               variant="secondary"
@@ -90,30 +93,24 @@ export default function DashboardPage() {
 
         {/* Appearance & Saved Repairs Buttons */}
         <div className="flex items-center justify-center gap-3">
-          <button
+          <Button
+            variant="secondary"
+            size="medium"
             onClick={() => setShowAppearance(true)}
-            className="flex items-center gap-2 px-5 py-3 rounded-lg text-[15px] font-semibold transition-all duration-300 cursor-pointer hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]"
-            style={{
-              backgroundColor: 'transparent',
-              border: '1px solid var(--accent-vivid)',
-              color: 'var(--accent-vivid)',
-            }}
+            className="flex items-center gap-2"
           >
             <Palette size={16} />
             APP APPEARANCE
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
+            size="medium"
             onClick={() => setShowSavedRepairs(true)}
-            className="flex items-center gap-2 px-5 py-3 rounded-lg text-[15px] font-semibold transition-all duration-300 cursor-pointer hover:shadow-[0_0_15px_rgba(168,85,247,0.4)]"
-            style={{
-              backgroundColor: 'transparent',
-              border: '1px solid var(--accent-vivid)',
-              color: 'var(--accent-vivid)',
-            }}
+            className="flex items-center gap-2"
           >
             <Wrench size={16} />
             MY SAVED REPAIRS
-          </button>
+          </Button>
         </div>
 
         {/* Narrative History */}
