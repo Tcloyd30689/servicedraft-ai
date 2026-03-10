@@ -16,7 +16,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
 
 // ─── Interfaces ──────────────────────────────────────────
-interface GroupInfo {
+interface TeamInfo {
   id: string;
   name: string;
   access_code: string;
@@ -25,7 +25,7 @@ interface GroupInfo {
   created_at: string;
 }
 
-interface GroupMember {
+interface TeamMember {
   id: string;
   first_name: string | null;
   last_name: string | null;
@@ -68,17 +68,17 @@ const tabVariants = {
 
 type TabKey = 'overview' | 'members';
 
-export default function GroupDashboardPage() {
+export default function TeamDashboardPage() {
   const router = useRouter();
   const { profile, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
-  // Group info
-  const [group, setGroup] = useState<GroupInfo | null>(null);
-  const [groupLoading, setGroupLoading] = useState(true);
+  // Team info
+  const [team, setTeam] = useState<TeamInfo | null>(null);
+  const [teamLoading, setTeamLoading] = useState(true);
 
   // Members
-  const [members, setMembers] = useState<GroupMember[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
 
   // Table state
@@ -106,51 +106,51 @@ export default function GroupDashboardPage() {
   useEffect(() => {
     if (!authLoading && profile) {
       if (profile.role === 'user') {
-        toast.error('Access denied. Group Dashboard is for admin users only.');
+        toast.error('Access denied. Team Dashboard is for admin users only.');
         router.replace('/dashboard');
       }
     }
   }, [authLoading, profile, router]);
 
-  // ─── Fetch Group Info ──────────────────────────────────
-  const fetchGroup = useCallback(async () => {
-    setGroupLoading(true);
+  // ─── Fetch Team Info ───────────────────────────────────
+  const fetchTeam = useCallback(async () => {
+    setTeamLoading(true);
     try {
-      const res = await fetch('/api/groups');
+      const res = await fetch('/api/teams');
       const json = await res.json();
       if (json.success && json.data) {
-        // Admin gets single group, owner gets array — handle both
+        // Admin gets single team, owner gets array — handle both
         if (Array.isArray(json.data)) {
-          // Owner viewing — pick the first group or their assigned group
-          if (profile?.group_id) {
-            const match = json.data.find((g: GroupInfo) => g.id === profile.group_id);
-            setGroup(match || json.data[0] || null);
+          // Owner viewing — pick the first team or their assigned team
+          if (profile?.team_id) {
+            const match = json.data.find((t: TeamInfo) => t.id === profile.team_id);
+            setTeam(match || json.data[0] || null);
           } else {
-            setGroup(json.data[0] || null);
+            setTeam(json.data[0] || null);
           }
         } else {
-          setGroup(json.data);
+          setTeam(json.data);
         }
       }
     } catch (err) {
-      console.error('Group fetch error:', err);
+      console.error('Team fetch error:', err);
     } finally {
-      setGroupLoading(false);
+      setTeamLoading(false);
     }
-  }, [profile?.group_id]);
+  }, [profile?.team_id]);
 
   useEffect(() => {
     if (profile && (profile.role === 'admin' || profile.role === 'owner')) {
-      fetchGroup();
+      fetchTeam();
     }
-  }, [profile, fetchGroup]);
+  }, [profile, fetchTeam]);
 
   // ─── Fetch Members ─────────────────────────────────────
   const fetchMembers = useCallback(async () => {
-    if (!group) return;
+    if (!team) return;
     setMembersLoading(true);
     try {
-      const res = await fetch(`/api/groups/members?group_id=${group.id}`);
+      const res = await fetch(`/api/teams/members?team_id=${team.id}`);
       const json = await res.json();
       if (json.success) {
         setMembers(json.data || []);
@@ -160,13 +160,13 @@ export default function GroupDashboardPage() {
     } finally {
       setMembersLoading(false);
     }
-  }, [group]);
+  }, [team]);
 
   useEffect(() => {
-    if (group) {
+    if (team) {
       fetchMembers();
     }
-  }, [group, fetchMembers]);
+  }, [team, fetchMembers]);
 
   // ─── Overview Stats ────────────────────────────────────
   const memberCount = members.length;
@@ -180,7 +180,7 @@ export default function GroupDashboardPage() {
   ).length;
 
   // Narratives today: approximate from activity (we'll show total for now since
-  // we don't have daily breakdown per group — the count is still useful)
+  // we don't have daily breakdown per team — the count is still useful)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const activeMembersToday = members.filter(
@@ -238,7 +238,7 @@ export default function GroupDashboardPage() {
 
     setActionLoading(`promote-${promoteTarget.id}`);
     try {
-      const res = await fetch('/api/groups/members', {
+      const res = await fetch('/api/teams/members', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -273,7 +273,7 @@ export default function GroupDashboardPage() {
   };
 
   // Can the current user manage this member's role?
-  const canManageRole = (member: GroupMember): { allowed: boolean; reason?: string } => {
+  const canManageRole = (member: TeamMember): { allowed: boolean; reason?: string } => {
     if (!profile) return { allowed: false };
 
     // Owner can do anything
@@ -307,25 +307,25 @@ export default function GroupDashboardPage() {
     return null;
   }
 
-  if (groupLoading) {
+  if (teamLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <LoadingSpinner size="large" message="Loading group..." />
+        <LoadingSpinner size="large" message="Loading team..." />
       </div>
     );
   }
 
-  if (!group) {
+  if (!team) {
     return (
       <div className="max-w-[90vw] mx-auto px-4 sm:px-6 py-4 sm:py-6">
         <LiquidCard size="standard" className="!rounded-[16px]">
           <div className="flex flex-col items-center justify-center py-12 gap-4">
             <Users size={40} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
             <p className="text-[var(--text-secondary)] text-base text-center">
-              You are not assigned to any group yet.
+              You are not assigned to any team yet.
             </p>
             <p className="text-[var(--text-muted)] text-sm text-center">
-              Contact the platform owner to be assigned to a group.
+              Contact the platform owner to be assigned to a team.
             </p>
             <Button variant="secondary" size="medium" onClick={() => router.push('/dashboard')}>
               Back to Dashboard
@@ -338,9 +338,9 @@ export default function GroupDashboardPage() {
 
   // ─── Overview Cards ────────────────────────────────────
   const overviewCards = [
-    { label: 'Team Members', value: memberCount, icon: Users, color: 'var(--accent-bright)', sub: 'in this group' },
+    { label: 'Team Members', value: memberCount, icon: Users, color: 'var(--accent-bright)', sub: 'in this team' },
     { label: 'Active This Week', value: activeMembersThisWeek, icon: Activity, color: '#16a34a', sub: 'last 7 days' },
-    { label: 'Total Narratives', value: totalNarratives, icon: FileText, color: 'var(--accent-primary)', sub: 'generated by group' },
+    { label: 'Total Narratives', value: totalNarratives, icon: FileText, color: 'var(--accent-primary)', sub: 'generated by team' },
     { label: 'Active Today', value: activeMembersToday, icon: UserCheck, color: '#f59e0b', sub: 'members active today' },
   ];
 
@@ -356,7 +356,7 @@ export default function GroupDashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        {/* Header — Group Name with premium styling */}
+        {/* Header — Team Name with premium styling */}
         <div className="flex items-center justify-center mb-6 sm:mb-8">
           <div
             ref={titleRef}
@@ -406,7 +406,7 @@ export default function GroupDashboardPage() {
                   textShadow: '0 0 10px var(--accent-primary), 0 0 20px var(--accent-primary), 0 0 40px var(--accent-primary), 0 0 80px var(--accent-primary)',
                 }}
               >
-                {group.name}
+                {team.name}
               </h1>
             </div>
           </div>
@@ -451,7 +451,7 @@ export default function GroupDashboardPage() {
               {membersLoading && members.length === 0 ? (
                 <LiquidCard size="standard">
                   <div className="py-12">
-                    <LoadingSpinner size="medium" message="Loading group data..." />
+                    <LoadingSpinner size="medium" message="Loading team data..." />
                   </div>
                 </LiquidCard>
               ) : (
@@ -472,11 +472,11 @@ export default function GroupDashboardPage() {
                     ))}
                   </div>
 
-                  {/* Group Info Card */}
-                  {group.description && (
+                  {/* Team Info Card */}
+                  {team.description && (
                     <LiquidCard size="standard" className="!rounded-[16px]">
-                      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">About This Group</h3>
-                      <p className="text-[var(--text-secondary)] text-sm">{group.description}</p>
+                      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">About This Team</h3>
+                      <p className="text-[var(--text-secondary)] text-sm">{team.description}</p>
                     </LiquidCard>
                   )}
 
@@ -489,7 +489,7 @@ export default function GroupDashboardPage() {
                       </Button>
                     </div>
                     {members.length === 0 ? (
-                      <p className="text-[var(--text-muted)] text-sm text-center py-8">No members in this group yet.</p>
+                      <p className="text-[var(--text-muted)] text-sm text-center py-8">No members in this team yet.</p>
                     ) : (
                       <div className="space-y-2">
                         {members.slice(0, 5).map((member) => {
@@ -792,8 +792,8 @@ export default function GroupDashboardPage() {
             />
             <p className="text-[var(--text-secondary)] text-sm">
               {promoteTarget?.currentRole === 'user'
-                ? `Promote ${promoteTarget?.name} to Group Admin? They will gain access to this Group Dashboard and team management features.`
-                : `Demote ${promoteTarget?.name} from Admin to User? They will lose access to the Group Dashboard.`}
+                ? `Promote ${promoteTarget?.name} to Team Admin? They will gain access to this Team Dashboard and team management features.`
+                : `Demote ${promoteTarget?.name} from Admin to User? They will lose access to the Team Dashboard.`}
             </p>
           </div>
           <div className="flex gap-3 justify-end">

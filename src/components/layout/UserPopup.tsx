@@ -104,12 +104,12 @@ export default function UserPopup() {
               <>
                 <div className="border-t border-[var(--accent-15)] my-1" />
                 <Link
-                  href="/group-dashboard"
+                  href="/team-dashboard"
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-2 text-[var(--text-secondary)] text-sm px-3 py-2 rounded-md hover:bg-[rgba(168,85,247,0.1)] hover:text-[var(--accent-bright)] border-l-2 border-transparent hover:border-[var(--accent-primary)] transition-all duration-300"
                 >
                   <Users size={16} />
-                  Group Dashboard
+                  Team Dashboard
                 </Link>
               </>
             )}

@@ -45,7 +45,7 @@ function SignupContent() {
 
   // Step 2: Payment / Access Code
   const [accessCode, setAccessCode] = useState('');
-  const [pendingGroupId, setPendingGroupId] = useState<string | null>(null);
+  const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
 
   // Step 3: Profile
   const [firstName, setFirstName] = useState('');
@@ -168,9 +168,9 @@ function SignupContent() {
       return;
     }
 
-    // Store group_id if the access code belongs to a group
-    const groupId = data.group_id || null;
-    setPendingGroupId(groupId);
+    // Store team_id if the access code belongs to a team
+    const teamId = data.team_id || null;
+    setPendingTeamId(teamId);
 
     // Update subscription status — upsert to handle missing profile row
     const { data: { user } } = await supabase.auth.getUser();
@@ -181,8 +181,8 @@ function SignupContent() {
         email: user.email || email,
         subscription_status: 'bypass',
       };
-      if (groupId) {
-        upsertData.group_id = groupId;
+      if (teamId) {
+        upsertData.team_id = teamId;
       }
       await supabase
         .from('users')

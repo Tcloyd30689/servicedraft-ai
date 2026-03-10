@@ -18,16 +18,16 @@ async function getAuthUser() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('role, group_id')
+    .select('role, team_id')
     .eq('id', user.id)
     .single();
 
   if (!profile) return null;
-  return { userId: user.id, role: profile.role as string, groupId: profile.group_id as string | null };
+  return { userId: user.id, role: profile.role as string, teamId: profile.team_id as string | null };
 }
 
-// GET: List members of a group
-// Owner can query any group via ?group_id=xxx. Admin can only query their own group.
+// GET: List members of a team
+// Owner can query any team via ?team_id=xxx. Admin can only query their own team.
 export async function GET(request: Request) {
   try {
     const authUser = await getAuthUser();
@@ -40,28 +40,28 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    let groupId = searchParams.get('group_id');
+    let teamId = searchParams.get('team_id');
 
-    // Admin can only query their own group
+    // Admin can only query their own team
     if (authUser.role === 'admin') {
-      if (!authUser.groupId) {
+      if (!authUser.teamId) {
         return NextResponse.json({ success: true, data: [] });
       }
-      groupId = authUser.groupId;
+      teamId = authUser.teamId;
     }
 
-    // Owner must provide a group_id
-    if (!groupId) {
-      return NextResponse.json({ error: 'group_id query parameter is required' }, { status: 400 });
+    // Owner must provide a team_id
+    if (!teamId) {
+      return NextResponse.json({ error: 'team_id query parameter is required' }, { status: 400 });
     }
 
     const svc = createServiceClient();
 
-    // Get group members
+    // Get team members
     const { data: members, error: membersError } = await svc
       .from('users')
-      .select('id, first_name, last_name, email, role, position, group_id')
-      .eq('group_id', groupId)
+      .select('id, first_name, last_name, email, role, position, team_id')
+      .eq('team_id', teamId)
       .order('created_at', { ascending: false });
 
     if (membersError) {
@@ -110,13 +110,13 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, data: enrichedMembers });
   } catch (err) {
-    console.error('Group members GET error:', err);
+    console.error('Team members GET error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 // PUT: Update a member's role
-// Admin can promote user→admin within their group. Owner can change any role except owner.
+// Admin can promote user→admin within their team. Owner can change any role except owner.
 export async function PUT(request: Request) {
   try {
     const authUser = await getAuthUser();
@@ -144,7 +144,7 @@ export async function PUT(request: Request) {
     // Get the target user's current info
     const { data: targetUser } = await svc
       .from('users')
-      .select('role, group_id')
+      .select('role, team_id')
       .eq('id', userId)
       .single();
 
@@ -157,10 +157,10 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Cannot change owner role' }, { status: 403 });
     }
 
-    // Admin can only manage users within their own group
+    // Admin can only manage users within their own team
     if (authUser.role === 'admin') {
-      if (!authUser.groupId || targetUser.group_id !== authUser.groupId) {
-        return NextResponse.json({ error: 'You can only manage members in your own group' }, { status: 403 });
+      if (!authUser.teamId || targetUser.team_id !== authUser.teamId) {
+        return NextResponse.json({ error: 'You can only manage members in your own team' }, { status: 403 });
       }
       // Admin can only promote user→admin, not demote admin→user
       if (newRole === 'user' && targetUser.role === 'admin') {
@@ -179,7 +179,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('Group members PUT error:', err);
+    console.error('Team members PUT error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -44,11 +44,12 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 5 Sprint 5:** COMPLETE — Dashboard split preferences into App Appearance modal and My Saved Repairs placeholder modal, added Owner Dashboard button for admin users with gold/amber accent
 **Stage 5 Sprint 6:** COMPLETE — Full SavedRepairsModal with template list/create/edit/delete, narrative table row hover glow, wider dashboard container (max-w-7xl)
 **Stage 5 Sprint 7:** COMPLETE — Owner Dashboard AI token usage pricing calculator with model selector, token inputs, proofread/customization toggles, and real-time cost estimates
-**Stage 5 Sprint 8:** COMPLETE — Role hierarchy restructure from 2-tier (admin/user) to 3-tier (owner/admin/user). Owner = platform owner, Admin = Group Manager, User = standard. All access gates, API routes, badges, promote/demote logic updated.
-**Stage 5 Sprint 9:** COMPLETE — Group management database schema, API routes, and signup integration
-**Stage 5 Sprint 10:** COMPLETE — Group Manager Dashboard UI and Owner Dashboard group management
+**Stage 5 Sprint 8:** COMPLETE — Role hierarchy restructure from 2-tier (admin/user) to 3-tier (owner/admin/user). Owner = platform owner, Admin = Team Manager, User = standard. All access gates, API routes, badges, promote/demote logic updated.
+**Stage 5 Sprint 9:** COMPLETE — Team management database schema, API routes, and signup integration
+**Stage 5 Sprint 10:** COMPLETE — Team Manager Dashboard UI and Owner Dashboard team management
 **Documentation Refresh:** COMPLETE — All 6 project reference files updated to v2.0 reflecting current application state
-**Next Task:** TBD
+**Stage 6 Sprint A (Task 1):** COMPLETE — Group→Team rename across entire codebase
+**Next Task:** Stage 6 Sprint A Tasks 2-5 (main menu buttons, activity log tab, refresh button, remove member function)
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
 **Stage 3 Sprint 6:** COMPLETE — Added Inter font for data/input text readability
@@ -2712,6 +2713,33 @@ All 6 project reference documents manually updated to v2.0 to accurately reflect
 - [x] **ServiceDraft_AI_Prompt_Logic_v1.md** — Updated to v2.0 with all prompt sections including story-type-aware proofreading, diagnostic optimizer, apply selected edits, diagnostic→repair update, convert recommendation, and pre-generation customization
 - [x] **ServiceDraft_AI_Spec_v1_3.md** — Updated to Version 2.0 (March 2026) with complete page specifications, database schema (5 tables including groups), API route inventory, and feature matrix
 - [x] **ServiceDraft_AI_UI_Design_Spec_v1.md** — Updated to v2.0 with complete design system documentation including dynamic theming, 9 accent colors, modal system, card system, and all visual enhancement specifications
+
+---
+
+## STAGE 6 SPRINT A — TASK 1: GROUP→TEAM RENAME (2026-03-10)
+
+**Status:** COMPLETE (Task 1 of 5)
+
+Comprehensive rename of all "group" references to "team" across the entire codebase. This is the first task in Stage 6 Sprint A; remaining tasks (2-5) to be completed in the next session.
+
+- [x] **Task 1: Rename all "group" references to "team"** — **2026-03-10**
+  - Renamed folder `src/app/(protected)/group-dashboard/` → `team-dashboard/`
+  - Renamed folder `src/app/api/groups/` → `teams/` (route.ts + members/route.ts)
+  - Updated `src/types/database.ts`: `Group` interface → `Team`, `group_id` → `team_id`
+  - Updated `src/hooks/useAuth.ts`: `group_id` → `team_id` in UserProfile interface
+  - Updated `src/components/layout/UserPopup.tsx`: route `/group-dashboard` → `/team-dashboard`, label "Group Dashboard" → "Team Dashboard"
+  - Updated `src/app/api/stripe/route.ts`: `groups` table → `teams`, `group_id` → `team_id` in response
+  - Updated `src/app/(auth)/signup/page.tsx`: `pendingGroupId` → `pendingTeamId`, `group_id` → `team_id`
+  - Updated `src/app/(protected)/team-dashboard/page.tsx`: All interfaces (`GroupInfo`→`TeamInfo`, `GroupMember`→`TeamMember`), function name (`GroupDashboardPage`→`TeamDashboardPage`), all state variables, API paths (`/api/groups`→`/api/teams`), UI text (group→team)
+  - Updated `src/app/(protected)/admin/page.tsx`: Tab key `groups`→`teams`, role badge `Group Manager`→`Team Manager`, all state variables (`groups`→`teams`, `groupsLoading`→`teamsLoading`, etc.), all functions (`fetchGroups`→`fetchTeams`, `handleCreateGroup`→`handleCreateTeam`, etc.), all modal text and UI labels, API paths
+  - Updated `src/app/api/teams/route.ts` + `members/route.ts`: All DB queries use `teams` table + `team_id` column, updated comments and error messages
+  - Created migration `supabase/migrations/008_rename_groups_to_teams.sql`: Renames `groups` table → `teams`, `group_id` column → `team_id`, recreates indexes and RLS policies with new names
+  - Build verified clean with `npm run build` — all routes correctly show `/team-dashboard`, `/api/teams`, `/api/teams/members`
+
+- [ ] **Task 2: Add conditional dashboard buttons to main menu** — Pending (next session)
+- [ ] **Task 3: Add Activity Log tab to Team Dashboard** — Pending (next session)
+- [ ] **Task 4: Add refresh button to Activity Log tabs** — Pending (next session)
+- [ ] **Task 5: Add remove-from-team function to Team Member table** — Pending (next session)
 
 ---
 

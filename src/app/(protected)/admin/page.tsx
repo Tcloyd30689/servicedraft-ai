@@ -31,7 +31,7 @@ import TokenCalculator from '@/components/admin/TokenCalculator';
 // ─── Protected user — cannot be deleted or restricted ────────
 const PROTECTED_EMAIL = 'hvcadip@gmail.com';
 
-type TabKey = 'overview' | 'activity' | 'users' | 'analytics' | 'costs' | 'groups' | 'settings';
+type TabKey = 'overview' | 'activity' | 'users' | 'analytics' | 'costs' | 'teams' | 'settings';
 
 const ACTION_FILTERS = [
   { value: 'all', label: 'All Actions' },
@@ -132,7 +132,7 @@ const SUB_BADGE: Record<string, { bg: string; text: string }> = {
 
 const ROLE_BADGE: Record<string, { bg: string; text: string; label: string }> = {
   owner: { bg: 'rgba(168,85,247,0.15)', text: '#a855f7', label: 'Owner' },
-  admin: { bg: 'rgba(234,179,8,0.15)', text: '#eab308', label: 'Group Manager' },
+  admin: { bg: 'rgba(234,179,8,0.15)', text: '#eab308', label: 'Team Manager' },
   user: { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af', label: 'User' },
 };
 
@@ -220,8 +220,8 @@ export default function AdminPage() {
   const [accessCode, setAccessCode] = useState<string>('');
   const [accessCodeLoading, setAccessCodeLoading] = useState(false);
 
-  // Groups management state
-  interface GroupData {
+  // Teams management state
+  interface TeamData {
     id: string;
     name: string;
     access_code: string;
@@ -230,16 +230,16 @@ export default function AdminPage() {
     created_at: string;
     member_count: number;
   }
-  const [groups, setGroups] = useState<GroupData[]>([]);
-  const [groupsLoading, setGroupsLoading] = useState(false);
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<GroupData | null>(null);
-  const [viewingGroupMembers, setViewingGroupMembers] = useState<{ id: string; name: string } | null>(null);
+  const [teams, setTeams] = useState<TeamData[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState(false);
+  const [showCreateTeam, setShowCreateTeam] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<TeamData | null>(null);
+  const [viewingTeamMembers, setViewingTeamMembers] = useState<{ id: string; name: string } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [groupMembers, setGroupMembers] = useState<any[]>([]);
-  const [groupMembersLoading, setGroupMembersLoading] = useState(false);
-  const [newGroup, setNewGroup] = useState({ name: '', access_code: '', description: '' });
-  const [groupActionLoading, setGroupActionLoading] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [teamMembersLoading, setTeamMembersLoading] = useState(false);
+  const [newTeam, setNewTeam] = useState({ name: '', access_code: '', description: '' });
+  const [teamActionLoading, setTeamActionLoading] = useState(false);
 
   // Title spotlight state
   const titleRef = useRef<HTMLDivElement>(null);
@@ -506,7 +506,7 @@ export default function AdminPage() {
     try {
       const json = await adminAction(action, { userId: promoteTarget.id });
       if (json.success) {
-        toast.success(isPromoting ? `${promoteTarget.name} promoted to Group Manager` : `${promoteTarget.name} demoted to User`);
+        toast.success(isPromoting ? `${promoteTarget.name} promoted to Team Manager` : `${promoteTarget.name} demoted to User`);
         setUsers((prev) =>
           prev.map((u) =>
             u.id === promoteTarget.id ? { ...u, role: isPromoting ? 'admin' : 'user' } : u,
@@ -762,163 +762,163 @@ export default function AdminPage() {
     toast.success('Analytics report exported');
   };
 
-  // ─── Groups Management ─────────────────────────────────
-  const fetchGroups = useCallback(async () => {
-    setGroupsLoading(true);
+  // ─── Teams Management ──────────────────────────────────
+  const fetchTeams = useCallback(async () => {
+    setTeamsLoading(true);
     try {
-      const res = await fetch('/api/groups');
+      const res = await fetch('/api/teams');
       const json = await res.json();
       if (json.success) {
-        setGroups(Array.isArray(json.data) ? json.data : json.data ? [json.data] : []);
+        setTeams(Array.isArray(json.data) ? json.data : json.data ? [json.data] : []);
       }
     } catch (err) {
-      console.error('Groups fetch error:', err);
+      console.error('Teams fetch error:', err);
     } finally {
-      setGroupsLoading(false);
+      setTeamsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'groups' && profile?.role === 'owner' && groups.length === 0 && !groupsLoading) {
-      fetchGroups();
+    if (activeTab === 'teams' && profile?.role === 'owner' && teams.length === 0 && !teamsLoading) {
+      fetchTeams();
     }
-  }, [activeTab, profile, groups.length, groupsLoading, fetchGroups]);
+  }, [activeTab, profile, teams.length, teamsLoading, fetchTeams]);
 
-  const generateGroupAccessCode = (groupName: string) => {
+  const generateTeamAccessCode = (teamName: string) => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const seg1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const seg2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    const prefix = groupName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8) || 'GROUP';
+    const prefix = teamName.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8) || 'TEAM';
     return `${prefix}-${seg1}-${seg2}`;
   };
 
-  const handleCreateGroup = async () => {
-    if (!newGroup.name.trim() || !newGroup.access_code.trim()) {
-      toast.error('Group name and access code are required');
+  const handleCreateTeam = async () => {
+    if (!newTeam.name.trim() || !newTeam.access_code.trim()) {
+      toast.error('Team name and access code are required');
       return;
     }
-    setGroupActionLoading(true);
+    setTeamActionLoading(true);
     try {
-      const res = await fetch('/api/groups', {
+      const res = await fetch('/api/teams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newGroup),
+        body: JSON.stringify(newTeam),
       });
       const json = await res.json();
       if (json.success) {
-        toast.success('Group created successfully');
-        setGroups((prev) => [{ ...json.data, member_count: 0 }, ...prev]);
-        setNewGroup({ name: '', access_code: '', description: '' });
-        setShowCreateGroup(false);
+        toast.success('Team created successfully');
+        setTeams((prev) => [{ ...json.data, member_count: 0 }, ...prev]);
+        setNewTeam({ name: '', access_code: '', description: '' });
+        setShowCreateTeam(false);
       } else {
-        toast.error(json.error || 'Failed to create group');
+        toast.error(json.error || 'Failed to create team');
       }
     } catch {
-      toast.error('Failed to create group');
+      toast.error('Failed to create team');
     } finally {
-      setGroupActionLoading(false);
+      setTeamActionLoading(false);
     }
   };
 
-  const handleEditGroup = async () => {
-    if (!editingGroup) return;
-    setGroupActionLoading(true);
+  const handleEditTeam = async () => {
+    if (!editingTeam) return;
+    setTeamActionLoading(true);
     try {
-      const res = await fetch('/api/groups', {
+      const res = await fetch('/api/teams', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: editingGroup.id,
-          name: editingGroup.name,
-          access_code: editingGroup.access_code,
-          description: editingGroup.description,
+          id: editingTeam.id,
+          name: editingTeam.name,
+          access_code: editingTeam.access_code,
+          description: editingTeam.description,
         }),
       });
       const json = await res.json();
       if (json.success) {
-        toast.success('Group updated successfully');
-        setGroups((prev) =>
-          prev.map((g) => (g.id === editingGroup.id ? { ...g, ...json.data } : g))
+        toast.success('Team updated successfully');
+        setTeams((prev) =>
+          prev.map((t) => (t.id === editingTeam.id ? { ...t, ...json.data } : t))
         );
-        setEditingGroup(null);
+        setEditingTeam(null);
       } else {
-        toast.error(json.error || 'Failed to update group');
+        toast.error(json.error || 'Failed to update team');
       }
     } catch {
-      toast.error('Failed to update group');
+      toast.error('Failed to update team');
     } finally {
-      setGroupActionLoading(false);
+      setTeamActionLoading(false);
     }
   };
 
-  const handleToggleGroupActive = async (group: GroupData) => {
-    if (!group.is_active) {
+  const handleToggleTeamActive = async (teamItem: TeamData) => {
+    if (!teamItem.is_active) {
       // Re-activate: use PUT to set is_active back (we'll update name to trigger save)
-      setGroupActionLoading(true);
+      setTeamActionLoading(true);
       try {
-        const res = await fetch('/api/groups', {
+        const res = await fetch('/api/teams', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: group.id, name: group.name }),
+          body: JSON.stringify({ id: teamItem.id, name: teamItem.name }),
         });
         const json = await res.json();
         if (json.success) {
-          toast.success('Group reactivated');
-          fetchGroups();
+          toast.success('Team reactivated');
+          fetchTeams();
         } else {
-          toast.error(json.error || 'Failed to reactivate group');
+          toast.error(json.error || 'Failed to reactivate team');
         }
       } catch {
-        toast.error('Failed to reactivate group');
+        toast.error('Failed to reactivate team');
       } finally {
-        setGroupActionLoading(false);
+        setTeamActionLoading(false);
       }
       return;
     }
     // Deactivate
-    setGroupActionLoading(true);
+    setTeamActionLoading(true);
     try {
-      const res = await fetch('/api/groups', {
+      const res = await fetch('/api/teams', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: group.id }),
+        body: JSON.stringify({ id: teamItem.id }),
       });
       const json = await res.json();
       if (json.success) {
-        toast.success('Group deactivated');
-        setGroups((prev) =>
-          prev.map((g) => (g.id === group.id ? { ...g, is_active: false } : g))
+        toast.success('Team deactivated');
+        setTeams((prev) =>
+          prev.map((t) => (t.id === teamItem.id ? { ...t, is_active: false } : t))
         );
       } else {
-        toast.error(json.error || 'Failed to deactivate group');
+        toast.error(json.error || 'Failed to deactivate team');
       }
     } catch {
-      toast.error('Failed to deactivate group');
+      toast.error('Failed to deactivate team');
     } finally {
-      setGroupActionLoading(false);
+      setTeamActionLoading(false);
     }
   };
 
-  const fetchGroupMembers = useCallback(async (groupId: string) => {
-    setGroupMembersLoading(true);
+  const fetchTeamMembers = useCallback(async (teamId: string) => {
+    setTeamMembersLoading(true);
     try {
-      const res = await fetch(`/api/groups/members?group_id=${groupId}`);
+      const res = await fetch(`/api/teams/members?team_id=${teamId}`);
       const json = await res.json();
       if (json.success) {
-        setGroupMembers(json.data || []);
+        setTeamMembers(json.data || []);
       }
     } catch (err) {
-      console.error('Group members fetch error:', err);
+      console.error('Team members fetch error:', err);
     } finally {
-      setGroupMembersLoading(false);
+      setTeamMembersLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (viewingGroupMembers) {
-      fetchGroupMembers(viewingGroupMembers.id);
+    if (viewingTeamMembers) {
+      fetchTeamMembers(viewingTeamMembers.id);
     }
-  }, [viewingGroupMembers, fetchGroupMembers]);
+  }, [viewingTeamMembers, fetchTeamMembers]);
 
   if (authLoading) {
     return (
@@ -951,7 +951,7 @@ export default function AdminPage() {
     { key: 'users', label: 'User Management', icon: Users },
     { key: 'analytics', label: 'Analytics', icon: BarChart3 },
     { key: 'costs', label: 'Cost Calculator', icon: DollarSign },
-    { key: 'groups', label: 'Groups', icon: UsersIcon },
+    { key: 'teams', label: 'Teams', icon: UsersIcon },
     { key: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -1652,7 +1652,7 @@ export default function AdminPage() {
                                           }
                                           disabled={actionLoading === `promote-${user.id}`}
                                           className="p-2.5 rounded-lg hover:bg-[var(--accent-15)] text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-all cursor-pointer disabled:opacity-50"
-                                          title={user.role === 'admin' ? 'Demote to User' : 'Promote to Group Manager'}
+                                          title={user.role === 'admin' ? 'Demote to User' : 'Promote to Team Manager'}
                                         >
                                           <UserCog size={20} />
                                         </button>
@@ -2208,11 +2208,11 @@ export default function AdminPage() {
           )}
 
           {/* ═══════════════════════════════════════════════════════════
-              GROUPS TAB
+              TEAMS TAB
              ═══════════════════════════════════════════════════════════ */}
-          {activeTab === 'groups' && (
+          {activeTab === 'teams' && (
             <motion.div
-              key="groups"
+              key="teams"
               variants={tabVariants}
               initial="initial"
               animate="animate"
@@ -2223,56 +2223,56 @@ export default function AdminPage() {
               {/* Header with Create button */}
               <div className="flex items-center justify-between">
                 <p className="text-sm text-[var(--text-muted)]">
-                  {groups.length} {groups.length === 1 ? 'group' : 'groups'} total
+                  {teams.length} {teams.length === 1 ? 'team' : 'teams'} total
                 </p>
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="small" onClick={fetchGroups} disabled={groupsLoading}>
-                    <RefreshCw size={16} className={groupsLoading ? 'animate-spin' : ''} />
+                  <Button variant="ghost" size="small" onClick={fetchTeams} disabled={teamsLoading}>
+                    <RefreshCw size={16} className={teamsLoading ? 'animate-spin' : ''} />
                     Refresh
                   </Button>
-                  <Button variant="primary" size="small" onClick={() => setShowCreateGroup(true)}>
+                  <Button variant="primary" size="small" onClick={() => setShowCreateTeam(true)}>
                     <Plus size={16} className="mr-1" />
-                    New Group
+                    New Team
                   </Button>
                 </div>
               </div>
 
-              {groupsLoading && groups.length === 0 ? (
+              {teamsLoading && teams.length === 0 ? (
                 <LiquidCard size="standard">
                   <div className="py-12">
-                    <LoadingSpinner size="medium" message="Loading groups..." />
+                    <LoadingSpinner size="medium" message="Loading teams..." />
                   </div>
                 </LiquidCard>
-              ) : groups.length === 0 ? (
+              ) : teams.length === 0 ? (
                 <LiquidCard size="standard" className="!rounded-[16px]">
                   <div className="flex flex-col items-center justify-center py-12 gap-4">
                     <UsersIcon size={40} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
-                    <p className="text-[var(--text-secondary)] text-base text-center">No groups created yet.</p>
+                    <p className="text-[var(--text-secondary)] text-base text-center">No teams created yet.</p>
                     <p className="text-[var(--text-muted)] text-sm text-center">
-                      Create a group to start organizing users into teams.
+                      Create a team to start organizing users.
                     </p>
                   </div>
                 </LiquidCard>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {groups.map((g) => (
-                    <LiquidCard key={g.id} size="standard" className="!rounded-[16px]">
+                  {teams.map((t) => (
+                    <LiquidCard key={t.id} size="standard" className="!rounded-[16px]">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">{g.name}</h3>
+                            <h3 className="text-lg font-semibold text-[var(--text-primary)]">{t.name}</h3>
                             <span
                               className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                                g.is_active
+                                t.is_active
                                   ? 'bg-green-500/15 text-green-400 border border-green-500/30'
                                   : 'bg-red-500/15 text-red-400 border border-red-500/30'
                               }`}
                             >
-                              {g.is_active ? 'Active' : 'Inactive'}
+                              {t.is_active ? 'Active' : 'Inactive'}
                             </span>
                           </div>
-                          {g.description && (
-                            <p className="text-[var(--text-muted)] text-sm mb-2">{g.description}</p>
+                          {t.description && (
+                            <p className="text-[var(--text-muted)] text-sm mb-2">{t.description}</p>
                           )}
                         </div>
                       </div>
@@ -2282,11 +2282,11 @@ export default function AdminPage() {
                         <Key size={16} style={{ color: 'var(--accent-hover)', opacity: 0.7 }} />
                         <span className="text-sm text-[var(--text-muted)]">Access Code:</span>
                         <span className="font-mono text-sm text-[var(--accent-bright)] tracking-wider select-all">
-                          {g.access_code}
+                          {t.access_code}
                         </span>
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(g.access_code);
+                            navigator.clipboard.writeText(t.access_code);
                             toast.success('Access code copied');
                           }}
                           className="ml-auto p-1.5 rounded hover:bg-[var(--accent-15)] text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-all cursor-pointer"
@@ -2300,13 +2300,13 @@ export default function AdminPage() {
                       <div className="flex items-center gap-4 mb-4">
                         <div className="flex items-center gap-1.5">
                           <Users size={16} style={{ color: 'var(--accent-bright)', opacity: 0.6 }} />
-                          <span className="text-sm font-medium text-[var(--text-primary)]">{g.member_count}</span>
+                          <span className="text-sm font-medium text-[var(--text-primary)]">{t.member_count}</span>
                           <span className="text-sm text-[var(--text-muted)]">members</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Clock size={16} style={{ color: 'var(--text-muted)', opacity: 0.6 }} />
                           <span className="text-xs text-[var(--text-muted)]">
-                            Created {formatDateShort(g.created_at)}
+                            Created {formatDateShort(t.created_at)}
                           </span>
                         </div>
                       </div>
@@ -2314,26 +2314,26 @@ export default function AdminPage() {
                       {/* Actions */}
                       <div className="flex items-center gap-2 pt-3 border-t border-[var(--accent-15)]">
                         <button
-                          onClick={() => setViewingGroupMembers({ id: g.id, name: g.name })}
+                          onClick={() => setViewingTeamMembers({ id: t.id, name: t.name })}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-10)] hover:text-[var(--accent-bright)] transition-all cursor-pointer"
                         >
                           <Eye size={15} />
                           Members
                         </button>
                         <button
-                          onClick={() => setEditingGroup({ ...g })}
+                          onClick={() => setEditingTeam({ ...t })}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-10)] hover:text-[var(--accent-bright)] transition-all cursor-pointer"
                         >
                           <Edit3 size={15} />
                           Edit
                         </button>
                         <button
-                          onClick={() => handleToggleGroupActive(g)}
-                          disabled={groupActionLoading}
+                          onClick={() => handleToggleTeamActive(t)}
+                          disabled={teamActionLoading}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-10)] hover:text-[var(--accent-bright)] transition-all cursor-pointer disabled:opacity-50 ml-auto"
                         >
-                          {g.is_active ? <EyeOff size={15} /> : <Eye size={15} />}
-                          {g.is_active ? 'Deactivate' : 'Reactivate'}
+                          {t.is_active ? <EyeOff size={15} /> : <Eye size={15} />}
+                          {t.is_active ? 'Deactivate' : 'Reactivate'}
                         </button>
                       </div>
                     </LiquidCard>
@@ -2527,7 +2527,7 @@ export default function AdminPage() {
         <Modal
           isOpen={!!promoteTarget}
           onClose={() => setPromoteTarget(null)}
-          title={promoteTarget?.currentRole === 'admin' ? 'Demote to User' : 'Promote to Group Manager'}
+          title={promoteTarget?.currentRole === 'admin' ? 'Demote to User' : 'Promote to Team Manager'}
           width="max-w-[460px]"
         >
           <div className="flex items-center gap-3 mb-4">
@@ -2539,8 +2539,8 @@ export default function AdminPage() {
             />
             <p className="text-[var(--text-secondary)] text-sm">
               {promoteTarget?.currentRole === 'admin'
-                ? `Demote ${promoteTarget?.name} from Group Manager to User? They will lose group management access.`
-                : `Promote ${promoteTarget?.name} to Group Manager? They will be able to manage their assigned group.`}
+                ? `Demote ${promoteTarget?.name} from Team Manager to User? They will lose team management access.`
+                : `Promote ${promoteTarget?.name} to Team Manager? They will be able to manage their assigned team.`}
             </p>
           </div>
           <div className="flex gap-3 justify-end">
@@ -2553,7 +2553,7 @@ export default function AdminPage() {
               onClick={handlePromoteToggle}
               disabled={!!actionLoading}
             >
-              {promoteTarget?.currentRole === 'admin' ? 'Demote to User' : 'Promote to Group Manager'}
+              {promoteTarget?.currentRole === 'admin' ? 'Demote to User' : 'Promote to Team Manager'}
             </Button>
           </div>
         </Modal>
@@ -2608,20 +2608,20 @@ export default function AdminPage() {
           )}
         </Modal>
 
-        {/* Create Group Modal */}
+        {/* Create Team Modal */}
         <Modal
-          isOpen={showCreateGroup}
-          onClose={() => setShowCreateGroup(false)}
-          title="Create New Group"
+          isOpen={showCreateTeam}
+          onClose={() => setShowCreateTeam(false)}
+          title="Create New Team"
           width="max-w-[520px]"
         >
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-[var(--text-muted)] mb-1.5">Group Name *</label>
+              <label className="block text-sm text-[var(--text-muted)] mb-1.5">Team Name *</label>
               <input
                 type="text"
-                value={newGroup.name}
-                onChange={(e) => setNewGroup((prev) => ({ ...prev, name: e.target.value }))}
+                value={newTeam.name}
+                onChange={(e) => setNewTeam((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="e.g. Downtown Service Center"
                 className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
               />
@@ -2632,16 +2632,16 @@ export default function AdminPage() {
               <div className="flex gap-2">
                 <input
                   type="text"
-                  value={newGroup.access_code}
-                  onChange={(e) => setNewGroup((prev) => ({ ...prev, access_code: e.target.value }))}
+                  value={newTeam.access_code}
+                  onChange={(e) => setNewTeam((prev) => ({ ...prev, access_code: e.target.value }))}
                   placeholder="e.g. DOWNTOWN-A1B2-C3D4"
                   className="flex-1 px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm font-mono focus:outline-none focus:border-[var(--accent-hover)] transition-all"
                 />
                 <button
                   onClick={() =>
-                    setNewGroup((prev) => ({
+                    setNewTeam((prev) => ({
                       ...prev,
-                      access_code: generateGroupAccessCode(prev.name),
+                      access_code: generateTeamAccessCode(prev.name),
                     }))
                   }
                   className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-[var(--accent-10)] border border-[var(--accent-border)] text-[var(--accent-bright)] hover:bg-[var(--accent-20)] transition-all cursor-pointer text-sm whitespace-nowrap"
@@ -2652,53 +2652,53 @@ export default function AdminPage() {
                 </button>
               </div>
               <p className="text-xs text-[var(--text-muted)] mt-1">
-                Users will enter this code during signup to join this group.
+                Users will enter this code during signup to join this team.
               </p>
             </div>
 
             <div>
               <label className="block text-sm text-[var(--text-muted)] mb-1.5">Description</label>
               <textarea
-                value={newGroup.description}
-                onChange={(e) => setNewGroup((prev) => ({ ...prev, description: e.target.value }))}
-                placeholder="Optional description of the group..."
+                value={newTeam.description}
+                onChange={(e) => setNewTeam((prev) => ({ ...prev, description: e.target.value }))}
+                placeholder="Optional description of the team..."
                 rows={3}
                 className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all resize-none"
               />
             </div>
 
             <div className="flex gap-3 justify-end pt-2">
-              <Button variant="ghost" size="small" onClick={() => setShowCreateGroup(false)}>
+              <Button variant="ghost" size="small" onClick={() => setShowCreateTeam(false)}>
                 Cancel
               </Button>
               <Button
                 variant="primary"
                 size="small"
-                onClick={handleCreateGroup}
-                disabled={groupActionLoading || !newGroup.name.trim() || !newGroup.access_code.trim()}
+                onClick={handleCreateTeam}
+                disabled={teamActionLoading || !newTeam.name.trim() || !newTeam.access_code.trim()}
               >
-                {groupActionLoading ? 'Creating...' : 'Create Group'}
+                {teamActionLoading ? 'Creating...' : 'Create Team'}
               </Button>
             </div>
           </div>
         </Modal>
 
-        {/* Edit Group Modal */}
+        {/* Edit Team Modal */}
         <Modal
-          isOpen={!!editingGroup}
-          onClose={() => setEditingGroup(null)}
-          title="Edit Group"
+          isOpen={!!editingTeam}
+          onClose={() => setEditingTeam(null)}
+          title="Edit Team"
           width="max-w-[520px]"
         >
-          {editingGroup && (
+          {editingTeam && (
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-[var(--text-muted)] mb-1.5">Group Name</label>
+                <label className="block text-sm text-[var(--text-muted)] mb-1.5">Team Name</label>
                 <input
                   type="text"
-                  value={editingGroup.name}
+                  value={editingTeam.name}
                   onChange={(e) =>
-                    setEditingGroup((prev) => (prev ? { ...prev, name: e.target.value } : null))
+                    setEditingTeam((prev) => (prev ? { ...prev, name: e.target.value } : null))
                   }
                   className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
                 />
@@ -2709,16 +2709,16 @@ export default function AdminPage() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    value={editingGroup.access_code}
+                    value={editingTeam.access_code}
                     onChange={(e) =>
-                      setEditingGroup((prev) => (prev ? { ...prev, access_code: e.target.value } : null))
+                      setEditingTeam((prev) => (prev ? { ...prev, access_code: e.target.value } : null))
                     }
                     className="flex-1 px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] text-sm font-mono focus:outline-none focus:border-[var(--accent-hover)] transition-all"
                   />
                   <button
                     onClick={() =>
-                      setEditingGroup((prev) =>
-                        prev ? { ...prev, access_code: generateGroupAccessCode(prev.name) } : null
+                      setEditingTeam((prev) =>
+                        prev ? { ...prev, access_code: generateTeamAccessCode(prev.name) } : null
                       )
                     }
                     className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-[var(--accent-10)] border border-[var(--accent-border)] text-[var(--accent-bright)] hover:bg-[var(--accent-20)] transition-all cursor-pointer text-sm whitespace-nowrap"
@@ -2733,9 +2733,9 @@ export default function AdminPage() {
               <div>
                 <label className="block text-sm text-[var(--text-muted)] mb-1.5">Description</label>
                 <textarea
-                  value={editingGroup.description || ''}
+                  value={editingTeam.description || ''}
                   onChange={(e) =>
-                    setEditingGroup((prev) => (prev ? { ...prev, description: e.target.value } : null))
+                    setEditingTeam((prev) => (prev ? { ...prev, description: e.target.value } : null))
                   }
                   rows={3}
                   className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all resize-none"
@@ -2743,38 +2743,38 @@ export default function AdminPage() {
               </div>
 
               <div className="flex gap-3 justify-end pt-2">
-                <Button variant="ghost" size="small" onClick={() => setEditingGroup(null)}>
+                <Button variant="ghost" size="small" onClick={() => setEditingTeam(null)}>
                   Cancel
                 </Button>
                 <Button
                   variant="primary"
                   size="small"
-                  onClick={handleEditGroup}
-                  disabled={groupActionLoading}
+                  onClick={handleEditTeam}
+                  disabled={teamActionLoading}
                 >
-                  {groupActionLoading ? 'Saving...' : 'Save Changes'}
+                  {teamActionLoading ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </div>
           )}
         </Modal>
 
-        {/* View Group Members Modal */}
+        {/* View Team Members Modal */}
         <Modal
-          isOpen={!!viewingGroupMembers}
+          isOpen={!!viewingTeamMembers}
           onClose={() => {
-            setViewingGroupMembers(null);
-            setGroupMembers([]);
+            setViewingTeamMembers(null);
+            setTeamMembers([]);
           }}
-          title={`${viewingGroupMembers?.name || 'Group'} — Members`}
+          title={`${viewingTeamMembers?.name || 'Team'} — Members`}
           width="max-w-[700px]"
         >
-          {groupMembersLoading ? (
+          {teamMembersLoading ? (
             <div className="py-8">
               <LoadingSpinner size="medium" message="Loading members..." />
             </div>
-          ) : groupMembers.length === 0 ? (
-            <p className="text-center text-[var(--text-muted)] py-8 text-sm">No members in this group yet.</p>
+          ) : teamMembers.length === 0 ? (
+            <p className="text-center text-[var(--text-muted)] py-8 text-sm">No members in this team yet.</p>
           ) : (
             <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
               <table className="w-full">
@@ -2789,7 +2789,7 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {groupMembers.map((m: any) => {
+                  {teamMembers.map((m: any) => {
                     const mName = [m.first_name, m.last_name].filter(Boolean).join(' ') || 'No name';
                     const mBadge = ROLE_BADGE[m.role] || ROLE_BADGE.user;
                     return (

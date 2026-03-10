@@ -24,26 +24,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check master access code first (owner/direct users — no group assignment)
+    // Check master access code first (owner/direct users — no team assignment)
     if (accessCode === validCode) {
       return NextResponse.json({ success: true, method: 'access_code' });
     }
 
-    // Check if the code matches any group's access_code
+    // Check if the code matches any team's access_code
     try {
       const svc = createServiceClient();
-      const { data: group } = await svc
-        .from('groups')
+      const { data: team } = await svc
+        .from('teams')
         .select('id')
         .eq('access_code', accessCode)
         .eq('is_active', true)
         .single();
 
-      if (group) {
-        return NextResponse.json({ success: true, method: 'access_code', group_id: group.id });
+      if (team) {
+        return NextResponse.json({ success: true, method: 'access_code', team_id: team.id });
       }
     } catch {
-      // Group lookup failed — fall through to invalid code
+      // Team lookup failed — fall through to invalid code
     }
 
     return NextResponse.json(

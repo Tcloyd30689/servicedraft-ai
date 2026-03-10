@@ -18,15 +18,15 @@ async function getAuthUser() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('role, group_id')
+    .select('role, team_id')
     .eq('id', user.id)
     .single();
 
   if (!profile) return null;
-  return { userId: user.id, role: profile.role as string, groupId: profile.group_id as string | null };
+  return { userId: user.id, role: profile.role as string, teamId: profile.team_id as string | null };
 }
 
-// GET: List all groups (owner) or get current user's group (admin/user)
+// GET: List all teams (owner) or get current user's team (admin/user)
 export async function GET() {
   try {
     const authUser = await getAuthUser();
@@ -37,9 +37,9 @@ export async function GET() {
     const svc = createServiceClient();
 
     if (authUser.role === 'owner') {
-      // Owner sees all groups
-      const { data: groups, error } = await svc
-        .from('groups')
+      // Owner sees all teams
+      const { data: teams, error } = await svc
+        .from('teams')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -47,49 +47,49 @@ export async function GET() {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
 
-      // Get member counts for each group
+      // Get member counts for each team
       const { data: users } = await svc
         .from('users')
-        .select('group_id');
+        .select('team_id');
 
       const memberCounts: Record<string, number> = {};
-      (users || []).forEach((u: { group_id: string | null }) => {
-        if (u.group_id) {
-          memberCounts[u.group_id] = (memberCounts[u.group_id] || 0) + 1;
+      (users || []).forEach((u: { team_id: string | null }) => {
+        if (u.team_id) {
+          memberCounts[u.team_id] = (memberCounts[u.team_id] || 0) + 1;
         }
       });
 
-      const enrichedGroups = (groups || []).map((g: { id: string }) => ({
-        ...g,
-        member_count: memberCounts[g.id] || 0,
+      const enrichedTeams = (teams || []).map((t: { id: string }) => ({
+        ...t,
+        member_count: memberCounts[t.id] || 0,
       }));
 
-      return NextResponse.json({ success: true, data: enrichedGroups });
+      return NextResponse.json({ success: true, data: enrichedTeams });
     }
 
-    // Admin or user — return their own group
-    if (!authUser.groupId) {
+    // Admin or user — return their own team
+    if (!authUser.teamId) {
       return NextResponse.json({ success: true, data: null });
     }
 
-    const { data: group, error } = await svc
-      .from('groups')
+    const { data: team, error } = await svc
+      .from('teams')
       .select('*')
-      .eq('id', authUser.groupId)
+      .eq('id', authUser.teamId)
       .single();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: group });
+    return NextResponse.json({ success: true, data: team });
   } catch (err) {
-    console.error('Groups GET error:', err);
+    console.error('Teams GET error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// POST: Create a new group (owner only)
+// POST: Create a new team (owner only)
 export async function POST(request: Request) {
   try {
     const authUser = await getAuthUser();
@@ -105,8 +105,8 @@ export async function POST(request: Request) {
 
     const svc = createServiceClient();
 
-    const { data: group, error } = await svc
-      .from('groups')
+    const { data: team, error } = await svc
+      .from('teams')
       .insert({
         name: name.trim(),
         access_code: access_code.trim(),
@@ -123,14 +123,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: group }, { status: 201 });
+    return NextResponse.json({ success: true, data: team }, { status: 201 });
   } catch (err) {
-    console.error('Groups POST error:', err);
+    console.error('Teams POST error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// PUT: Update group details (owner only)
+// PUT: Update team details (owner only)
 export async function PUT(request: Request) {
   try {
     const authUser = await getAuthUser();
@@ -141,7 +141,7 @@ export async function PUT(request: Request) {
     const { id, name, access_code, description } = await request.json();
 
     if (!id) {
-      return NextResponse.json({ error: 'Group id is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Team id is required' }, { status: 400 });
     }
 
     const svc = createServiceClient();
@@ -155,8 +155,8 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
-    const { data: group, error } = await svc
-      .from('groups')
+    const { data: team, error } = await svc
+      .from('teams')
       .update(updates)
       .eq('id', id)
       .select()
@@ -169,14 +169,14 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: group });
+    return NextResponse.json({ success: true, data: team });
   } catch (err) {
-    console.error('Groups PUT error:', err);
+    console.error('Teams PUT error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// DELETE: Soft-delete a group (owner only, sets is_active = false)
+// DELETE: Soft-delete a team (owner only, sets is_active = false)
 export async function DELETE(request: Request) {
   try {
     const authUser = await getAuthUser();
@@ -187,13 +187,13 @@ export async function DELETE(request: Request) {
     const { id } = await request.json();
 
     if (!id) {
-      return NextResponse.json({ error: 'Group id is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Team id is required' }, { status: 400 });
     }
 
     const svc = createServiceClient();
 
     const { error } = await svc
-      .from('groups')
+      .from('teams')
       .update({ is_active: false })
       .eq('id', id);
 
@@ -203,7 +203,7 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('Groups DELETE error:', err);
+    console.error('Teams DELETE error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

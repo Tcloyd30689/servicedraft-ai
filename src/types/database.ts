@@ -28,12 +28,12 @@ export interface UserProfile {
   role: 'user' | 'admin' | 'owner';
   is_restricted: boolean;
   preferences?: UserPreferences;
-  group_id?: string;
+  team_id?: string;
   created_at: string;
   updated_at: string;
 }
 
-export interface Group {
+export interface Team {
   id: string;
   name: string;
   access_code: string;
