@@ -13,6 +13,7 @@ import ProfileSection from '@/components/dashboard/ProfileSection';
 import EditProfileModal from '@/components/dashboard/EditProfileModal';
 import NarrativeHistory from '@/components/dashboard/NarrativeHistory';
 import AppearanceModal from '@/components/dashboard/AppearanceModal';
+import SavedRepairsModal from '@/components/dashboard/SavedRepairsModal';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function DashboardPage() {
 
   if (!profile) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="text-center py-12 text-[var(--text-muted)]">
           <p>Unable to load profile data. Please try refreshing the page.</p>
         </div>
@@ -46,7 +47,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
+    <div className="max-w-7xl mx-auto px-4 py-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -148,23 +149,11 @@ export default function DashboardPage() {
         onClose={() => setShowAppearance(false)}
       />
 
-      {/* Saved Repairs Placeholder Modal */}
-      <Modal
+      {/* Saved Repairs Modal */}
+      <SavedRepairsModal
         isOpen={showSavedRepairs}
         onClose={() => setShowSavedRepairs(false)}
-        title="My Saved Repairs"
-        width="max-w-[480px]"
-      >
-        <div className="flex flex-col items-center justify-center py-10">
-          <Wrench size={40} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-          <p
-            className="text-center mt-4"
-            style={{ color: 'var(--text-muted)', fontSize: 14 }}
-          >
-            Coming in Sprint 6
-          </p>
-        </div>
-      </Modal>
+      />
 
       {/* Delete Account Confirmation Modal */}
       <Modal

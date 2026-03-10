@@ -42,6 +42,7 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 5 Sprint 3:** COMPLETE — NavBar glowing purple hover animations on all interactive elements (Main Menu, theme toggle, user button, dropdown items)
 **Stage 5 Sprint 4:** COMPLETE — Signup page updates: AccentColorPicker added to Step 3 profile creation, Location text input replaced with US state dropdown (all 50 states), accent color persists via existing ThemeProvider (localStorage + Supabase preferences)
 **Stage 5 Sprint 5:** COMPLETE — Dashboard split preferences into App Appearance modal and My Saved Repairs placeholder modal, added Owner Dashboard button for admin users with gold/amber accent
+**Stage 5 Sprint 6:** COMPLETE — Full SavedRepairsModal with template list/create/edit/delete, narrative table row hover glow, wider dashboard container (max-w-7xl)
 **Next Task:** Vercel production deployment
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
 **Stage 3 Sprint 3:** COMPLETE — Matched email and print exports to PDF formatting
@@ -2627,6 +2628,18 @@ This file is a living document that Claude Code reads at the start of every sess
 
 - [x] **Task 1:** Added `xlarge` size variant to LoadingSpinner component (w-32 h-32, border-4, text-2xl) — approximately 2x the `large` variant (w-16 h-16). Added per-size text sizing via textSizeMap. Added optional className prop for external styling.
 - [x] **Task 2:** Updated narrative page initial generation loading state to use `xlarge` spinner with `min-h-[calc(100vh-64px)]` flex centering — spinner now owns the full viewport below the NavBar. Updated message text to uppercase "GENERATING NARRATIVE..." for consistency.
+
+---
+
+## STAGE 5 — SPRINT 6: DASHBOARD — MY SAVED REPAIRS MODAL & TABLE STYLING (2026-03-09)
+
+**Status:** COMPLETE
+
+- [x] **Task 1:** Replaced placeholder "Coming in Sprint 6" modal with full `SavedRepairsModal` component (`src/components/dashboard/SavedRepairsModal.tsx`). Fetches user's saved repair templates from `/api/saved-repairs`, displays in scrollable list with expand/collapse per row showing all 5 core repair fields (codes_present, diagnostics_performed, root_cause, repair_performed, repair_verification). Shows loading spinner while fetching, empty state when no templates exist. — **2026-03-09**
+- [x] **Task 2:** Added "NEW REPAIR TEMPLATE" button at top of modal. Opens inline form with template name, story type selector (Diagnostic Only / Repair Complete), and all 5 core repair field textareas. Saves via POST `/api/saved-repairs` with loading state and toast feedback. — **2026-03-09**
+- [x] **Task 3:** Added Edit and Delete action buttons per template row. Edit opens inline editing with template name + 5 core fields and Save/Cancel buttons (PUT `/api/saved-repairs/[id]`). Delete shows confirmation prompt with Cancel/Confirm before DELETE. Both show appropriate loading states and toast messages. — **2026-03-09**
+- [x] **Task 4:** Added glowing hover effect to NarrativeHistory table rows: `hover:bg-[rgba(168,85,247,0.08)]` accent tint, `hover:shadow-[0_0_10px_rgba(168,85,247,0.15)]` soft glow, `transition-all duration-200` smooth animation, `group-hover:text-[var(--text-secondary)]` brighter text on all data cells. — **2026-03-09**
+- [x] **Task 5:** Widened dashboard container from `max-w-5xl` (1024px) to `max-w-7xl` (1280px) for more breathing room on the narrative table and overall dashboard layout. — **2026-03-09**
 
 ---
 

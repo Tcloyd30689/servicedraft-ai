@@ -281,14 +281,14 @@ export default function NarrativeHistory({ userId, senderName }: NarrativeHistor
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.2 }}
                       onClick={() => setSelectedNarrative(n)}
-                      className="border-b border-[var(--accent-8)] hover:bg-[var(--accent-5)] cursor-pointer transition-colors"
+                      className="border-b border-[var(--accent-8)] hover:bg-[rgba(168,85,247,0.08)] hover:shadow-[0_0_10px_rgba(168,85,247,0.15)] cursor-pointer transition-all duration-200 group"
                     >
-                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{date.toLocaleDateString()}</td>
-                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]">{date.toLocaleDateString()}</td>
+                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]">{date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                       <td className="py-2.5 px-2 font-data text-[var(--text-primary)]">{n.ro_number || '—'}</td>
-                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{n.vehicle_year || '—'}</td>
-                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{n.vehicle_make || '—'}</td>
-                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)]">{n.vehicle_model || '—'}</td>
+                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]">{n.vehicle_year || '—'}</td>
+                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]">{n.vehicle_make || '—'}</td>
+                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]">{n.vehicle_model || '—'}</td>
                       <td className="py-2.5 px-2">
                         <span
                           className="inline-block text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full whitespace-nowrap"
@@ -301,7 +301,7 @@ export default function NarrativeHistory({ userId, senderName }: NarrativeHistor
                           {n.story_type === 'diagnostic_only' ? 'DIAGNOSTIC' : 'REPAIR COMPLETE'}
                         </span>
                       </td>
-                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)] truncate max-w-[150px]">
+                      <td className="py-2.5 px-2 font-data text-[var(--text-muted)] group-hover:text-[var(--text-secondary)] truncate max-w-[150px]">
                         {preview}{preview.length >= 30 ? '...' : ''}
                       </td>
                     </motion.tr>
