@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS public.api_usage_log (
   prompt_tokens integer NOT NULL DEFAULT 0,
   completion_tokens integer NOT NULL DEFAULT 0,
   total_tokens integer NOT NULL DEFAULT 0,
-  model_name text NOT NULL DEFAULT 'gemini-2.0-flash',
+  model_name text NOT NULL DEFAULT 'gemini-3-flash-preview',
   estimated_cost_usd numeric(10,6) NOT NULL DEFAULT 0,
   created_at timestamptz NOT NULL DEFAULT now()
 );

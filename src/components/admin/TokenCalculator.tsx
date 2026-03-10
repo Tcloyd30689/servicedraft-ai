@@ -7,10 +7,10 @@ import LiquidCard from '@/components/ui/LiquidCard';
 // ─── Gemini Model Pricing (per 1M tokens, as of March 2026) ──
 const MODELS = [
   {
-    id: 'gemini-2.0-flash',
-    label: 'Gemini 2.0 Flash',
-    inputPer1M: 0.10,
-    outputPer1M: 0.40,
+    id: 'gemini-3-flash-preview',
+    label: 'Gemini 3 Flash Preview',
+    inputPer1M: 0.50,
+    outputPer1M: 3.00,
   },
   {
     id: 'gemini-1.5-flash',
@@ -29,7 +29,7 @@ const MODELS = [
 type ModelId = (typeof MODELS)[number]['id'];
 
 export default function TokenCalculator() {
-  const [modelId, setModelId] = useState<ModelId>('gemini-2.0-flash');
+  const [modelId, setModelId] = useState<ModelId>('gemini-3-flash-preview');
   const [inputTokens, setInputTokens] = useState(1500);
   const [outputTokens, setOutputTokens] = useState(800);
   const [narrativesPerMonth, setNarrativesPerMonth] = useState(100);

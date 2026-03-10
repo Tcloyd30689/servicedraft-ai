@@ -2309,8 +2309,8 @@ export default function AdminPage() {
               <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--accent-5)] border border-[var(--accent-15)]">
                 <Info size={18} className="flex-shrink-0" style={{ color: 'var(--accent-hover)' }} />
                 <p className="text-sm text-[var(--text-muted)]">
-                  <span className="font-medium text-[var(--accent-bright)]">Model: gemini-2.0-flash</span>
-                  {' | Input: $0.10/1M tokens | Output: $0.40/1M tokens'}
+                  <span className="font-medium text-[var(--accent-bright)]">Model: gemini-3-flash-preview</span>
+                  {' | Input: $0.50/1M tokens | Output: $3.00/1M tokens'}
                 </p>
               </div>
 
@@ -2377,7 +2377,7 @@ export default function AdminPage() {
                               const dt = new Date(String(d) + 'T12:00:00');
                               return dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
                             }}
-                            formatter={(value: number) => value.toLocaleString()}
+                            formatter={(value) => typeof value === 'number' ? value.toLocaleString() : String(value ?? '')}
                           />
                           <Legend wrapperStyle={{ color: 'var(--text-secondary)', fontSize: 13 }} />
                           <Area type="monotone" dataKey="promptTokens" name="Input Tokens" stackId="tokens" fill="#3b82f6" stroke="#3b82f6" fillOpacity={0.5} />
@@ -2425,7 +2425,7 @@ export default function AdminPage() {
                               const dt = new Date(String(d) + 'T12:00:00');
                               return dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
                             }}
-                            formatter={(value: number) => [`$${value.toFixed(4)}`, 'Cost']}
+                            formatter={(value) => [`$${typeof value === 'number' ? value.toFixed(4) : value}`, 'Cost']}
                           />
                           <Bar dataKey="cost" name="Cost (USD)" fill="var(--accent-primary)" radius={[4, 4, 0, 0]} />
                         </BarChart>
@@ -2459,7 +2459,7 @@ export default function AdminPage() {
                                 color: 'var(--text-primary)',
                                 fontSize: 13,
                               }}
-                              formatter={(value: number) => value.toLocaleString()}
+                              formatter={(value) => typeof value === 'number' ? value.toLocaleString() : String(value ?? '')}
                             />
                             <Bar dataKey="tokens" name="Total Tokens" radius={[0, 4, 4, 0]}>
                               {barData.map((entry, idx) => (

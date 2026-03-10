@@ -24,7 +24,8 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-10
-**Current Phase:** Stage 6 Sprint B — In Progress (Task 1 complete, Tasks 2-6 pending)
+**Current Phase:** Stage 6 Sprint B — In Progress (Task 1 complete + hotfix applied, Tasks 2-6 pending)
+**Hotfix (Post Sprint B Task 1):** COMPLETE — Fixed Gemini API Usage Tracker: corrected model name from gemini-2.0-flash to gemini-3-flash-preview across entire codebase, fixed pricing rates from $0.10/$0.40 to $0.50/$3.00 per 1M tokens (input/output), updated migration default, fixed Recharts tooltip type errors
 **Stage 6 Sprint B (Task 1):** COMPLETE — Gemini API Usage Tracker: modified Gemini client to return token usage metadata, created api_usage_log table migration, added server-side usage logger utility, instrumented all 6 API routes (generate, customize, proofread, apply-edits, update-narrative, convert-recommendation), built /api/admin/usage endpoint with aggregated stats, replaced Cost Calculator tab with live API Usage tab featuring summary cards, token/cost charts, action breakdown, and top users leaderboard
 **Stage 6 Sprint B (Tasks 2-6):** PENDING — Email column truncation, center alignment for all table cells, glowing row hover effect, activity detail popup modal, owner team assignment
 **Stage 4 Sprint 1:** COMPLETE — Font rendering fix, sidebar positioning, button relocation, template rename, access code update
@@ -2809,13 +2810,13 @@ Replaced the static Cost Calculator tab with a real-time Gemini API Usage Tracke
 
 - [x] **Step 2: Create api_usage_log table migration** — **2026-03-10**
   - Created `supabase/migrations/009_api_usage_log.sql`
-  - Columns: id (uuid PK), user_id (FK to public.users), action_type (text), prompt_tokens, completion_tokens, total_tokens, model_name (default 'gemini-2.0-flash'), estimated_cost_usd (numeric(10,6)), created_at (timestamptz)
+  - Columns: id (uuid PK), user_id (FK to public.users), action_type (text), prompt_tokens, completion_tokens, total_tokens, model_name (default 'gemini-3-flash-preview'), estimated_cost_usd (numeric(10,6)), created_at (timestamptz)
   - Indexes on created_at (DESC) and user_id
   - RLS: Owner can SELECT all, users can SELECT own, authenticated can INSERT
 
 - [x] **Step 3: Log token usage from every API route** — **2026-03-10**
   - Created `src/lib/usageLogger.ts` — server-side fire-and-forget logger
-  - Calculates estimated cost using gemini-2.0-flash rates: Input $0.10/1M tokens, Output $0.40/1M tokens
+  - Calculates estimated cost using gemini-3-flash-preview rates: Input $0.50/1M tokens, Output $3.00/1M tokens
   - Added `logTokenUsage(userId, actionType, usage)` call in all 6 API routes after Gemini response
   - Uses same fire-and-forget async IIFE pattern as activity logger — never blocks user requests
 
@@ -2840,6 +2841,29 @@ Replaced the static Cost Calculator tab with a real-time Gemini API Usage Tracke
   - "Last updated: Xs ago" ticker
   - Model info callout showing pricing context
   - Removed TokenCalculator import (component file preserved but no longer referenced)
+
+---
+
+### Hotfix: Gemini API Usage Tracker — Model Name & Pricing Correction (2026-03-10)
+
+**Problem:** The API Usage Tracker built in Sprint B Task 1 referenced the wrong model name (`gemini-2.0-flash`) and used incorrect pricing rates ($0.10/$0.40 per 1M tokens input/output).
+
+**Correct values:** Model: `gemini-3-flash-preview` | Input: $0.50/1M tokens ($0.0000005/token) | Output: $3.00/1M tokens ($0.000003/token)
+
+**Files changed:**
+
+- [x] `src/lib/usageLogger.ts` — Fixed model_name from `gemini-2.0-flash` to `gemini-3-flash-preview`, updated INPUT_COST_PER_TOKEN from 0.0000001 to 0.0000005, OUTPUT_COST_PER_TOKEN from 0.0000004 to 0.000003
+- [x] `src/components/admin/TokenCalculator.tsx` — Updated MODELS array: changed id/label from gemini-2.0-flash to gemini-3-flash-preview, inputPer1M from 0.10 to 0.50, outputPer1M from 0.40 to 3.00, updated default state
+- [x] `src/app/(protected)/admin/page.tsx` — Fixed model info callout: "Model: gemini-3-flash-preview | Input: $0.50/1M tokens | Output: $3.00/1M tokens", also fixed 3 Recharts Tooltip `formatter` TypeScript type errors (pre-existing)
+- [x] `supabase/migrations/009_api_usage_log.sql` — Updated DEFAULT from `gemini-2.0-flash` to `gemini-3-flash-preview`
+- [x] `src/lib/gemini/client.ts` — Verified: already uses `gemini-3-flash-preview` (no change needed)
+- [x] Build verified: `npm run build` passes cleanly
+
+**⚠️ MANUAL ACTION REQUIRED (Tyler):** Run this SQL in Supabase SQL Editor to update the live column default:
+```sql
+ALTER TABLE api_usage_log ALTER COLUMN model_name SET DEFAULT 'gemini-3-flash-preview';
+```
+The migration file has been updated for future deployments, but the existing database column default needs this manual update.
 
 ---
 
