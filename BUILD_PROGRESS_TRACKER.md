@@ -23,7 +23,7 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-03-10
+**Last Updated:** 2026-03-11
 **Current Phase:** Stage 6 Sprint B — COMPLETE (All 6 tasks done)
 **Hotfix (Post Sprint B Task 1):** COMPLETE — Fixed Gemini API Usage Tracker: corrected model name from gemini-2.0-flash to gemini-3-flash-preview across entire codebase, fixed pricing rates from $0.10/$0.40 to $0.50/$3.00 per 1M tokens (input/output), updated migration default, fixed Recharts tooltip type errors
 **Stage 6 Sprint B (Task 1):** COMPLETE — Gemini API Usage Tracker: modified Gemini client to return token usage metadata, created api_usage_log table migration, added server-side usage logger utility, instrumented all 6 API routes (generate, customize, proofread, apply-edits, update-narrative, convert-recommendation), built /api/admin/usage endpoint with aggregated stats, replaced Cost Calculator tab with live API Usage tab featuring summary cards, token/cost charts, action breakdown, and top users leaderboard
@@ -51,7 +51,8 @@ This file is a living document that Claude Code reads at the start of every sess
 **Stage 5 Sprint 8:** COMPLETE — Role hierarchy restructure from 2-tier (admin/user) to 3-tier (owner/admin/user). Owner = platform owner, Admin = Team Manager, User = standard. All access gates, API routes, badges, promote/demote logic updated.
 **Stage 5 Sprint 9:** COMPLETE — Team management database schema, API routes, and signup integration
 **Stage 5 Sprint 10:** COMPLETE — Team Manager Dashboard UI and Owner Dashboard team management
-**Documentation Refresh:** COMPLETE — All 6 project reference files updated to v2.0 reflecting current application state
+**Documentation Refresh v2.1:** COMPLETE — All 6 project knowledge files updated to v2.1 reflecting complete current application state (5,804 lines / 280.5 KB total)
+**Documentation Refresh v2.0:** COMPLETE — All 6 project reference files updated to v2.0 reflecting current application state
 **Stage 6 Sprint A (Task 1):** COMPLETE — Group→Team rename across entire codebase
 **Stage 6 Sprint A (Tasks 2-5):** COMPLETE — Main menu dashboard buttons, team dashboard activity log + refresh, remove member function
 **Stage 3 Sprint 2:** COMPLETE — Auto-sizing text fields in Edit Story modal
@@ -88,6 +89,23 @@ This file is a living document that Claude Code reads at the start of every sess
 **Hotfix 16A:** COMPLETE — Export logo aspect ratio fix — preserve native 2.09:1 ratio (PB.85)
 **Session 17A:** COMPLETE — Email export feature with Resend integration and professional HTML template (S2-5)
 **Hotfix 18A:** COMPLETE — Fix save timeout: replace Promise.resolve wrapping with proper async pattern for Supabase queries, remove double timeout on save (PB.86)
+
+---
+
+## DOCUMENTATION REFRESH v2.1 — 2026-03-11
+
+**Status:** COMPLETE
+
+All 6 project knowledge files updated to v2.1 reflecting the complete current application state:
+
+- [x] CLAUDE_CODE_BUILD_INSTRUCTIONS.md — 1,617 lines, 78.5 KB (architecture reference with all systems)
+- [x] ServiceDraft_AI_Project_Instructions_v1_3.md — 605 lines, 35.7 KB (app overview, workflows, communication rules)
+- [x] ServiceDraft_AI_UI_Design_Spec_v1.md — 1,150 lines, 48.7 KB (complete visual design system, 23 sections)
+- [x] ServiceDraft_AI_Prompt_Logic_v1.md — 1,165 lines, 53.3 KB (all AI logic, data flows, 26 sections)
+- [x] PRE_BUILD_SETUP_CHECKLIST.md — 343 lines, 17.3 KB (setup, deployment, troubleshooting)
+- [x] ServiceDraft_AI_Spec_v1_3.md — 924 lines, 47.0 KB (full spec, 17 sections, 71 features)
+
+Total project knowledge base: 5,804 lines / 280.5 KB (doubled from previous versions)
 
 ---
 
