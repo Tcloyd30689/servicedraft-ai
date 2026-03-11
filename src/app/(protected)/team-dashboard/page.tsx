@@ -801,19 +801,29 @@ export default function TeamDashboardPage() {
                               <motion.tr
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className="border-b border-[var(--accent-10)] hover:bg-[var(--accent-10)] transition-colors cursor-pointer text-sm"
+                                className="border-b border-[var(--accent-10)] transition-all duration-200 ease-in-out cursor-pointer text-sm"
                                 onClick={() => setExpandedMemberId(isExpanded ? null : member.id)}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.boxShadow = '0 0 8px 1px rgba(168, 85, 247, 0.3)';
+                                  e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.05)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.boxShadow = 'none';
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                }}
                               >
-                                <td className="py-3 pr-3 text-[var(--text-primary)] font-medium whitespace-nowrap">
+                                <td className="py-3 pr-3 text-center text-[var(--text-primary)] font-medium whitespace-nowrap">
                                   {memberName}
                                 </td>
-                                <td className="py-3 pr-3 text-[var(--text-muted)] whitespace-nowrap hidden md:table-cell">
-                                  {member.email}
+                                <td className="py-3 pr-3 text-center hidden md:table-cell">
+                                  <span className="inline-block max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text-muted)]" title={member.email}>
+                                    {member.email}
+                                  </span>
                                 </td>
-                                <td className="py-3 pr-3 text-[var(--text-muted)] whitespace-nowrap hidden md:table-cell">
+                                <td className="py-3 pr-3 text-center text-[var(--text-muted)] whitespace-nowrap hidden md:table-cell">
                                   {member.position || '\u2014'}
                                 </td>
-                                <td className="py-3 pr-3 whitespace-nowrap">
+                                <td className="py-3 pr-3 text-center whitespace-nowrap">
                                   <span
                                     className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-sm font-medium"
                                     style={{ background: roleBadge.bg, color: roleBadge.text }}
@@ -825,18 +835,18 @@ export default function TeamDashboardPage() {
                                 <td className="py-3 pr-3 text-[var(--text-secondary)] text-center whitespace-nowrap">
                                   {member.narrative_count}
                                 </td>
-                                <td className="py-3 pr-3 whitespace-nowrap hidden lg:table-cell">
+                                <td className="py-3 pr-3 text-center whitespace-nowrap hidden lg:table-cell">
                                   {member.last_active ? (() => {
                                     const { date, time } = formatDateTimeStacked(member.last_active);
                                     return (
-                                      <div className="flex flex-col">
+                                      <div className="flex flex-col items-center">
                                         <span className="text-[var(--text-secondary)]">{date}</span>
                                         <span className="text-[var(--text-muted)] text-xs">{time}</span>
                                       </div>
                                     );
                                   })() : '\u2014'}
                                 </td>
-                                <td className="py-3" onClick={(e) => e.stopPropagation()}>
+                                <td className="py-3 text-center" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center justify-center gap-1">
                                     {roleAccess.allowed ? (
                                       <button
@@ -1017,13 +1027,13 @@ export default function TeamDashboardPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="text-left text-[var(--text-muted)] text-sm uppercase tracking-wider border-b border-[var(--accent-15)]">
-                          <th className="pb-3 pr-4">Date/Time</th>
-                          <th className="pb-3 pr-4">User</th>
-                          <th className="pb-3 pr-4 hidden md:table-cell">Email</th>
-                          <th className="pb-3 pr-4">Action</th>
-                          <th className="pb-3 pr-4 hidden lg:table-cell">Story Type</th>
-                          <th className="pb-3 hidden lg:table-cell">Preview</th>
+                        <tr className="text-center text-[var(--text-muted)] text-sm uppercase tracking-wider border-b border-[var(--accent-15)]">
+                          <th className="pb-3 pr-4 text-center">Date/Time</th>
+                          <th className="pb-3 pr-4 text-center">User</th>
+                          <th className="pb-3 pr-4 text-center hidden md:table-cell">Email</th>
+                          <th className="pb-3 pr-4 text-center">Action</th>
+                          <th className="pb-3 pr-4 text-center hidden lg:table-cell">Story Type</th>
+                          <th className="pb-3 text-left hidden lg:table-cell">Preview</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1032,22 +1042,32 @@ export default function TeamDashboardPage() {
                             <motion.tr
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
-                              className="border-b border-[var(--accent-10)] hover:bg-[var(--accent-10)] transition-colors cursor-pointer text-sm"
+                              className="border-b border-[var(--accent-10)] transition-all duration-200 ease-in-out cursor-pointer text-sm"
                               onClick={() => setActivityExpandedRow(activityExpandedRow === log.id ? null : log.id)}
                               style={{
                                 borderLeft: `3px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}`,
                               }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.boxShadow = '0 0 8px 1px rgba(168, 85, 247, 0.3)';
+                                e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.05)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.boxShadow = 'none';
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                              }}
                             >
-                              <td className="py-3 pr-4 text-[var(--text-secondary)] whitespace-nowrap">
+                              <td className="py-3 pr-4 text-center text-[var(--text-secondary)] whitespace-nowrap">
                                 {formatDateReadable(log.created_at)}
                               </td>
-                              <td className="py-3 pr-4 text-[var(--text-primary)] font-medium">
+                              <td className="py-3 pr-4 text-center text-[var(--text-primary)] font-medium">
                                 {log.user_name}
                               </td>
-                              <td className="py-3 pr-4 text-[var(--text-muted)] hidden md:table-cell">
-                                {log.user_email}
+                              <td className="py-3 pr-4 text-center hidden md:table-cell">
+                                <span className="inline-block max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text-muted)]" title={log.user_email}>
+                                  {log.user_email}
+                                </span>
                               </td>
-                              <td className="py-3 pr-4">
+                              <td className="py-3 pr-4 text-center">
                                 <span
                                   className="inline-block px-2.5 py-1 rounded-full text-sm font-medium"
                                   style={{
@@ -1059,10 +1079,10 @@ export default function TeamDashboardPage() {
                                   {formatActionLabel(log.action_type)}
                                 </span>
                               </td>
-                              <td className="py-3 pr-4 text-[var(--text-muted)] capitalize hidden lg:table-cell">
+                              <td className="py-3 pr-4 text-center text-[var(--text-muted)] capitalize hidden lg:table-cell">
                                 {log.story_type?.replace(/_/g, ' ') || '\u2014'}
                               </td>
-                              <td className="py-3 text-[var(--text-muted)] max-w-[200px] truncate hidden lg:table-cell">
+                              <td className="py-3 text-left text-[var(--text-muted)] max-w-[200px] truncate hidden lg:table-cell">
                                 {log.output_preview || '\u2014'}
                               </td>
                             </motion.tr>

@@ -24,10 +24,11 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-10
-**Current Phase:** Stage 6 Sprint B — In Progress (Task 1 complete + hotfix applied, Tasks 2-6 pending)
+**Current Phase:** Stage 6 Sprint B — In Progress (Tasks 1-4 complete, Tasks 5-6 pending)
 **Hotfix (Post Sprint B Task 1):** COMPLETE — Fixed Gemini API Usage Tracker: corrected model name from gemini-2.0-flash to gemini-3-flash-preview across entire codebase, fixed pricing rates from $0.10/$0.40 to $0.50/$3.00 per 1M tokens (input/output), updated migration default, fixed Recharts tooltip type errors
 **Stage 6 Sprint B (Task 1):** COMPLETE — Gemini API Usage Tracker: modified Gemini client to return token usage metadata, created api_usage_log table migration, added server-side usage logger utility, instrumented all 6 API routes (generate, customize, proofread, apply-edits, update-narrative, convert-recommendation), built /api/admin/usage endpoint with aggregated stats, replaced Cost Calculator tab with live API Usage tab featuring summary cards, token/cost charts, action breakdown, and top users leaderboard
-**Stage 6 Sprint B (Tasks 2-6):** PENDING — Email column truncation, center alignment for all table cells, glowing row hover effect, activity detail popup modal, owner team assignment
+**Stage 6 Sprint B (Tasks 2-4):** COMPLETE — Email column truncation with tooltip on hover, center alignment on all table headers/cells, glowing accent-colored row hover effect across all data tables on both dashboards
+**Stage 6 Sprint B (Tasks 5-6):** PENDING — Activity detail popup modal, owner team assignment
 **Stage 4 Sprint 1:** COMPLETE — Font rendering fix, sidebar positioning, button relocation, template rename, access code update
 **Stage 4 Sprint 2:** COMPLETE — Clear form button, story type switching preservation, ProofreadResults render bug fix
 **Stage 4 Sprint 3:** COMPLETE — Refactored repair templates to save only 5 core repair fields (codes_present, diagnostics_performed, root_cause, repair_performed, repair_verification), removing vehicle info and non-core fields from save/display/edit flows
@@ -2858,6 +2859,33 @@ Replaced the static Cost Calculator tab with a real-time Gemini API Usage Tracke
 - [x] `supabase/migrations/009_api_usage_log.sql` — Updated DEFAULT from `gemini-2.0-flash` to `gemini-3-flash-preview`
 - [x] `src/lib/gemini/client.ts` — Verified: already uses `gemini-3-flash-preview` (no change needed)
 - [x] Build verified: `npm run build` passes cleanly
+
+---
+
+## STAGE 6 SPRINT B — TASKS 2-4: TABLE UI IMPROVEMENTS (2026-03-10)
+
+**Status:** COMPLETE (Tasks 2, 3, 4 of 6)
+
+Applied table UI improvements across ALL data tables on both the Owner Dashboard and Team Dashboard pages.
+
+- [x] **Task 2: Email Column Truncation** — **2026-03-10**
+  - Added `max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap` on email cells via inline-block span wrapper
+  - Added `title` attribute on email cells so full address shows as native browser tooltip on hover
+  - Applied to: Owner Dashboard User Management table, Owner Dashboard Activity Log table, Owner Dashboard Teams modal member table, Team Dashboard Team Members table, Team Dashboard Activity Log table
+
+- [x] **Task 3: Center Alignment for All Table Cells** — **2026-03-10**
+  - Changed all `<tr>` header rows from `text-left` to `text-center`
+  - Added explicit `text-center` to every `<th>` and `<td>` across all tables
+  - Preview/narrative text columns kept as `text-left` since long text looks bad centered
+  - Applied to all tables: Owner Dashboard Activity Log, User Management, Analytics Top Users Leaderboard, API Usage Top Users, Teams modal members table, Team Dashboard Team Members, Team Dashboard Activity Log
+
+- [x] **Task 4: Glowing Row Hover Effect** — **2026-03-10**
+  - Replaced `hover:bg-[var(--accent-10)]` with JS-driven hover using `onMouseEnter`/`onMouseLeave`
+  - On hover: `boxShadow: '0 0 8px 1px rgba(168, 85, 247, 0.3)'` + `backgroundColor: 'rgba(168, 85, 247, 0.05)'`
+  - On leave: resets both to `none`/`transparent`
+  - Added `transition-all duration-200 ease-in-out` for smooth fade in/out
+  - Applied to every `<tbody>` row across all data tables on both dashboards
+  - Does not conflict with expandable row click behavior or action button hover states
 
 **⚠️ MANUAL ACTION REQUIRED (Tyler):** Run this SQL in Supabase SQL Editor to update the live column default:
 ```sql
