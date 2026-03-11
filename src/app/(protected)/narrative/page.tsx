@@ -100,7 +100,18 @@ export default function NarrativePage() {
       const data: NarrativeData = await res.json();
       setNarrative(data);
       setAnimateNarrative(true);
-      logActivity('generate', { story_type: state.storyType || undefined, output_preview: data.block_narrative.substring(0, 100) });
+      logActivity('generate', {
+        story_type: state.storyType || undefined,
+        output_preview: data.block_narrative.substring(0, 100),
+        metadata: {
+          narrative_preview: data.block_narrative.substring(0, 500),
+          vehicle_year: state.fieldValues['year'] || null,
+          vehicle_make: state.fieldValues['make'] || null,
+          vehicle_model: state.fieldValues['model'] || null,
+          ro_number: state.roNumber || null,
+          story_type: state.storyType || null,
+        },
+      });
     } catch {
       toast.error('Failed to generate narrative. Please try again.');
     } finally {
@@ -203,7 +214,18 @@ export default function NarrativePage() {
       setNarrative(data);
       setAnimateNarrative(true);
       resetCustomization();
-      logActivity('regenerate', { story_type: state.storyType || undefined });
+      logActivity('regenerate', {
+        story_type: state.storyType || undefined,
+        output_preview: data.block_narrative.substring(0, 100),
+        metadata: {
+          narrative_preview: data.block_narrative.substring(0, 500),
+          vehicle_year: state.fieldValues['year'] || null,
+          vehicle_make: state.fieldValues['make'] || null,
+          vehicle_model: state.fieldValues['model'] || null,
+          ro_number: state.roNumber || null,
+          story_type: state.storyType || null,
+        },
+      });
       toast.success('Story regenerated');
     } catch {
       toast.error('Failed to regenerate. Please try again.');
@@ -256,7 +278,18 @@ export default function NarrativePage() {
       setNarrative(data);
       setAnimateNarrative(true);
       setProofreadData(null);
-      logActivity('customize', { story_type: state.storyType || undefined });
+      logActivity('customize', {
+        story_type: state.storyType || undefined,
+        output_preview: data.block_narrative.substring(0, 100),
+        metadata: {
+          narrative_preview: data.block_narrative.substring(0, 500),
+          vehicle_year: state.fieldValues['year'] || null,
+          vehicle_make: state.fieldValues['make'] || null,
+          vehicle_model: state.fieldValues['model'] || null,
+          ro_number: state.roNumber || null,
+          story_type: state.storyType || null,
+        },
+      });
       toast.success('Customization applied');
     } catch {
       toast.error('Failed to customize narrative. Please try again.');
@@ -397,7 +430,17 @@ export default function NarrativePage() {
     dispatchActivity(0.5);
     try {
       await saveToDatabase();
-      logActivity('save', { story_type: state.storyType || undefined });
+      logActivity('save', {
+        story_type: state.storyType || undefined,
+        metadata: {
+          narrative_preview: state.narrative?.block_narrative.substring(0, 500) || null,
+          vehicle_year: state.fieldValues['year'] || null,
+          vehicle_make: state.fieldValues['make'] || null,
+          vehicle_model: state.fieldValues['model'] || null,
+          ro_number: state.roNumber || null,
+          story_type: state.storyType || null,
+        },
+      });
       toast.success('Story saved successfully');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';

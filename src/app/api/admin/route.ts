@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       case 'list_users': {
         const { data: users, error: usersError } = await svc
           .from('users')
-          .select('id, email, first_name, last_name, position, subscription_status, is_restricted, role, created_at')
+          .select('id, email, first_name, last_name, position, subscription_status, is_restricted, role, team_id, created_at')
           .order('created_at', { ascending: false });
 
         if (usersError) {
@@ -71,11 +71,22 @@ export async function POST(request: Request) {
           if (!lastActiveMap[a.user_id]) lastActiveMap[a.user_id] = a.created_at;
         });
 
+        // Get team names for mapping
+        const { data: allTeams } = await svc
+          .from('teams')
+          .select('id, name');
+
+        const teamNameMap: Record<string, string> = {};
+        (allTeams || []).forEach((t: { id: string; name: string }) => {
+          teamNameMap[t.id] = t.name;
+        });
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const enrichedUsers = (users || []).map((u: any) => ({
           ...u,
           narrative_count: countMap[u.id] || 0,
           last_active: lastActiveMap[u.id] || null,
+          team_name: u.team_id ? teamNameMap[u.team_id] || null : null,
         }));
 
         return NextResponse.json({ success: true, data: enrichedUsers });
@@ -269,6 +280,97 @@ export async function POST(request: Request) {
         }
 
         return NextResponse.json({ success: true });
+      }
+
+      case 'list_teams': {
+        const { data: teamsList, error: teamsError } = await svc
+          .from('teams')
+          .select('id, name, created_at')
+          .eq('is_active', true)
+          .order('name', { ascending: true });
+
+        if (teamsError) {
+          return NextResponse.json({ success: false, error: teamsError.message }, { status: 500 });
+        }
+
+        // Get member counts for each team
+        const { data: teamUsers } = await svc
+          .from('users')
+          .select('team_id');
+
+        const teamMemberCounts: Record<string, number> = {};
+        (teamUsers || []).forEach((u: { team_id: string | null }) => {
+          if (u.team_id) {
+            teamMemberCounts[u.team_id] = (teamMemberCounts[u.team_id] || 0) + 1;
+          }
+        });
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const enrichedTeams = (teamsList || []).map((t: any) => ({
+          ...t,
+          member_count: teamMemberCounts[t.id] || 0,
+        }));
+
+        return NextResponse.json({ success: true, data: enrichedTeams });
+      }
+
+      case 'assign_user': {
+        const { userId: assignUserId, teamId: assignTeamId } = params;
+        if (!assignUserId || !assignTeamId) {
+          return NextResponse.json({ success: false, error: 'userId and teamId are required' }, { status: 400 });
+        }
+
+        // Check if user is already on this team
+        const { data: currentUser } = await svc
+          .from('users')
+          .select('team_id')
+          .eq('id', assignUserId)
+          .single();
+
+        if (currentUser?.team_id === assignTeamId) {
+          return NextResponse.json({ success: false, error: 'User is already assigned to this team' }, { status: 409 });
+        }
+
+        // Update user's team_id
+        const { error: assignError } = await svc
+          .from('users')
+          .update({ team_id: assignTeamId })
+          .eq('id', assignUserId);
+
+        if (assignError) {
+          return NextResponse.json({ success: false, error: assignError.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true });
+      }
+
+      case 'create_team': {
+        const { name: teamName } = params;
+        if (!teamName?.trim()) {
+          return NextResponse.json({ success: false, error: 'Team name is required' }, { status: 400 });
+        }
+
+        // Generate a simple access code from team name
+        const accessCode = teamName.trim().toUpperCase().replace(/\s+/g, '-') + '-' + Date.now().toString(36).toUpperCase();
+
+        const { data: newTeam, error: createError } = await svc
+          .from('teams')
+          .insert({
+            name: teamName.trim(),
+            access_code: accessCode,
+            created_by: admin.userId,
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          if (createError.code === '23505') {
+            return NextResponse.json({ success: false, error: 'A team with this access code already exists' }, { status: 409 });
+          }
+          return NextResponse.json({ success: false, error: createError.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true, data: newTeam });
       }
 
       default:

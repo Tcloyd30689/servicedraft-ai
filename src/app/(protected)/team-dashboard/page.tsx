@@ -15,6 +15,7 @@ import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
+import ActivityDetailModal from '@/components/admin/ActivityDetailModal';
 
 // ─── Interfaces ──────────────────────────────────────────
 interface TeamInfo {
@@ -145,6 +146,7 @@ export default function TeamDashboardPage() {
   const [activitySearch, setActivitySearch] = useState('');
   const [activitySortAsc, setActivitySortAsc] = useState(false);
   const [activityExpandedRow, setActivityExpandedRow] = useState<string | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityRow | null>(null);
 
   // Title spotlight
   const titleRef = useRef<HTMLDivElement>(null);
@@ -1038,99 +1040,54 @@ export default function TeamDashboardPage() {
                       </thead>
                       <tbody>
                         {activityLogs.map((log) => (
-                          <AnimatePresence key={log.id}>
-                            <motion.tr
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              className="border-b border-[var(--accent-10)] transition-all duration-200 ease-in-out cursor-pointer text-sm"
-                              onClick={() => setActivityExpandedRow(activityExpandedRow === log.id ? null : log.id)}
-                              style={{
-                                borderLeft: `3px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}`,
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.boxShadow = '0 0 8px 1px rgba(168, 85, 247, 0.3)';
-                                e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.05)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.boxShadow = 'none';
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                              }}
-                            >
-                              <td className="py-3 pr-4 text-center text-[var(--text-secondary)] whitespace-nowrap">
-                                {formatDateReadable(log.created_at)}
-                              </td>
-                              <td className="py-3 pr-4 text-center text-[var(--text-primary)] font-medium">
-                                {log.user_name}
-                              </td>
-                              <td className="py-3 pr-4 text-center hidden md:table-cell">
-                                <span className="inline-block max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text-muted)]" title={log.user_email}>
-                                  {log.user_email}
-                                </span>
-                              </td>
-                              <td className="py-3 pr-4 text-center">
-                                <span
-                                  className="inline-block px-2.5 py-1 rounded-full text-sm font-medium"
-                                  style={{
-                                    background: `${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}20`,
-                                    color: ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-bright)',
-                                    border: `1px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}40`,
-                                  }}
-                                >
-                                  {formatActionLabel(log.action_type)}
-                                </span>
-                              </td>
-                              <td className="py-3 pr-4 text-center text-[var(--text-muted)] capitalize hidden lg:table-cell">
-                                {log.story_type?.replace(/_/g, ' ') || '\u2014'}
-                              </td>
-                              <td className="py-3 text-left text-[var(--text-muted)] max-w-[200px] truncate hidden lg:table-cell">
-                                {log.output_preview || '\u2014'}
-                              </td>
-                            </motion.tr>
-
-                            {activityExpandedRow === log.id && (
-                              <motion.tr
-                                key={`${log.id}-detail`}
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
+                          <motion.tr
+                            key={log.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="border-b border-[var(--accent-10)] transition-all duration-200 ease-in-out cursor-pointer text-sm"
+                            onClick={() => setSelectedActivity(log)}
+                            style={{
+                              borderLeft: `3px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}`,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.boxShadow = '0 0 8px 1px rgba(168, 85, 247, 0.3)';
+                              e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.05)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.boxShadow = 'none';
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
+                          >
+                            <td className="py-3 pr-4 text-center text-[var(--text-secondary)] whitespace-nowrap">
+                              {formatDateReadable(log.created_at)}
+                            </td>
+                            <td className="py-3 pr-4 text-center text-[var(--text-primary)] font-medium">
+                              {log.user_name}
+                            </td>
+                            <td className="py-3 pr-4 text-center hidden md:table-cell">
+                              <span className="inline-block max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text-muted)]" title={log.user_email}>
+                                {log.user_email}
+                              </span>
+                            </td>
+                            <td className="py-3 pr-4 text-center">
+                              <span
+                                className="inline-block px-2.5 py-1 rounded-full text-sm font-medium"
+                                style={{
+                                  background: `${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}20`,
+                                  color: ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-bright)',
+                                  border: `1px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}40`,
+                                }}
                               >
-                                <td colSpan={6} className="p-4 bg-[var(--bg-elevated)]">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                      <p className="text-[var(--text-muted)] text-sm uppercase mb-1">User ID</p>
-                                      <p className="text-[var(--text-secondary)] font-mono text-sm break-all">{log.user_id}</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Timestamp</p>
-                                      <p className="text-[var(--text-secondary)]">{new Date(log.created_at).toISOString()}</p>
-                                    </div>
-                                    {log.output_preview && (
-                                      <div className="md:col-span-2">
-                                        <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Output Preview</p>
-                                        <p className="text-[var(--text-secondary)] whitespace-pre-wrap">{log.output_preview}</p>
-                                      </div>
-                                    )}
-                                    {log.input_data && Object.keys(log.input_data).length > 0 && (
-                                      <div className="md:col-span-2">
-                                        <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Input Data</p>
-                                        <pre className="text-[var(--text-secondary)] text-sm bg-[var(--bg-input)] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
-                                          {JSON.stringify(log.input_data, null, 2)}
-                                        </pre>
-                                      </div>
-                                    )}
-                                    {log.metadata && Object.keys(log.metadata).length > 0 && (
-                                      <div className="md:col-span-2">
-                                        <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Metadata</p>
-                                        <pre className="text-[var(--text-secondary)] text-sm bg-[var(--bg-input)] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
-                                          {JSON.stringify(log.metadata, null, 2)}
-                                        </pre>
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                              </motion.tr>
-                            )}
-                          </AnimatePresence>
+                                {formatActionLabel(log.action_type)}
+                              </span>
+                            </td>
+                            <td className="py-3 pr-4 text-center text-[var(--text-muted)] capitalize hidden lg:table-cell">
+                              {log.story_type?.replace(/_/g, ' ') || '\u2014'}
+                            </td>
+                            <td className="py-3 text-left text-[var(--text-muted)] max-w-[200px] truncate hidden lg:table-cell">
+                              {log.output_preview || '\u2014'}
+                            </td>
+                          </motion.tr>
                         ))}
                       </tbody>
                     </table>
@@ -1168,6 +1125,14 @@ export default function TeamDashboardPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Activity Detail Modal */}
+        {selectedActivity && (
+          <ActivityDetailModal
+            activity={selectedActivity}
+            onClose={() => setSelectedActivity(null)}
+          />
+        )}
 
         {/* Promote/Demote Confirmation Modal */}
         <Modal

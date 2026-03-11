@@ -24,11 +24,11 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-10
-**Current Phase:** Stage 6 Sprint B — In Progress (Tasks 1-4 complete, Tasks 5-6 pending)
+**Current Phase:** Stage 6 Sprint B — COMPLETE (All 6 tasks done)
 **Hotfix (Post Sprint B Task 1):** COMPLETE — Fixed Gemini API Usage Tracker: corrected model name from gemini-2.0-flash to gemini-3-flash-preview across entire codebase, fixed pricing rates from $0.10/$0.40 to $0.50/$3.00 per 1M tokens (input/output), updated migration default, fixed Recharts tooltip type errors
 **Stage 6 Sprint B (Task 1):** COMPLETE — Gemini API Usage Tracker: modified Gemini client to return token usage metadata, created api_usage_log table migration, added server-side usage logger utility, instrumented all 6 API routes (generate, customize, proofread, apply-edits, update-narrative, convert-recommendation), built /api/admin/usage endpoint with aggregated stats, replaced Cost Calculator tab with live API Usage tab featuring summary cards, token/cost charts, action breakdown, and top users leaderboard
 **Stage 6 Sprint B (Tasks 2-4):** COMPLETE — Email column truncation with tooltip on hover, center alignment on all table headers/cells, glowing accent-colored row hover effect across all data tables on both dashboards
-**Stage 6 Sprint B (Tasks 5-6):** PENDING — Activity detail popup modal, owner team assignment
+**Stage 6 Sprint B (Tasks 5-6):** COMPLETE — Activity detail popup modal with full metadata display, owner team assignment with create team and assign user
 **Stage 4 Sprint 1:** COMPLETE — Font rendering fix, sidebar positioning, button relocation, template rename, access code update
 **Stage 4 Sprint 2:** COMPLETE — Clear form button, story type switching preservation, ProofreadResults render bug fix
 **Stage 4 Sprint 3:** COMPLETE — Refactored repair templates to save only 5 core repair fields (codes_present, diagnostics_performed, root_cause, repair_performed, repair_verification), removing vehicle info and non-core fields from save/display/edit flows
@@ -2892,6 +2892,37 @@ Applied table UI improvements across ALL data tables on both the Owner Dashboard
 ALTER TABLE api_usage_log ALTER COLUMN model_name SET DEFAULT 'gemini-3-flash-preview';
 ```
 The migration file has been updated for future deployments, but the existing database column default needs this manual update.
+
+---
+
+## STAGE 6 SPRINT B — TASKS 5-6: ACTIVITY DETAIL MODAL & TEAM ASSIGNMENT (2026-03-10)
+
+**Status:** COMPLETE (Tasks 5 and 6 of 6)
+
+- [x] **Task 5: Activity Detail Popup Modal** — **2026-03-10**
+  - Enhanced activity logging in `src/app/(protected)/narrative/page.tsx`: generate, regenerate, customize, and save actions now include metadata with narrative preview (first 500 chars), vehicle year/make/model, RO number, and story type
+  - Created `src/components/admin/ActivityDetailModal.tsx` — standalone modal component with Framer Motion animations (fade backdrop + scale modal)
+  - Modal content sections: action type badge (color-coded), timestamp (MM/DD/YYYY HH:MM AM/PM), user info (name + email), vehicle info, RO number, story type badge, narrative text in scrollable container, input data, and collapsible "View Raw Data" JSON section
+  - Gracefully handles entries with minimal metadata (e.g., login events show only action badge, timestamp, and user info)
+  - Close on X button, backdrop click, and Escape key (inherited from portal rendering)
+  - Wired to Owner Dashboard Activity Log tab: row click opens detail modal instead of inline expansion
+  - Wired to Team Dashboard Activity Log tab: same behavior — row click opens detail modal
+  - Both dashboards use the same shared ActivityDetailModal component
+
+- [x] **Task 6: Owner Ability to Assign Users to a Team** — **2026-03-10**
+  - Added `team_id` and `team_name` to AdminUser interface and list_users API response
+  - Admin API `list_users` now joins with teams table to return team_name for each user
+  - Added "Team" column to Owner Dashboard User Management table (after Last Activity, before Actions, hidden on small screens)
+  - Shows team name with truncation (max-w-[150px]) and title tooltip, or "—" if unassigned
+  - Added "Assign to Team" action button (Users icon, accent-colored) in the Actions column for each non-protected user
+  - Assign to Team modal: shows current team assignment note, dropdown of all available teams with member counts, Assign/Cancel buttons, disabled when same team selected
+  - Added "CREATE TEAM" button in User Management tab header area (Plus icon, outline/secondary style)
+  - Create Team modal: team name input field with Enter key submit, Create/Cancel buttons
+  - Added `list_teams` action to admin API: returns all active teams with member counts, owner-only
+  - Added `assign_user` action to admin API: updates user's team_id, handles already-assigned check, owner-only
+  - Added `create_team` action to admin API: creates team with auto-generated access code, owner-only
+  - User Management table Team column updates immediately after successful assignment
+  - Newly created teams available immediately in Assign to Team dropdown via refetch
 
 ---
 

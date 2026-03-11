@@ -26,6 +26,7 @@ import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
+import ActivityDetailModal from '@/components/admin/ActivityDetailModal';
 // TokenCalculator removed — replaced by live API Usage tracker
 
 // ─── Protected user — cannot be deleted or restricted ────────
@@ -87,6 +88,14 @@ interface AdminUser {
   created_at: string;
   narrative_count: number;
   last_active: string | null;
+  team_id: string | null;
+  team_name: string | null;
+}
+
+interface TeamOption {
+  id: string;
+  name: string;
+  member_count: number;
 }
 
 interface UserDetailData {
@@ -194,6 +203,7 @@ export default function AdminPage() {
   const [filterAction, setFilterAction] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityRow | null>(null);
 
   // User management state
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -207,6 +217,16 @@ export default function AdminPage() {
   const [restrictTarget, setRestrictTarget] = useState<{ id: string; name: string; restricted: boolean } | null>(null);
   const [promoteTarget, setPromoteTarget] = useState<{ id: string; name: string; currentRole: string } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Team assignment state
+  const [assignTarget, setAssignTarget] = useState<{ id: string; name: string; currentTeamName: string | null; currentTeamId: string | null } | null>(null);
+  const [teamOptions, setTeamOptions] = useState<TeamOption[]>([]);
+  const [teamOptionsLoading, setTeamOptionsLoading] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState('');
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
+  const [createTeamName, setCreateTeamName] = useState('');
+  const [createTeamLoading, setCreateTeamLoading] = useState(false);
 
   // Analytics / Overview state
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
@@ -562,6 +582,83 @@ export default function AdminPage() {
       toast.error('Failed to update subscription');
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  // ─── Team Assignment ────────────────────────────────────────
+  const fetchTeamOptions = useCallback(async () => {
+    setTeamOptionsLoading(true);
+    try {
+      const json = await adminAction('list_teams', {});
+      if (json.success) {
+        setTeamOptions(json.data || []);
+      }
+    } catch {
+      console.error('Failed to fetch team options');
+    } finally {
+      setTeamOptionsLoading(false);
+    }
+  }, []);
+
+  const handleOpenAssignModal = (user: AdminUser) => {
+    const userName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'No name';
+    setAssignTarget({
+      id: user.id,
+      name: userName,
+      currentTeamName: user.team_name,
+      currentTeamId: user.team_id,
+    });
+    setSelectedTeamId(user.team_id || '');
+    fetchTeamOptions();
+  };
+
+  const handleAssignUser = async () => {
+    if (!assignTarget || !selectedTeamId) return;
+    setAssignLoading(true);
+    try {
+      const json = await adminAction('assign_user', {
+        userId: assignTarget.id,
+        teamId: selectedTeamId,
+      });
+      if (json.success) {
+        const teamName = teamOptions.find((t) => t.id === selectedTeamId)?.name || 'team';
+        toast.success(`${assignTarget.name} assigned to ${teamName}`);
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === assignTarget.id
+              ? { ...u, team_id: selectedTeamId, team_name: teamName }
+              : u,
+          ),
+        );
+        setAssignTarget(null);
+      } else {
+        toast.error(json.error || 'Failed to assign user');
+      }
+    } catch {
+      toast.error('Failed to assign user');
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
+  const handleCreateTeamQuick = async () => {
+    if (!createTeamName.trim()) return;
+    setCreateTeamLoading(true);
+    try {
+      const json = await adminAction('create_team', { name: createTeamName.trim() });
+      if (json.success) {
+        toast.success(`Team '${createTeamName.trim()}' created successfully`);
+        setCreateTeamName('');
+        setShowCreateTeamModal(false);
+        // Refresh team options if assign modal is open
+        fetchTeamOptions();
+      } else {
+        toast.error(json.error || 'Failed to create team');
+      }
+    } catch {
+      toast.error('Failed to create team');
+    } finally {
+      setCreateTeamLoading(false);
     }
   };
 
@@ -1354,99 +1451,54 @@ export default function AdminPage() {
                       </thead>
                       <tbody>
                         {logs.map((log) => (
-                          <AnimatePresence key={log.id}>
-                            <motion.tr
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              className="border-b border-[var(--accent-10)] transition-all duration-200 ease-in-out cursor-pointer text-sm"
-                              onClick={() => setExpandedRow(expandedRow === log.id ? null : log.id)}
-                              style={{
-                                borderLeft: `3px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}`,
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.boxShadow = '0 0 8px 1px rgba(168, 85, 247, 0.3)';
-                                e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.05)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.boxShadow = 'none';
-                                e.currentTarget.style.backgroundColor = 'transparent';
-                              }}
-                            >
-                              <td className="py-3 pr-4 text-center text-[var(--text-secondary)] whitespace-nowrap">
-                                {formatDateReadable(log.created_at)}
-                              </td>
-                              <td className="py-3 pr-4 text-center text-[var(--text-primary)] font-medium">
-                                {log.user_name}
-                              </td>
-                              <td className="py-3 pr-4 text-center hidden md:table-cell">
-                                <span className="inline-block max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text-muted)]" title={log.user_email}>
-                                  {log.user_email}
-                                </span>
-                              </td>
-                              <td className="py-3 pr-4 text-center">
-                                <span
-                                  className="inline-block px-2.5 py-1 rounded-full text-sm font-medium"
-                                  style={{
-                                    background: `${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}20`,
-                                    color: ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-bright)',
-                                    border: `1px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}40`,
-                                  }}
-                                >
-                                  {formatActionLabel(log.action_type)}
-                                </span>
-                              </td>
-                              <td className="py-3 pr-4 text-center text-[var(--text-muted)] capitalize hidden lg:table-cell">
-                                {log.story_type?.replace(/_/g, ' ') || '—'}
-                              </td>
-                              <td className="py-3 text-left text-[var(--text-muted)] max-w-[200px] truncate hidden lg:table-cell">
-                                {log.output_preview || '—'}
-                              </td>
-                            </motion.tr>
-
-                            {expandedRow === log.id && (
-                              <motion.tr
-                                key={`${log.id}-detail`}
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
+                          <motion.tr
+                            key={log.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="border-b border-[var(--accent-10)] transition-all duration-200 ease-in-out cursor-pointer text-sm"
+                            onClick={() => setSelectedActivity(log)}
+                            style={{
+                              borderLeft: `3px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}`,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.boxShadow = '0 0 8px 1px rgba(168, 85, 247, 0.3)';
+                              e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.05)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.boxShadow = 'none';
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
+                          >
+                            <td className="py-3 pr-4 text-center text-[var(--text-secondary)] whitespace-nowrap">
+                              {formatDateReadable(log.created_at)}
+                            </td>
+                            <td className="py-3 pr-4 text-center text-[var(--text-primary)] font-medium">
+                              {log.user_name}
+                            </td>
+                            <td className="py-3 pr-4 text-center hidden md:table-cell">
+                              <span className="inline-block max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text-muted)]" title={log.user_email}>
+                                {log.user_email}
+                              </span>
+                            </td>
+                            <td className="py-3 pr-4 text-center">
+                              <span
+                                className="inline-block px-2.5 py-1 rounded-full text-sm font-medium"
+                                style={{
+                                  background: `${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}20`,
+                                  color: ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-bright)',
+                                  border: `1px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}40`,
+                                }}
                               >
-                                <td colSpan={6} className="p-4 bg-[var(--bg-elevated)]">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                      <p className="text-[var(--text-muted)] text-sm uppercase mb-1">User ID</p>
-                                      <p className="text-[var(--text-secondary)] font-mono text-sm break-all">{log.user_id}</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Timestamp</p>
-                                      <p className="text-[var(--text-secondary)]">{new Date(log.created_at).toISOString()}</p>
-                                    </div>
-                                    {log.output_preview && (
-                                      <div className="md:col-span-2">
-                                        <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Output Preview</p>
-                                        <p className="text-[var(--text-secondary)] whitespace-pre-wrap">{log.output_preview}</p>
-                                      </div>
-                                    )}
-                                    {log.input_data && Object.keys(log.input_data).length > 0 && (
-                                      <div className="md:col-span-2">
-                                        <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Input Data</p>
-                                        <pre className="text-[var(--text-secondary)] text-sm bg-[var(--bg-input)] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
-                                          {JSON.stringify(log.input_data, null, 2)}
-                                        </pre>
-                                      </div>
-                                    )}
-                                    {log.metadata && Object.keys(log.metadata).length > 0 && (
-                                      <div className="md:col-span-2">
-                                        <p className="text-[var(--text-muted)] text-sm uppercase mb-1">Metadata</p>
-                                        <pre className="text-[var(--text-secondary)] text-sm bg-[var(--bg-input)] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
-                                          {JSON.stringify(log.metadata, null, 2)}
-                                        </pre>
-                                      </div>
-                                    )}
-                                  </div>
-                                </td>
-                              </motion.tr>
-                            )}
-                          </AnimatePresence>
+                                {formatActionLabel(log.action_type)}
+                              </span>
+                            </td>
+                            <td className="py-3 pr-4 text-center text-[var(--text-muted)] capitalize hidden lg:table-cell">
+                              {log.story_type?.replace(/_/g, ' ') || '—'}
+                            </td>
+                            <td className="py-3 text-left text-[var(--text-muted)] max-w-[200px] truncate hidden lg:table-cell">
+                              {log.output_preview || '—'}
+                            </td>
+                          </motion.tr>
                         ))}
                       </tbody>
                     </table>
@@ -1567,7 +1619,14 @@ export default function AdminPage() {
                       {userSortAsc ? 'A→Z' : 'Z→A'}
                     </button>
                   </div>
-                  <div className="ml-auto">
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      onClick={() => setShowCreateTeamModal(true)}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-[var(--accent-border)] text-[var(--text-secondary)] hover:border-[var(--accent-hover)] hover:text-[var(--accent-bright)] bg-[var(--bg-input)] transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      <Plus size={14} />
+                      CREATE TEAM
+                    </button>
                     <Button variant="ghost" size="small" onClick={fetchUsers} disabled={usersLoading}>
                       <RefreshCw size={16} className={usersLoading ? 'animate-spin' : ''} />
                       Refresh
@@ -1617,6 +1676,7 @@ export default function AdminPage() {
                               </span>
                             </th>
                           ))}
+                          <th className="pb-3 pr-3 text-center whitespace-nowrap hidden lg:table-cell">Team</th>
                           <th className="pb-3 text-center whitespace-nowrap">Actions</th>
                         </tr>
                       </thead>
@@ -1689,6 +1749,15 @@ export default function AdminPage() {
                                     );
                                   })() : '—'}
                                 </td>
+                                <td className="py-3 pr-3 text-center whitespace-nowrap hidden lg:table-cell">
+                                  {user.team_name ? (
+                                    <span className="inline-block max-w-[150px] overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text-secondary)]" title={user.team_name}>
+                                      {user.team_name}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[var(--text-muted)]">—</span>
+                                  )}
+                                </td>
                                 <td className="py-3 text-center" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center justify-center gap-2">
                                     {isProtected ? (
@@ -1740,6 +1809,16 @@ export default function AdminPage() {
                                           <UserCog size={20} />
                                         </button>
 
+                                        {/* Assign to Team */}
+                                        <button
+                                          onClick={() => handleOpenAssignModal(user)}
+                                          className="p-2.5 rounded-lg hover:bg-[var(--accent-15)] text-[var(--text-muted)] hover:text-[var(--accent-bright)] transition-all cursor-pointer"
+                                          title="Assign to Team"
+                                          style={{ color: 'var(--accent-bright)' }}
+                                        >
+                                          <UsersIcon size={20} />
+                                        </button>
+
                                         {/* Subscription Change */}
                                         <select
                                           value={user.subscription_status}
@@ -1783,7 +1862,7 @@ export default function AdminPage() {
                                   animate={{ opacity: 1, height: 'auto' }}
                                   exit={{ opacity: 0, height: 0 }}
                                 >
-                                  <td colSpan={10} className="p-4 bg-[var(--bg-elevated)]">
+                                  <td colSpan={11} className="p-4 bg-[var(--bg-elevated)]">
                                     {!details ? (
                                       <LoadingSpinner size="small" message="Loading details..." />
                                     ) : (
@@ -3128,6 +3207,129 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+        </Modal>
+
+        {/* Activity Detail Modal */}
+        {selectedActivity && (
+          <ActivityDetailModal
+            activity={selectedActivity}
+            onClose={() => setSelectedActivity(null)}
+          />
+        )}
+
+        {/* Assign to Team Modal */}
+        <Modal
+          isOpen={!!assignTarget}
+          onClose={() => setAssignTarget(null)}
+          title={`Assign ${assignTarget?.name || 'User'} to Team`}
+          width="max-w-[480px]"
+        >
+          {assignTarget?.currentTeamName && (
+            <div className="mb-4 p-3 rounded-lg bg-[var(--accent-10)] border border-[var(--accent-15)]">
+              <p className="text-sm text-[var(--text-secondary)]">
+                Currently assigned to: <strong className="text-[var(--accent-bright)]">{assignTarget.currentTeamName}</strong>
+              </p>
+            </div>
+          )}
+
+          {teamOptionsLoading ? (
+            <div className="py-6">
+              <LoadingSpinner size="medium" message="Loading teams..." />
+            </div>
+          ) : teamOptions.length === 0 ? (
+            <div className="text-center py-6">
+              <p className="text-[var(--text-muted)] text-sm mb-3">No teams available. Create a team first.</p>
+              <Button
+                variant="primary"
+                size="small"
+                onClick={() => {
+                  setAssignTarget(null);
+                  setShowCreateTeamModal(true);
+                }}
+              >
+                <Plus size={14} />
+                Create Team
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="mb-5">
+                <label className="block text-sm text-[var(--text-muted)] mb-1.5">Select Team</label>
+                <select
+                  value={selectedTeamId}
+                  onChange={(e) => setSelectedTeamId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] text-sm cursor-pointer focus:outline-none focus:border-[var(--accent-hover)] transition-all"
+                >
+                  <option value="">— Select a team —</option>
+                  {teamOptions.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.member_count} {t.member_count === 1 ? 'member' : 'members'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <Button variant="ghost" size="small" onClick={() => setAssignTarget(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  size="small"
+                  onClick={handleAssignUser}
+                  disabled={!selectedTeamId || selectedTeamId === assignTarget?.currentTeamId || assignLoading}
+                >
+                  {assignLoading ? 'Assigning...' : 'Assign'}
+                </Button>
+              </div>
+            </>
+          )}
+        </Modal>
+
+        {/* Create Team Modal (User Management) */}
+        <Modal
+          isOpen={showCreateTeamModal}
+          onClose={() => {
+            setShowCreateTeamModal(false);
+            setCreateTeamName('');
+          }}
+          title="Create New Team"
+          width="max-w-[420px]"
+        >
+          <div className="mb-5">
+            <label className="block text-sm text-[var(--text-muted)] mb-1.5">Team Name</label>
+            <input
+              type="text"
+              value={createTeamName}
+              onChange={(e) => setCreateTeamName(e.target.value)}
+              placeholder="Enter team name..."
+              className="w-full px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && createTeamName.trim()) handleCreateTeamQuick();
+              }}
+              autoFocus
+            />
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="ghost"
+              size="small"
+              onClick={() => {
+                setShowCreateTeamModal(false);
+                setCreateTeamName('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="small"
+              onClick={handleCreateTeamQuick}
+              disabled={!createTeamName.trim() || createTeamLoading}
+            >
+              {createTeamLoading ? 'Creating...' : 'Create'}
+            </Button>
+          </div>
         </Modal>
 
         {/* View Team Members Modal */}
