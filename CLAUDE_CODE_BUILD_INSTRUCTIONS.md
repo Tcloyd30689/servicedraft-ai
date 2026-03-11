@@ -6,16 +6,17 @@ This is the master instruction set for Claude Code when working on the ServiceDr
 
 The initial build (Phases 0–10) is complete. All post-build improvement sprints through Stage 6 Sprint B are complete. The pre-deployment security audit is complete. The app is deployed and live at `servicedraft.ai`. This document now serves as the **architecture reference, coding standards guide, and sprint execution playbook** for ongoing maintenance, bug fixes, and new feature development.
 
-**CRITICAL: Before starting any work, ALWAYS read `BUILD_PROGRESS_TRACKER.md` first to see what has been completed and what the next task is.**
+**IMPORTANT: Do NOT read `BUILD_PROGRESS_TRACKER.md` at the start of a session — it is a large file and wastes significant context window tokens. The sprint prompt you receive will contain all the context you need for the current task. Only WRITE to the tracker when your work is complete (see "When completing a task" below).**
 
 ---
 
 ## HOW TO USE THIS DOCUMENT
 
 1. **At the start of every session:**
-   - Read `BUILD_PROGRESS_TRACKER.md` to identify the next incomplete task
-   - Read the corresponding sections in THIS document for detailed instructions
+   - Read the sprint prompt provided by the user — it contains everything you need to know about the current task
+   - Read the corresponding sections in THIS document for architecture rules, coding standards, and implementation details
    - Read any referenced project knowledge files as needed
+   - Do NOT read `BUILD_PROGRESS_TRACKER.md` — it is write-only during sprints to save tokens
 
 2. **When completing a task:**
    - Implement the task as described
