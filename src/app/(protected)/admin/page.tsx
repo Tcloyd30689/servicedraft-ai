@@ -21,12 +21,12 @@ import {
 } from 'recharts';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { createClient } from '@/lib/supabase/client';
+// createClient removed — tracker data now fetched via admin API POST
 import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
-import ActivityDetailModal from '@/components/admin/ActivityDetailModal';
+import ActivityDetailModal from '@/components/dashboard/ActivityDetailModal';
 // TokenCalculator removed — replaced by live API Usage tracker
 
 // ─── Protected user — cannot be deleted or restricted ────────
@@ -34,18 +34,13 @@ const PROTECTED_EMAIL = 'hvcadip@gmail.com';
 
 type TabKey = 'overview' | 'activity' | 'users' | 'analytics' | 'usage' | 'teams' | 'settings';
 
-const ACTION_FILTERS = [
+const TRACKER_FILTERS = [
   { value: 'all', label: 'All Actions' },
-  { value: 'generate', label: 'Generate' },
-  { value: 'regenerate', label: 'Regenerate' },
-  { value: 'save', label: 'Save' },
-  { value: 'export_copy', label: 'Export (Copy)' },
-  { value: 'export_print', label: 'Export (Print)' },
-  { value: 'export_pdf', label: 'Export (PDF)' },
-  { value: 'export_docx', label: 'Export (DOCX)' },
-  { value: 'login', label: 'Login' },
-  { value: 'customize', label: 'Customize' },
+  { value: 'regenerated', label: 'Regenerated' },
+  { value: 'customized', label: 'Customized' },
   { value: 'proofread', label: 'Proofread' },
+  { value: 'saved', label: 'Saved' },
+  { value: 'exported', label: 'Exported' },
 ];
 
 const ACTION_BORDER_COLORS: Record<string, string> = {
@@ -61,18 +56,37 @@ const ACTION_BORDER_COLORS: Record<string, string> = {
   proofread: '#f59e0b',
 };
 
-interface ActivityRow {
+interface TrackerEntry {
   id: string;
   user_id: string;
-  action_type: string;
+  ro_number: string | null;
+  vehicle_year: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
   story_type: string | null;
-  input_data: Record<string, unknown> | null;
-  output_preview: string | null;
-  metadata: Record<string, unknown>;
   created_at: string;
-  user_name: string;
+  last_action_at: string;
+  is_regenerated: boolean;
+  is_customized: boolean;
+  is_proofread: boolean;
+  is_saved: boolean;
+  is_exported: boolean;
+  export_type: string | null;
+  user_first_name: string | null;
+  user_last_name: string | null;
   user_email: string;
 }
+
+const TRACKER_PILL_COLORS: Record<string, string> = {
+  regenerated: '#f59e0b',
+  customized: '#8b5cf6',
+  proofread: '#06b6d4',
+  saved: '#22c55e',
+  pdf: '#ef4444',
+  copy: '#64748b',
+  print: '#64748b',
+  docx: '#3b82f6',
+};
 
 const PAGE_SIZE = 25;
 
@@ -194,16 +208,15 @@ export default function AdminPage() {
   const { profile, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
-  // Activity log state
-  const [logs, setLogs] = useState<ActivityRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [totalCount, setTotalCount] = useState(0);
-  const [page, setPage] = useState(1);
-  const [sortAsc, setSortAsc] = useState(false);
-  const [filterAction, setFilterAction] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [selectedActivity, setSelectedActivity] = useState<ActivityRow | null>(null);
+  // Tracker (Activity Log) state
+  const [trackerEntries, setTrackerEntries] = useState<TrackerEntry[]>([]);
+  const [trackerLoading, setTrackerLoading] = useState(false);
+  const [trackerTotalCount, setTrackerTotalCount] = useState(0);
+  const [trackerPage, setTrackerPage] = useState(1);
+  const [trackerSearch, setTrackerSearch] = useState('');
+  const [trackerFilter, setTrackerFilter] = useState('all');
+  const [selectedTrackerId, setSelectedTrackerId] = useState<string | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   // User management state
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -298,106 +311,53 @@ export default function AdminPage() {
     }
   }, [authLoading, profile, router]);
 
-  // ─── Activity Log ──────────────────────────────────────────
-  const fetchLogs = useCallback(async () => {
-    setLoading(true);
+  // ─── Activity Log (Tracker) ────────────────────────────────
+  const fetchTrackerEntries = useCallback(async () => {
+    setTrackerLoading(true);
     try {
-      const supabase = createClient();
-      const from = (page - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
+      const offset = (trackerPage - 1) * PAGE_SIZE;
+      const response = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'list_tracker_entries',
+          limit: PAGE_SIZE,
+          offset,
+          search: trackerSearch.trim() || undefined,
+          filter: trackerFilter,
+        }),
+      });
 
-      let query = supabase
-        .from('activity_log')
-        .select(`
-          id,
-          user_id,
-          action_type,
-          story_type,
-          input_data,
-          output_preview,
-          metadata,
-          created_at,
-          users!activity_log_user_id_fkey (
-            first_name,
-            last_name,
-            email
-          )
-        `, { count: 'exact' });
-
-      if (filterAction !== 'all') {
-        query = query.eq('action_type', filterAction);
-      }
-
-      if (searchQuery.trim()) {
-        const { data: matchingUsers } = await supabase
-          .from('users')
-          .select('id')
-          .or(`email.ilike.%${searchQuery.trim()}%,first_name.ilike.%${searchQuery.trim()}%,last_name.ilike.%${searchQuery.trim()}%`);
-
-        if (matchingUsers && matchingUsers.length > 0) {
-          const userIds = matchingUsers.map((u: { id: string }) => u.id);
-          query = query.in('user_id', userIds);
-        } else {
-          // No matching users found — return empty results
-          setLogs([]);
-          setTotalCount(0);
-          setLoading(false);
-          return;
-        }
-      }
-
-      query = query
-        .order('created_at', { ascending: sortAsc })
-        .range(from, to);
-
-      const { data, count, error } = await query;
-
-      if (error) {
-        console.error('Failed to fetch activity logs:', error.message);
-        setLogs([]);
-        setTotalCount(0);
+      if (!response.ok) {
+        console.error('Failed to fetch tracker entries');
+        setTrackerEntries([]);
+        setTrackerTotalCount(0);
         return;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const mapped: ActivityRow[] = (data || []).map((row: any) => {
-        const user = row.users;
-        return {
-          id: row.id,
-          user_id: row.user_id,
-          action_type: row.action_type,
-          story_type: row.story_type,
-          input_data: row.input_data,
-          output_preview: row.output_preview,
-          metadata: row.metadata || {},
-          created_at: row.created_at,
-          user_name: user
-            ? [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Unknown'
-            : 'Unknown',
-          user_email: user?.email || 'N/A',
-        };
-      });
-
-      setLogs(mapped);
-      setTotalCount(count ?? 0);
+      const result = await response.json();
+      setTrackerEntries(result.data || []);
+      setTrackerTotalCount(result.total ?? 0);
     } catch (err) {
-      console.error('Activity log fetch error:', err);
+      console.error('Tracker fetch error:', err);
+      setTrackerEntries([]);
+      setTrackerTotalCount(0);
     } finally {
-      setLoading(false);
+      setTrackerLoading(false);
     }
-  }, [page, sortAsc, filterAction, searchQuery]);
+  }, [trackerPage, trackerSearch, trackerFilter]);
 
   useEffect(() => {
     if (activeTab === 'activity' && profile?.role === 'owner') {
-      fetchLogs();
+      fetchTrackerEntries();
     }
-  }, [activeTab, profile, fetchLogs]);
+  }, [activeTab, profile, fetchTrackerEntries]);
 
   useEffect(() => {
-    setPage(1);
-  }, [filterAction, searchQuery]);
+    setTrackerPage(1);
+  }, [trackerFilter, trackerSearch]);
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const trackerTotalPages = Math.max(1, Math.ceil(trackerTotalCount / PAGE_SIZE));
 
   const formatActionLabel = (action: string) => {
     return action
@@ -1393,138 +1353,175 @@ export default function AdminPage() {
                     <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                     <input
                       type="text"
-                      placeholder="Search by name or email..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search by RO# or user name..."
+                      value={trackerSearch}
+                      onChange={(e) => setTrackerSearch(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
                     />
                   </div>
                   <select
-                    value={filterAction}
-                    onChange={(e) => setFilterAction(e.target.value)}
+                    value={trackerFilter}
+                    onChange={(e) => setTrackerFilter(e.target.value)}
                     className="px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] text-sm cursor-pointer focus:outline-none focus:border-[var(--accent-hover)] appearance-none transition-all"
                   >
-                    {ACTION_FILTERS.map((f) => (
+                    {TRACKER_FILTERS.map((f) => (
                       <option key={f.value} value={f.value}>{f.label}</option>
                     ))}
                   </select>
                   <button
-                    onClick={() => setSortAsc(!sortAsc)}
-                    className="flex items-center gap-1.5 px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-secondary)] text-sm hover:border-[var(--accent-hover)] transition-all cursor-pointer whitespace-nowrap"
-                  >
-                    {sortAsc ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    {sortAsc ? 'Oldest First' : 'Newest First'}
-                  </button>
-                  <button
-                    onClick={fetchLogs}
-                    disabled={loading}
+                    onClick={fetchTrackerEntries}
+                    disabled={trackerLoading}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:text-[var(--accent-bright)] hover:bg-[var(--accent-10)] transition-all cursor-pointer disabled:opacity-50"
                     title="Refresh activity log"
                   >
-                    <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                    <RefreshCw size={16} className={trackerLoading ? 'animate-spin' : ''} />
                     Refresh
                   </button>
                 </div>
 
                 <p className="text-sm text-[var(--text-muted)] mb-3">
-                  {totalCount} {totalCount === 1 ? 'entry' : 'entries'} found
+                  {trackerTotalCount} {trackerTotalCount === 1 ? 'entry' : 'entries'} found
                 </p>
 
-                {loading ? (
+                {trackerLoading ? (
                   <div className="py-12">
-                    <LoadingSpinner size="medium" message="Loading activity logs..." />
+                    <LoadingSpinner size="medium" message="Loading narrative tracker..." />
                   </div>
-                ) : logs.length === 0 ? (
-                  <p className="text-center text-[var(--text-muted)] py-12 text-base">No activity logs found.</p>
+                ) : trackerEntries.length === 0 ? (
+                  <p className="text-center text-[var(--text-muted)] py-12 text-base">No tracker entries found.</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="text-center text-[var(--text-muted)] text-sm uppercase tracking-wider border-b border-[var(--accent-15)]">
-                          <th className="pb-3 pr-4 text-center">Date/Time</th>
                           <th className="pb-3 pr-4 text-center">User</th>
-                          <th className="pb-3 pr-4 text-center hidden md:table-cell">Email</th>
-                          <th className="pb-3 pr-4 text-center">Action</th>
+                          <th className="pb-3 pr-4 text-center">R.O. #</th>
+                          <th className="pb-3 pr-4 text-center hidden md:table-cell">Vehicle</th>
                           <th className="pb-3 pr-4 text-center hidden lg:table-cell">Story Type</th>
-                          <th className="pb-3 text-left hidden lg:table-cell">Preview</th>
+                          <th className="pb-3 pr-4 text-center">Actions</th>
+                          <th className="pb-3 text-center">Last Activity</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {logs.map((log) => (
-                          <motion.tr
-                            key={log.id}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="border-b border-[var(--accent-10)] transition-all duration-200 ease-in-out cursor-pointer text-sm"
-                            onClick={() => setSelectedActivity(log)}
-                            style={{
-                              borderLeft: `3px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}`,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.boxShadow = '0 0 8px 1px rgba(168, 85, 247, 0.3)';
-                              e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.05)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.boxShadow = 'none';
-                              e.currentTarget.style.backgroundColor = 'transparent';
-                            }}
-                          >
-                            <td className="py-3 pr-4 text-center text-[var(--text-secondary)] whitespace-nowrap">
-                              {formatDateReadable(log.created_at)}
-                            </td>
-                            <td className="py-3 pr-4 text-center text-[var(--text-primary)] font-medium">
-                              {log.user_name}
-                            </td>
-                            <td className="py-3 pr-4 text-center hidden md:table-cell">
-                              <span className="inline-block max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text-muted)]" title={log.user_email}>
-                                {log.user_email}
-                              </span>
-                            </td>
-                            <td className="py-3 pr-4 text-center">
-                              <span
-                                className="inline-block px-2.5 py-1 rounded-full text-sm font-medium"
-                                style={{
-                                  background: `${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}20`,
-                                  color: ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-bright)',
-                                  border: `1px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}40`,
-                                }}
-                              >
-                                {formatActionLabel(log.action_type)}
-                              </span>
-                            </td>
-                            <td className="py-3 pr-4 text-center text-[var(--text-muted)] capitalize hidden lg:table-cell">
-                              {log.story_type?.replace(/_/g, ' ') || '—'}
-                            </td>
-                            <td className="py-3 text-left text-[var(--text-muted)] max-w-[200px] truncate hidden lg:table-cell">
-                              {log.output_preview || '—'}
-                            </td>
-                          </motion.tr>
-                        ))}
+                        {trackerEntries.map((entry) => {
+                          const userName = [entry.user_first_name, entry.user_last_name].filter(Boolean).join(' ') || 'Unknown';
+                          const vehicle = [entry.vehicle_year, entry.vehicle_make, entry.vehicle_model].filter(Boolean).join(' ') || '—';
+                          const storyLabel = entry.story_type === 'diagnostic_only' ? 'Diagnostic Only' : entry.story_type === 'repair_complete' ? 'Repair Complete' : '—';
+                          const borderColor = entry.story_type === 'repair_complete' ? '#22c55e' : 'var(--accent-primary)';
+                          const lastAct = entry.last_action_at ? formatDateTimeStacked(entry.last_action_at) : null;
+
+                          // Build action pills
+                          const pills: Array<{ label: string; color: string }> = [];
+                          if (entry.is_regenerated) pills.push({ label: 'Regen', color: TRACKER_PILL_COLORS.regenerated });
+                          if (entry.is_customized) pills.push({ label: 'Custom', color: TRACKER_PILL_COLORS.customized });
+                          if (entry.is_proofread) pills.push({ label: 'Proofread', color: TRACKER_PILL_COLORS.proofread });
+                          if (entry.is_saved) pills.push({ label: 'Saved', color: TRACKER_PILL_COLORS.saved });
+                          if (entry.is_exported && entry.export_type) {
+                            const etLabel = entry.export_type.toUpperCase();
+                            const etColor = TRACKER_PILL_COLORS[entry.export_type] || '#64748b';
+                            pills.push({ label: etLabel, color: etColor });
+                          }
+
+                          return (
+                            <motion.tr
+                              key={entry.id}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="border-b border-[var(--accent-10)] transition-all duration-200 ease-in-out cursor-pointer text-sm"
+                              onClick={() => {
+                                setSelectedTrackerId(entry.id);
+                                setShowDetailModal(true);
+                              }}
+                              style={{
+                                borderLeft: `3px solid ${borderColor}`,
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.boxShadow = '0 0 8px 1px rgba(168, 85, 247, 0.3)';
+                                e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.05)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.boxShadow = 'none';
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                              }}
+                            >
+                              <td className="py-3 pr-4 text-center text-[var(--text-primary)] font-medium">
+                                {userName}
+                              </td>
+                              <td className="py-3 pr-4 text-center text-[var(--text-secondary)] font-mono">
+                                {entry.ro_number || '—'}
+                              </td>
+                              <td className="py-3 pr-4 text-center text-[var(--text-muted)] hidden md:table-cell">
+                                {vehicle}
+                              </td>
+                              <td className="py-3 pr-4 text-center hidden lg:table-cell">
+                                {entry.story_type ? (
+                                  <span
+                                    className="inline-block px-2 py-0.5 rounded-full text-xs font-medium"
+                                    style={{
+                                      backgroundColor: entry.story_type === 'repair_complete'
+                                        ? 'rgba(34,197,94,0.15)'
+                                        : 'color-mix(in srgb, var(--accent-primary) 15%, transparent)',
+                                      color: entry.story_type === 'repair_complete' ? '#22c55e' : 'var(--accent-bright)',
+                                      border: `1px solid ${entry.story_type === 'repair_complete' ? 'rgba(34,197,94,0.3)' : 'var(--accent-30)'}`,
+                                    }}
+                                  >
+                                    {storyLabel}
+                                  </span>
+                                ) : '—'}
+                              </td>
+                              <td className="py-3 pr-4 text-center">
+                                <div className="flex flex-wrap justify-center gap-1">
+                                  {pills.map((pill, i) => (
+                                    <span
+                                      key={i}
+                                      className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                                      style={{
+                                        backgroundColor: `color-mix(in srgb, ${pill.color} 15%, transparent)`,
+                                        color: pill.color,
+                                        border: `1px solid ${pill.color}`,
+                                      }}
+                                    >
+                                      {pill.label}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="py-3 text-center">
+                                {lastAct ? (
+                                  <div>
+                                    <p className="text-[var(--text-secondary)] text-sm">{lastAct.date}</p>
+                                    <p className="text-[var(--text-muted)] text-xs">{lastAct.time}</p>
+                                  </div>
+                                ) : '—'}
+                              </td>
+                            </motion.tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
                 )}
 
-                {totalPages > 1 && (
+                {trackerTotalPages > 1 && (
                   <div className="flex items-center justify-between mt-5 pt-4 border-t border-[var(--accent-15)]">
                     <Button
                       variant="ghost"
                       size="small"
-                      onClick={() => setPage(Math.max(1, page - 1))}
-                      disabled={page <= 1}
+                      onClick={() => setTrackerPage(Math.max(1, trackerPage - 1))}
+                      disabled={trackerPage <= 1}
                       className="flex items-center gap-1"
                     >
                       <ChevronLeft size={16} />
                       Previous
                     </Button>
                     <span className="text-sm text-[var(--text-muted)]">
-                      Page {page} of {totalPages}
+                      Page {trackerPage} of {trackerTotalPages}
                     </span>
                     <Button
                       variant="ghost"
                       size="small"
-                      onClick={() => setPage(Math.min(totalPages, page + 1))}
-                      disabled={page >= totalPages}
+                      onClick={() => setTrackerPage(Math.min(trackerTotalPages, trackerPage + 1))}
+                      disabled={trackerPage >= trackerTotalPages}
                       className="flex items-center gap-1"
                     >
                       Next
@@ -1533,6 +1530,16 @@ export default function AdminPage() {
                   </div>
                 )}
               </LiquidCard>
+
+              {/* Tracker Detail Modal */}
+              <ActivityDetailModal
+                isOpen={showDetailModal}
+                onClose={() => {
+                  setShowDetailModal(false);
+                  setSelectedTrackerId(null);
+                }}
+                trackerId={selectedTrackerId}
+              />
             </motion.div>
           )}
 
@@ -3209,13 +3216,7 @@ export default function AdminPage() {
           )}
         </Modal>
 
-        {/* Activity Detail Modal */}
-        {selectedActivity && (
-          <ActivityDetailModal
-            activity={selectedActivity}
-            onClose={() => setSelectedActivity(null)}
-          />
-        )}
+        {/* Old Activity Detail Modal removed — replaced by tracker detail modal in Activity tab */}
 
         {/* Assign to Team Modal */}
         <Modal

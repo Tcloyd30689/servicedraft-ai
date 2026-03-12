@@ -373,6 +373,119 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, data: newTeam });
       }
 
+      case 'list_tracker_entries': {
+        const limit = params.limit ?? 25;
+        const offset = params.offset ?? 0;
+        const search = (params.search || '').trim();
+        const filter = params.filter || 'all';
+
+        // If search is provided, find matching user IDs first
+        let matchedUserIds: string[] | null = null;
+        if (search) {
+          // Search by RO number will be handled in the main query — here we only find user matches
+          const { data: matchingUsers } = await svc
+            .from('users')
+            .select('id')
+            .or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
+          matchedUserIds = (matchingUsers || []).map((u: { id: string }) => u.id);
+        }
+
+        // Build the main query
+        let query = svc
+          .from('narrative_tracker')
+          .select('id, user_id, ro_number, vehicle_year, vehicle_make, vehicle_model, story_type, created_at, last_action_at, is_regenerated, is_customized, is_proofread, is_saved, is_exported, export_type', { count: 'exact' });
+
+        // Apply filter
+        if (filter === 'regenerated') query = query.eq('is_regenerated', true);
+        else if (filter === 'customized') query = query.eq('is_customized', true);
+        else if (filter === 'proofread') query = query.eq('is_proofread', true);
+        else if (filter === 'saved') query = query.eq('is_saved', true);
+        else if (filter === 'exported') query = query.eq('is_exported', true);
+
+        // Apply search — match RO number OR user IDs
+        if (search) {
+          if (matchedUserIds && matchedUserIds.length > 0) {
+            // Search matches users OR ro_number
+            query = query.or(`ro_number.ilike.%${search}%,user_id.in.(${matchedUserIds.join(',')})`);
+          } else {
+            // No user matches — only search by RO number
+            query = query.ilike('ro_number', `%${search}%`);
+          }
+        }
+
+        query = query
+          .order('last_action_at', { ascending: false })
+          .range(offset, offset + limit - 1);
+
+        const { data: trackerRows, count: trackerCount, error: trackerError } = await query;
+
+        if (trackerError) {
+          return NextResponse.json({ success: false, error: trackerError.message }, { status: 500 });
+        }
+
+        // Fetch user info for all unique user_ids
+        const userIds = [...new Set((trackerRows || []).map((r: { user_id: string }) => r.user_id))];
+        const userMap: Record<string, { first_name: string | null; last_name: string | null; email: string }> = {};
+
+        if (userIds.length > 0) {
+          const { data: usersData } = await svc
+            .from('users')
+            .select('id, first_name, last_name, email')
+            .in('id', userIds);
+
+          (usersData || []).forEach((u: { id: string; first_name: string | null; last_name: string | null; email: string }) => {
+            userMap[u.id] = { first_name: u.first_name, last_name: u.last_name, email: u.email };
+          });
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const enrichedEntries = (trackerRows || []).map((row: any) => {
+          const u = userMap[row.user_id] || { first_name: null, last_name: null, email: 'Unknown' };
+          return {
+            ...row,
+            user_first_name: u.first_name,
+            user_last_name: u.last_name,
+            user_email: u.email,
+          };
+        });
+
+        return NextResponse.json({ success: true, data: enrichedEntries, total: trackerCount ?? 0 });
+      }
+
+      case 'get_tracker_detail': {
+        const { tracker_id } = params;
+        if (!tracker_id) {
+          return NextResponse.json({ success: false, error: 'tracker_id is required' }, { status: 400 });
+        }
+
+        const { data: trackerDetail, error: detailError } = await svc
+          .from('narrative_tracker')
+          .select('*')
+          .eq('id', tracker_id)
+          .single();
+
+        if (detailError || !trackerDetail) {
+          return NextResponse.json({ success: false, error: detailError?.message || 'Tracker entry not found' }, { status: 404 });
+        }
+
+        // Fetch user info
+        const { data: detailUser } = await svc
+          .from('users')
+          .select('first_name, last_name, email')
+          .eq('id', trackerDetail.user_id)
+          .single();
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            ...trackerDetail,
+            user_first_name: detailUser?.first_name || null,
+            user_last_name: detailUser?.last_name || null,
+            user_email: detailUser?.email || 'Unknown',
+          },
+        });
+      }
+
       default:
         return NextResponse.json({ success: false, error: `Unknown action: ${action}` }, { status: 400 });
     }
