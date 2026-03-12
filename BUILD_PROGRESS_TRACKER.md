@@ -24,7 +24,8 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-12
-**Current Phase:** Narrative Lifecycle Tracker — Sprint A COMPLETE (Foundation infrastructure)
+**Current Phase:** Narrative Lifecycle Tracker — Sprint B COMPLETE (Wiring all call sites)
+**Sprint B — Narrative Lifecycle Tracker Wiring:** COMPLETE — Wired all narrative actions to lifecycle tracker: generate (createTrackerEntry with await for ID), regenerate/customize/proofread/proofread_apply/save (updateTrackerAction fire-and-forget), export_copy/export_print/export_pdf/export_docx (ShareExportModal trackerId prop), simplified all logActivity calls to remove heavy metadata (tracker handles rich data), activityLogger always sets output_preview to null
 **Sprint A — Narrative Lifecycle Tracker Foundation:** COMPLETE — Created narrative_tracker table with action_history JSONB, append_tracker_history RPC, API route (create/update with version tracking), client utility (fire-and-forget), and trackerId field in narrative store
 **Hotfix (Post Sprint B Task 1):** COMPLETE — Fixed Gemini API Usage Tracker: corrected model name from gemini-2.0-flash to gemini-3-flash-preview across entire codebase, fixed pricing rates from $0.10/$0.40 to $0.50/$3.00 per 1M tokens (input/output), updated migration default, fixed Recharts tooltip type errors
 **Stage 6 Sprint B (Task 1):** COMPLETE — Gemini API Usage Tracker: modified Gemini client to return token usage metadata, created api_usage_log table migration, added server-side usage logger utility, instrumented all 6 API routes (generate, customize, proofread, apply-edits, update-narrative, convert-recommendation), built /api/admin/usage endpoint with aggregated stats, replaced Cost Calculator tab with live API Usage tab featuring summary cards, token/cost charts, action breakdown, and top users leaderboard

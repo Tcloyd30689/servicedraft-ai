@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw } from 'lucide-react';
 import { logActivity } from '@/lib/activityLogger';
+import { createTrackerEntry, updateTrackerAction } from '@/lib/narrativeTracker';
 import { findHighlightRanges, type HighlightRange } from '@/lib/highlightUtils';
 import { dispatchActivity } from '@/hooks/useActivityPulse';
 import { useNarrativeStore } from '@/stores/narrativeStore';
@@ -43,6 +44,7 @@ export default function NarrativePage() {
     resetCustomization,
     resetAll,
     markSaved,
+    setTrackerId,
   } = useNarrativeStore();
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -100,24 +102,34 @@ export default function NarrativePage() {
       const data: NarrativeData = await res.json();
       setNarrative(data);
       setAnimateNarrative(true);
-      logActivity('generate', {
+
+      // Create tracker entry — awaited because we need the ID back
+      const trackerId = await createTrackerEntry({
+        ro_number: state.roNumber || undefined,
+        vehicle_year: state.fieldValues['year'] || undefined,
+        vehicle_make: state.fieldValues['make'] || undefined,
+        vehicle_model: state.fieldValues['model'] || undefined,
         story_type: state.storyType || undefined,
-        output_preview: data.block_narrative.substring(0, 100),
-        metadata: {
-          narrative_preview: data.block_narrative.substring(0, 500),
-          vehicle_year: state.fieldValues['year'] || null,
-          vehicle_make: state.fieldValues['make'] || null,
-          vehicle_model: state.fieldValues['model'] || null,
-          ro_number: state.roNumber || null,
-          story_type: state.storyType || null,
+        full_narrative: data.block_narrative,
+        concern: data.concern,
+        cause: data.cause,
+        correction: data.correction,
+        customization: {
+          length: state.lengthSlider,
+          tone: state.toneSlider,
+          detail: state.detailSlider,
+          custom_instructions: state.customInstructions || '',
         },
       });
+      if (trackerId) setTrackerId(trackerId);
+
+      logActivity('generate', { story_type: state.storyType || undefined });
     } catch {
       toast.error('Failed to generate narrative. Please try again.');
     } finally {
       setIsGenerating(false);
     }
-  }, [state.compiledDataBlock, state.storyType, setNarrative]);
+  }, [state.compiledDataBlock, state.storyType, state.roNumber, state.fieldValues, state.lengthSlider, state.toneSlider, state.detailSlider, state.customInstructions, setNarrative, setTrackerId]);
 
   useEffect(() => {
     // Redirect if no data to work with — allow through if narrative already exists (repair update flow)
@@ -214,18 +226,24 @@ export default function NarrativePage() {
       setNarrative(data);
       setAnimateNarrative(true);
       resetCustomization();
-      logActivity('regenerate', {
-        story_type: state.storyType || undefined,
-        output_preview: data.block_narrative.substring(0, 100),
-        metadata: {
-          narrative_preview: data.block_narrative.substring(0, 500),
-          vehicle_year: state.fieldValues['year'] || null,
-          vehicle_make: state.fieldValues['make'] || null,
-          vehicle_model: state.fieldValues['model'] || null,
-          ro_number: state.roNumber || null,
-          story_type: state.storyType || null,
-        },
-      });
+
+      // Fire-and-forget tracker update
+      if (state.trackerId) {
+        updateTrackerAction(state.trackerId, 'regenerate', {
+          narrative_text: data.block_narrative,
+          concern: data.concern,
+          cause: data.cause,
+          correction: data.correction,
+          customization: {
+            length: state.lengthSlider,
+            tone: state.toneSlider,
+            detail: state.detailSlider,
+            custom_instructions: state.customInstructions || '',
+          },
+        });
+      }
+
+      logActivity('regenerate', { story_type: state.storyType || undefined });
       toast.success('Story regenerated');
     } catch {
       toast.error('Failed to regenerate. Please try again.');
@@ -278,18 +296,24 @@ export default function NarrativePage() {
       setNarrative(data);
       setAnimateNarrative(true);
       setProofreadData(null);
-      logActivity('customize', {
-        story_type: state.storyType || undefined,
-        output_preview: data.block_narrative.substring(0, 100),
-        metadata: {
-          narrative_preview: data.block_narrative.substring(0, 500),
-          vehicle_year: state.fieldValues['year'] || null,
-          vehicle_make: state.fieldValues['make'] || null,
-          vehicle_model: state.fieldValues['model'] || null,
-          ro_number: state.roNumber || null,
-          story_type: state.storyType || null,
-        },
-      });
+
+      // Fire-and-forget tracker update
+      if (state.trackerId) {
+        updateTrackerAction(state.trackerId, 'customize', {
+          narrative_text: data.block_narrative,
+          concern: data.concern,
+          cause: data.cause,
+          correction: data.correction,
+          customization: {
+            length: state.lengthSlider,
+            tone: state.toneSlider,
+            detail: state.detailSlider,
+            custom_instructions: state.customInstructions || '',
+          },
+        });
+      }
+
+      logActivity('customize', { story_type: state.storyType || undefined });
       toast.success('Customization applied');
     } catch {
       toast.error('Failed to customize narrative. Please try again.');
@@ -336,6 +360,12 @@ export default function NarrativePage() {
       if (ranges.length > 0) {
         setHighlightActive(true);
       }
+
+      // Fire-and-forget tracker update — proofread audit complete
+      if (state.trackerId) {
+        updateTrackerAction(state.trackerId, 'proofread');
+      }
+
       logActivity('proofread', { story_type: state.storyType || undefined });
     } catch {
       toast.error('Failed to proofread. Please try again.');
@@ -377,6 +407,17 @@ export default function NarrativePage() {
       setAnimateNarrative(true);
       setProofreadData(null);
       setSelectedEditIndices([]);
+
+      // Fire-and-forget tracker update — proofread edits applied
+      if (state.trackerId) {
+        updateTrackerAction(state.trackerId, 'proofread_apply', {
+          narrative_text: data.block_narrative,
+          concern: data.concern,
+          cause: data.cause,
+          correction: data.correction,
+        });
+      }
+
       toast.success('Selected edits applied');
     } catch {
       toast.error('Failed to apply edits. Please try again.');
@@ -430,17 +471,13 @@ export default function NarrativePage() {
     dispatchActivity(0.5);
     try {
       await saveToDatabase();
-      logActivity('save', {
-        story_type: state.storyType || undefined,
-        metadata: {
-          narrative_preview: state.narrative?.block_narrative.substring(0, 500) || null,
-          vehicle_year: state.fieldValues['year'] || null,
-          vehicle_make: state.fieldValues['make'] || null,
-          vehicle_model: state.fieldValues['model'] || null,
-          ro_number: state.roNumber || null,
-          story_type: state.storyType || null,
-        },
-      });
+
+      // Fire-and-forget tracker update
+      if (state.trackerId) {
+        updateTrackerAction(state.trackerId, 'save');
+      }
+
+      logActivity('save', { story_type: state.storyType || undefined });
       toast.success('Story saved successfully');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -740,6 +777,7 @@ export default function NarrativePage() {
         onClose={() => setExportModalOpen(false)}
         narrative={state.narrative}
         displayFormat={state.displayFormat}
+        trackerId={state.trackerId}
         vehicleInfo={{
           year: state.fieldValues['year'] || '',
           make: state.fieldValues['make'] || '',

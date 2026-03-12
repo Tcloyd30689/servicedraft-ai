@@ -25,7 +25,7 @@ export function logActivity(action_type: string, data?: LogData): void {
         action_type,
         story_type: data?.story_type ?? null,
         input_data: data?.input_data ?? null,
-        output_preview: data?.output_preview ?? null,
+        output_preview: null,
         metadata: data?.metadata ?? {},
       });
 

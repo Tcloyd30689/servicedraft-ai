@@ -4,6 +4,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Copy, Printer, FileDown, FileText, Mail } from 'lucide-react';
 import { logActivity } from '@/lib/activityLogger';
+import { updateTrackerAction } from '@/lib/narrativeTracker';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import { downloadExport, buildPrintHtml } from '@/lib/exportUtils';
@@ -16,6 +17,7 @@ interface ShareExportModalProps {
   onClose: () => void;
   narrative: NarrativeData;
   displayFormat: 'block' | 'ccc';
+  trackerId?: string | null;
   vehicleInfo?: { year?: string; make?: string; model?: string; roNumber?: string };
   senderName?: string;
   onBeforeExport?: () => Promise<void>;
@@ -26,6 +28,7 @@ export default function ShareExportModal({
   onClose,
   narrative,
   displayFormat,
+  trackerId,
   vehicleInfo,
   senderName,
   onBeforeExport,
@@ -62,6 +65,7 @@ export default function ShareExportModal({
     try {
       await onBeforeExport?.();
       await navigator.clipboard.writeText(getTextContent());
+      if (trackerId) updateTrackerAction(trackerId, 'export_copy');
       logActivity('export_copy');
       toast.success('Copied to clipboard');
       onClose();
@@ -99,6 +103,7 @@ export default function ShareExportModal({
       document.body.removeChild(iframe);
     }, 1000);
 
+    if (trackerId) updateTrackerAction(trackerId, 'export_print');
     logActivity('export_print');
     onClose();
   };
@@ -108,6 +113,7 @@ export default function ShareExportModal({
     try {
       await onBeforeExport?.();
       await downloadExport('pdf', buildPayload());
+      if (trackerId) updateTrackerAction(trackerId, 'export_pdf');
       logActivity('export_pdf');
       toast.success('PDF downloaded');
       onClose();
@@ -123,6 +129,7 @@ export default function ShareExportModal({
     try {
       await onBeforeExport?.();
       await downloadExport('docx', buildPayload());
+      if (trackerId) updateTrackerAction(trackerId, 'export_docx');
       logActivity('export_docx');
       toast.success('Word document downloaded');
       onClose();
