@@ -235,6 +235,8 @@ export default function AdminPage() {
   const [trackerPage, setTrackerPage] = useState(1);
   const [trackerSearch, setTrackerSearch] = useState('');
   const [trackerFilter, setTrackerFilter] = useState('all');
+  const [trackerSortBy, setTrackerSortBy] = useState<string>('last_action_at');
+  const [trackerSortAsc, setTrackerSortAsc] = useState(false);
   const [selectedTrackerId, setSelectedTrackerId] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
@@ -346,6 +348,8 @@ export default function AdminPage() {
           offset,
           search: trackerSearch.trim() || undefined,
           filter: trackerFilter,
+          sort_by: trackerSortBy,
+          sort_asc: trackerSortAsc,
         }),
       });
 
@@ -368,7 +372,7 @@ export default function AdminPage() {
     } finally {
       setTrackerLoading(false);
     }
-  }, [trackerPage, trackerSearch, trackerFilter]);
+  }, [trackerPage, trackerSearch, trackerFilter, trackerSortBy, trackerSortAsc]);
 
   useEffect(() => {
     if (activeTab === 'activity' && profile?.role === 'owner') {
@@ -378,7 +382,16 @@ export default function AdminPage() {
 
   useEffect(() => {
     setTrackerPage(1);
-  }, [trackerFilter, trackerSearch]);
+  }, [trackerFilter, trackerSearch, trackerSortBy, trackerSortAsc]);
+
+  const handleTrackerSort = (col: string) => {
+    if (trackerSortBy === col) {
+      setTrackerSortAsc(!trackerSortAsc);
+    } else {
+      setTrackerSortBy(col);
+      setTrackerSortAsc(false);
+    }
+  };
 
   const trackerTotalPages = Math.max(1, Math.ceil(trackerTotalCount / PAGE_SIZE));
 
@@ -1381,40 +1394,81 @@ export default function AdminPage() {
               transition={{ duration: 0.25, ease: 'easeOut' }}
             >
               <LiquidCard size="standard" className="!rounded-[16px]">
-                <div className="flex flex-col sm:flex-row gap-3 mb-5">
-                  <div className="relative flex-1">
-                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                {/* ─── Row 1: Search + Refresh ─── */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="relative w-full max-w-[260px]">
+                    <Search size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                     <input
                       type="text"
-                      placeholder="Search by RO# or user name..."
+                      placeholder="Search RO# or name..."
                       value={trackerSearch}
                       onChange={(e) => setTrackerSearch(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
+                      className="w-full pl-8 pr-3 py-1.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-xs focus:outline-none focus:border-[var(--accent-hover)] transition-all"
                     />
                   </div>
-                  <select
-                    value={trackerFilter}
-                    onChange={(e) => setTrackerFilter(e.target.value)}
-                    className="px-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] text-sm cursor-pointer focus:outline-none focus:border-[var(--accent-hover)] appearance-none transition-all"
-                  >
-                    {TRACKER_FILTERS.map((f) => (
-                      <option key={f.value} value={f.value}>{f.label}</option>
-                    ))}
-                  </select>
                   <button
                     onClick={fetchTrackerEntries}
                     disabled={trackerLoading}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-[var(--text-muted)] hover:text-[var(--accent-bright)] hover:bg-[var(--accent-10)] transition-all cursor-pointer disabled:opacity-50"
+                    className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--accent-bright)] hover:bg-[var(--accent-10)] transition-all cursor-pointer disabled:opacity-50"
                     title="Refresh activity log"
                   >
-                    <RefreshCw size={16} className={trackerLoading ? 'animate-spin' : ''} />
-                    Refresh
+                    <RefreshCw size={15} className={trackerLoading ? 'animate-spin' : ''} />
                   </button>
+                  <span className="ml-auto text-xs text-[var(--text-muted)] whitespace-nowrap">
+                    {trackerTotalCount} {trackerTotalCount === 1 ? 'entry' : 'entries'}
+                  </span>
                 </div>
 
-                <p className="text-sm text-[var(--text-muted)] mb-3">
-                  {trackerTotalCount} {trackerTotalCount === 1 ? 'entry' : 'entries'} found
-                </p>
+                {/* ─── Row 2: Filter pills ─── */}
+                <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                  {TRACKER_FILTERS.map((f) => {
+                    const isActive = trackerFilter === f.value;
+                    return (
+                      <button
+                        key={f.value}
+                        onClick={() => setTrackerFilter(f.value)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer border ${
+                          isActive
+                            ? 'bg-[var(--accent-20)] text-[var(--accent-bright)] border-[var(--accent-50)]'
+                            : 'bg-transparent text-[var(--text-muted)] border-[var(--accent-15)] hover:text-[var(--text-secondary)] hover:border-[var(--accent-30)] hover:bg-[var(--accent-5)]'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* ─── Row 3: Sort toggles ─── */}
+                <div className="flex flex-wrap items-center gap-1.5 mb-4">
+                  <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] font-semibold mr-1">Sort:</span>
+                  {([
+                    { col: 'last_action_at', label: 'Last Activity' },
+                    { col: 'created_at', label: 'Created' },
+                    { col: 'ro_number', label: 'R.O. #' },
+                    { col: 'story_type', label: 'Story Type' },
+                  ] as const).map(({ col, label }) => {
+                    const isActive = trackerSortBy === col;
+                    return (
+                      <button
+                        key={col}
+                        onClick={() => handleTrackerSort(col)}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer border ${
+                          isActive
+                            ? 'bg-[var(--accent-15)] text-[var(--accent-bright)] border-[var(--accent-40)]'
+                            : 'bg-transparent text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)] hover:bg-[var(--accent-5)]'
+                        }`}
+                      >
+                        {label}
+                        {isActive && (
+                          trackerSortAsc
+                            ? <ArrowUp size={12} />
+                            : <ArrowDown size={12} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
 
                 {trackerLoading ? (
                   <div className="py-12">

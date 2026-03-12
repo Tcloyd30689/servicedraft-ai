@@ -384,6 +384,8 @@ export async function POST(request: Request) {
         const offset = params.offset ?? 0;
         const search = (params.search || '').trim();
         const filter = params.filter || 'all';
+        const sortBy = params.sort_by || 'last_action_at';
+        const sortAsc = params.sort_asc === true;
 
         // If search is provided, find matching user IDs first
         let matchedUserIds: string[] | null = null;
@@ -419,8 +421,12 @@ export async function POST(request: Request) {
           }
         }
 
+        // Validate sortBy against allowed columns
+        const allowedSortCols = ['last_action_at', 'created_at', 'ro_number', 'story_type', 'vehicle_make'];
+        const safeSortBy = allowedSortCols.includes(sortBy) ? sortBy : 'last_action_at';
+
         query = query
-          .order('last_action_at', { ascending: false })
+          .order(safeSortBy, { ascending: sortAsc })
           .range(offset, offset + limit - 1);
 
         const { data: trackerRows, count: trackerCount, error: trackerError } = await query;
