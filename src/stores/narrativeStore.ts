@@ -36,6 +36,9 @@ export interface NarrativeState {
   // Save tracking — navigation guard + auto-save dedup
   isSaved: boolean;
   savedNarrativeId: string | null;
+
+  // Narrative lifecycle tracker ID
+  trackerId: string | null;
 }
 
 const initialState: NarrativeState = {
@@ -53,6 +56,7 @@ const initialState: NarrativeState = {
   generationId: 0,
   isSaved: true, // true initially (no narrative to protect yet)
   savedNarrativeId: null,
+  trackerId: null,
 };
 
 // Simple hook-based store (avoids external dependency)
@@ -198,6 +202,11 @@ export function useNarrativeStore() {
     notifyListeners();
   }, []);
 
+  const setTrackerId = useCallback((id: string | null) => {
+    globalState = { ...globalState, trackerId: id };
+    notifyListeners();
+  }, []);
+
   /** Set up state for a diagnostic→repair-complete update flow.
    *  Sets the narrative from the API response, storyType to repair_complete,
    *  and carries forward vehicle info + RO# from the original diagnostic entry. */
@@ -250,6 +259,7 @@ export function useNarrativeStore() {
     resetAll,
     clearFormFields,
     markSaved,
+    setTrackerId,
     setForRepairUpdate,
   };
 }

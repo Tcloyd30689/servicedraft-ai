@@ -23,8 +23,9 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-03-11
-**Current Phase:** Stage 6 Sprint B — COMPLETE (All 6 tasks done)
+**Last Updated:** 2026-03-12
+**Current Phase:** Narrative Lifecycle Tracker — Sprint A COMPLETE (Foundation infrastructure)
+**Sprint A — Narrative Lifecycle Tracker Foundation:** COMPLETE — Created narrative_tracker table with action_history JSONB, append_tracker_history RPC, API route (create/update with version tracking), client utility (fire-and-forget), and trackerId field in narrative store
 **Hotfix (Post Sprint B Task 1):** COMPLETE — Fixed Gemini API Usage Tracker: corrected model name from gemini-2.0-flash to gemini-3-flash-preview across entire codebase, fixed pricing rates from $0.10/$0.40 to $0.50/$3.00 per 1M tokens (input/output), updated migration default, fixed Recharts tooltip type errors
 **Stage 6 Sprint B (Task 1):** COMPLETE — Gemini API Usage Tracker: modified Gemini client to return token usage metadata, created api_usage_log table migration, added server-side usage logger utility, instrumented all 6 API routes (generate, customize, proofread, apply-edits, update-narrative, convert-recommendation), built /api/admin/usage endpoint with aggregated stats, replaced Cost Calculator tab with live API Usage tab featuring summary cards, token/cost charts, action breakdown, and top users leaderboard
 **Stage 6 Sprint B (Tasks 2-4):** COMPLETE — Email column truncation with tooltip on hover, center alignment on all table headers/cells, glowing accent-colored row hover effect across all data tables on both dashboards
@@ -106,6 +107,39 @@ All 6 project knowledge files updated to v2.1 reflecting the complete current ap
 - [x] ServiceDraft_AI_Spec_v1_3.md — 924 lines, 47.0 KB (full spec, 17 sections, 71 features)
 
 Total project knowledge base: 5,804 lines / 280.5 KB (doubled from previous versions)
+
+---
+
+## SPRINT A — NARRATIVE LIFECYCLE TRACKER: FOUNDATION — 2026-03-12
+
+**Status:** COMPLETE
+
+Backend infrastructure for the Narrative Lifecycle Tracker — no UI changes, no existing behavior changes.
+
+- [x] **Task 1 — Database Migration: narrative_tracker table + append_tracker_history RPC**
+  - Created `narrative_tracker` table with vehicle/RO info, current narrative content, boolean+timestamp action pairs, JSONB action_history array
+  - Added indexes on `last_action_at DESC` and `user_id`
+  - Enabled RLS with policies for user SELECT/INSERT/UPDATE and service role full access
+  - Created `append_tracker_history()` RPC function (SECURITY DEFINER) for atomic JSONB append + last_action_at bump
+  - Migration applied to production Supabase: `create_narrative_tracker`
+
+- [x] **Task 2 — API Route: src/app/api/narrative-tracker/route.ts**
+  - POST handler with action-based routing (`create` and `update`)
+  - Uses service-role Supabase client (same pattern as admin route)
+  - `create`: inserts new tracker row with initial generate action_history entry (version 1)
+  - `update`: fetches current row for version tracking, appends history via RPC, updates columns per actionType
+  - Handles all action types: regenerate, customize, proofread, proofread_apply, save, export_copy/print/pdf/docx
+  - Ownership verification on update, full try/catch error handling
+
+- [x] **Task 3 — Client Utility: src/lib/narrativeTracker.ts**
+  - `createTrackerEntry(data)`: POST to API, returns tracker ID or null
+  - `updateTrackerAction(trackerId, actionType, data?)`: POST to API, returns boolean
+  - Fire-and-forget pattern — all errors caught silently, never breaks user workflows
+
+- [x] **Task 4 — Narrative Store Update: src/stores/narrativeStore.ts**
+  - Added `trackerId: string | null` to NarrativeState interface (default: null)
+  - Added `setTrackerId(id)` action
+  - `trackerId` resets to null via `resetAll()` (initialState spread)
 
 ---
 
