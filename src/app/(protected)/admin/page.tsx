@@ -46,14 +46,15 @@ const TRACKER_FILTERS = [
 const ACTION_BORDER_COLORS: Record<string, string> = {
   generate: 'var(--accent-primary)',
   regenerate: 'var(--accent-primary)',
+  customize: 'var(--accent-hover)',
+  proofread: '#f59e0b',
+  proofread_apply: '#f59e0b',
   save: '#16a34a',
   export_copy: '#3b82f6',
   export_print: '#3b82f6',
   export_pdf: '#3b82f6',
   export_docx: '#3b82f6',
   login: '#6b7280',
-  customize: 'var(--accent-hover)',
-  proofread: '#f59e0b',
 };
 
 interface TrackerEntry {
@@ -112,10 +113,28 @@ interface TeamOption {
   member_count: number;
 }
 
+interface UserTrackerEntry {
+  id: string;
+  ro_number: string | null;
+  vehicle_year: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  story_type: string | null;
+  created_at: string;
+  last_action_at: string;
+  is_regenerated: boolean;
+  is_customized: boolean;
+  is_proofread: boolean;
+  is_saved: boolean;
+  is_exported: boolean;
+  export_type: string | null;
+}
+
 interface UserDetailData {
   profile: Record<string, unknown>;
   recent_activity: Array<Record<string, unknown>>;
   recent_narratives: Array<Record<string, unknown>>;
+  recent_tracker_entries: UserTrackerEntry[];
 }
 
 interface AnalyticsData {
@@ -211,6 +230,7 @@ export default function AdminPage() {
   // Tracker (Activity Log) state
   const [trackerEntries, setTrackerEntries] = useState<TrackerEntry[]>([]);
   const [trackerLoading, setTrackerLoading] = useState(false);
+  const [trackerError, setTrackerError] = useState<string | null>(null);
   const [trackerTotalCount, setTrackerTotalCount] = useState(0);
   const [trackerPage, setTrackerPage] = useState(1);
   const [trackerSearch, setTrackerSearch] = useState('');
@@ -314,6 +334,7 @@ export default function AdminPage() {
   // ─── Activity Log (Tracker) ────────────────────────────────
   const fetchTrackerEntries = useCallback(async () => {
     setTrackerLoading(true);
+    setTrackerError(null);
     try {
       const offset = (trackerPage - 1) * PAGE_SIZE;
       const response = await fetch('/api/admin', {
@@ -330,6 +351,7 @@ export default function AdminPage() {
 
       if (!response.ok) {
         console.error('Failed to fetch tracker entries');
+        setTrackerError('Failed to load activity log. Please try again.');
         setTrackerEntries([]);
         setTrackerTotalCount(0);
         return;
@@ -340,6 +362,7 @@ export default function AdminPage() {
       setTrackerTotalCount(result.total ?? 0);
     } catch (err) {
       console.error('Tracker fetch error:', err);
+      setTrackerError('Failed to load activity log. Please try again.');
       setTrackerEntries([]);
       setTrackerTotalCount(0);
     } finally {
@@ -360,9 +383,19 @@ export default function AdminPage() {
   const trackerTotalPages = Math.max(1, Math.ceil(trackerTotalCount / PAGE_SIZE));
 
   const formatActionLabel = (action: string) => {
-    return action
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+    const labels: Record<string, string> = {
+      generate: 'Generated',
+      regenerate: 'Regenerated',
+      customize: 'Customized',
+      proofread: 'Proofread',
+      proofread_apply: 'Edits Applied',
+      save: 'Saved',
+      export_copy: 'Copied',
+      export_print: 'Printed',
+      export_pdf: 'PDF Export',
+      export_docx: 'Word Export',
+    };
+    return labels[action] || action.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   // ─── User Management ─────────────────────────────────────────
@@ -1387,8 +1420,12 @@ export default function AdminPage() {
                   <div className="py-12">
                     <LoadingSpinner size="medium" message="Loading narrative tracker..." />
                   </div>
+                ) : trackerError ? (
+                  <ErrorState message={trackerError} onRetry={fetchTrackerEntries} />
                 ) : trackerEntries.length === 0 ? (
-                  <p className="text-center text-[var(--text-muted)] py-12 text-base">No tracker entries found.</p>
+                  <p className="text-center text-[var(--text-muted)] py-12 text-base">
+                    No narrative activity recorded yet. Activity will appear here as users generate stories.
+                  </p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
@@ -1899,30 +1936,82 @@ export default function AdminPage() {
 
                                         <div>
                                           <h4 className="text-sm uppercase tracking-wider text-[var(--text-muted)] mb-2 font-semibold">
-                                            Recent Activity (Last 5)
+                                            Recent Narrative Activity (Last 5)
                                           </h4>
-                                          {details.recent_activity.length === 0 ? (
-                                            <p className="text-[var(--text-muted)] text-sm">No activity recorded.</p>
+                                          {!details.recent_tracker_entries || details.recent_tracker_entries.length === 0 ? (
+                                            <p className="text-[var(--text-muted)] text-sm">No narrative activity recorded.</p>
                                           ) : (
-                                            <div className="space-y-1.5">
-                                              {details.recent_activity.map((a, i) => (
-                                                <div
-                                                  key={i}
-                                                  className="flex items-center gap-3 text-sm text-[var(--text-secondary)]"
-                                                >
-                                                  <span className="text-[var(--text-muted)] whitespace-nowrap">
-                                                    {formatDateReadable(a.created_at as string)}
-                                                  </span>
-                                                  <span className="inline-block px-2 py-0.5 rounded bg-[var(--accent-10)] text-[var(--accent-bright)] font-medium">
-                                                    {formatActionLabel(a.action_type as string)}
-                                                  </span>
-                                                  {typeof a.output_preview === 'string' && a.output_preview && (
-                                                    <span className="truncate max-w-[300px] text-[var(--text-muted)]">
-                                                      {a.output_preview}
-                                                    </span>
-                                                  )}
-                                                </div>
-                                              ))}
+                                            <div className="space-y-2">
+                                              {details.recent_tracker_entries.map((te) => {
+                                                const vehicle = [te.vehicle_year, te.vehicle_make, te.vehicle_model].filter(Boolean).join(' ');
+                                                const storyColor = te.story_type === 'repair_complete' ? '#22c55e' : 'var(--accent-primary)';
+                                                const storyLabel = te.story_type === 'diagnostic_only' ? 'Diagnostic' : te.story_type === 'repair_complete' ? 'Repair' : '—';
+                                                const tePills: Array<{ label: string; color: string }> = [];
+                                                if (te.is_regenerated) tePills.push({ label: 'Regen', color: TRACKER_PILL_COLORS.regenerated });
+                                                if (te.is_customized) tePills.push({ label: 'Custom', color: TRACKER_PILL_COLORS.customized });
+                                                if (te.is_proofread) tePills.push({ label: 'Proofread', color: TRACKER_PILL_COLORS.proofread });
+                                                if (te.is_saved) tePills.push({ label: 'Saved', color: TRACKER_PILL_COLORS.saved });
+                                                if (te.is_exported && te.export_type) {
+                                                  const etColor = TRACKER_PILL_COLORS[te.export_type] || '#64748b';
+                                                  tePills.push({ label: te.export_type.toUpperCase(), color: etColor });
+                                                }
+                                                const teLastAct = te.last_action_at ? formatDateTimeStacked(te.last_action_at) : null;
+
+                                                return (
+                                                  <div
+                                                    key={te.id}
+                                                    className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[var(--accent-5)] transition-all cursor-pointer hover:bg-[var(--accent-10)]"
+                                                    style={{ borderLeft: `3px solid ${storyColor}` }}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setSelectedTrackerId(te.id);
+                                                      setShowDetailModal(true);
+                                                    }}
+                                                  >
+                                                    <div className="flex-1 min-w-0">
+                                                      <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="text-sm font-medium text-[var(--text-primary)]">
+                                                          R.O. #{te.ro_number || '—'}
+                                                        </span>
+                                                        {vehicle && (
+                                                          <span className="text-sm text-[var(--text-muted)]">{vehicle}</span>
+                                                        )}
+                                                        <span
+                                                          className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                                                          style={{
+                                                            backgroundColor: `color-mix(in srgb, ${storyColor} 15%, transparent)`,
+                                                            color: storyColor,
+                                                            border: `1px solid ${storyColor}`,
+                                                          }}
+                                                        >
+                                                          {storyLabel}
+                                                        </span>
+                                                      </div>
+                                                      <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                                        {tePills.map((pill, i) => (
+                                                          <span
+                                                            key={i}
+                                                            className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                                                            style={{
+                                                              backgroundColor: `color-mix(in srgb, ${pill.color} 15%, transparent)`,
+                                                              color: pill.color,
+                                                              border: `1px solid ${pill.color}`,
+                                                            }}
+                                                          >
+                                                            {pill.label}
+                                                          </span>
+                                                        ))}
+                                                      </div>
+                                                    </div>
+                                                    {teLastAct && (
+                                                      <div className="text-right shrink-0">
+                                                        <p className="text-xs text-[var(--text-muted)]">{teLastAct.date}</p>
+                                                        <p className="text-[10px] text-[var(--text-muted)]">{teLastAct.time}</p>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                );
+                                              })}
                                             </div>
                                           )}
                                         </div>
@@ -1975,6 +2064,16 @@ export default function AdminPage() {
                   </div>
                 )}
               </LiquidCard>
+
+              {/* Tracker Detail Modal (for user expansion rows) */}
+              <ActivityDetailModal
+                isOpen={showDetailModal && activeTab === 'users'}
+                onClose={() => {
+                  setShowDetailModal(false);
+                  setSelectedTrackerId(null);
+                }}
+                trackerId={selectedTrackerId}
+              />
             </motion.div>
           )}
 

@@ -69,3 +69,47 @@ export interface Narrative {
   created_at: string;
   updated_at: string;
 }
+
+export interface TrackerActionEntry {
+  action: string;
+  at: string;
+  version?: number;
+  narrative_text?: string;
+  concern?: string;
+  cause?: string;
+  correction?: string;
+  customization?: {
+    length: string;
+    tone: string;
+    detail: string;
+    custom_instructions: string;
+  };
+}
+
+export interface NarrativeTrackerEntry {
+  id: string;
+  user_id: string;
+  ro_number: string | null;
+  vehicle_year: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  story_type: string | null;
+  full_narrative: string;
+  concern: string | null;
+  cause: string | null;
+  correction: string | null;
+  created_at: string;
+  last_action_at: string;
+  is_regenerated: boolean;
+  regenerated_at: string | null;
+  is_customized: boolean;
+  customized_at: string | null;
+  is_proofread: boolean;
+  proofread_at: string | null;
+  is_saved: boolean;
+  saved_at: string | null;
+  is_exported: boolean;
+  export_type: string | null;
+  exported_at: string | null;
+  action_history: TrackerActionEntry[];
+}

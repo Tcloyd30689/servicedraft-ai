@@ -98,10 +98,15 @@ export async function POST(request: Request) {
           return NextResponse.json({ success: false, error: 'userId is required' }, { status: 400 });
         }
 
-        const [profileRes, activityRes, narrativesRes] = await Promise.all([
+        const [profileRes, activityRes, narrativesRes, trackerRes] = await Promise.all([
           svc.from('users').select('*').eq('id', userId).single(),
           svc.from('activity_log').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(5),
           svc.from('narratives').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(5),
+          svc.from('narrative_tracker')
+            .select('id, ro_number, vehicle_year, vehicle_make, vehicle_model, story_type, created_at, last_action_at, is_regenerated, is_customized, is_proofread, is_saved, is_exported, export_type')
+            .eq('user_id', userId)
+            .order('last_action_at', { ascending: false })
+            .limit(5),
         ]);
 
         return NextResponse.json({
@@ -110,6 +115,7 @@ export async function POST(request: Request) {
             profile: profileRes.data,
             recent_activity: activityRes.data || [],
             recent_narratives: narrativesRes.data || [],
+            recent_tracker_entries: trackerRes.data || [],
           },
         });
       }

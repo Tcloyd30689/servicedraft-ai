@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import type { TrackerActionEntry } from '@/types/database';
 
 // ─── Color map for action type pills ──────────────────────────
 const ACTION_PILL_COLORS: Record<string, string> = {
@@ -22,16 +23,16 @@ const ACTION_PILL_COLORS: Record<string, string> = {
 
 function formatActionLabel(action: string): string {
   const labels: Record<string, string> = {
-    generate: 'Generate',
-    regenerate: 'Regenerate',
-    customize: 'Customize',
+    generate: 'Generated',
+    regenerate: 'Regenerated',
+    customize: 'Customized',
     proofread: 'Proofread',
-    proofread_apply: 'Proofread Apply',
-    save: 'Save',
-    export_copy: 'Export Copy',
-    export_print: 'Export Print',
-    export_pdf: 'Export PDF',
-    export_docx: 'Export DOCX',
+    proofread_apply: 'Edits Applied',
+    save: 'Saved',
+    export_copy: 'Copied',
+    export_print: 'Printed',
+    export_pdf: 'PDF Export',
+    export_docx: 'Word Export',
   };
   return labels[action] || action.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
@@ -55,7 +56,6 @@ function formatStoryType(st: string | null): string {
   return st.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface TrackerDetailData {
   id: string;
   user_id: string;
@@ -68,21 +68,7 @@ interface TrackerDetailData {
   concern: string | null;
   cause: string | null;
   correction: string | null;
-  action_history: Array<{
-    action: string;
-    at: string;
-    version?: number;
-    narrative_text?: string | null;
-    concern?: string | null;
-    cause?: string | null;
-    correction?: string | null;
-    customization?: {
-      length?: string;
-      tone?: string;
-      detail?: string;
-      custom_instructions?: string;
-    } | null;
-  }>;
+  action_history: TrackerActionEntry[];
   created_at: string;
   last_action_at: string;
   user_first_name: string | null;

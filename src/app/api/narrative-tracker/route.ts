@@ -132,7 +132,7 @@ export async function POST(request: Request) {
         });
 
         if (rpcError) {
-          console.error('Tracker RPC error:', rpcError.message);
+          console.warn('Tracker RPC (append_tracker_history) failed — action_history may be out of sync:', rpcError.message);
           return NextResponse.json({ success: false, error: rpcError.message }, { status: 500 });
         }
 
@@ -200,7 +200,7 @@ export async function POST(request: Request) {
             .eq('id', trackerId);
 
           if (updateError) {
-            console.error('Tracker update error:', updateError.message);
+            console.warn('Tracker column update failed — action_history was appended but boolean flags may be stale:', updateError.message);
             return NextResponse.json({ success: false, error: updateError.message }, { status: 500 });
           }
         }
