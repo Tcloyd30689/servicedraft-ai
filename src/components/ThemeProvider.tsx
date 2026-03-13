@@ -225,64 +225,49 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // On mount: check auth state and load preferences, or reset to defaults
+  // On mount: check auth state via getSession (local, no network call) and
+  // listen for auth changes from the shared useAuth module via custom event.
+  // This replaces two previous useEffects that independently called getUser()
+  // and created a second onAuthStateChange subscription, causing race conditions.
   useEffect(() => {
-    async function initTheme() {
+    // Listen for auth state changes from the shared useAuth module
+    const handleAuthChange = async (e: Event) => {
+      const { user, event } = (e as CustomEvent).detail;
+
+      if (event === 'SIGNED_OUT' || !user) {
+        resetToDefaults();
+        return;
+      }
+
+      if (event === 'SIGNED_IN' && user) {
+        await loadUserPreferences(user.id);
+      }
+    };
+
+    window.addEventListener('sd-auth-change', handleAuthChange);
+
+    // Initial check via getSession — reads from local memory/cookies
+    // without a network request, avoiding the token refresh race condition
+    (async () => {
       try {
+        // Small delay to let useAuth initialize first
+        await new Promise(resolve => setTimeout(resolve, 100));
         const { createClient } = await import('@/lib/supabase/client');
         const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!user) {
-          // Not authenticated — force purple dark defaults
+        // Use getSession instead of getUser — no network call
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await loadUserPreferences(session.user.id);
+        } else {
           resetToDefaults();
-          return;
         }
-
-        // Authenticated — load preferences from Supabase
-        await loadUserPreferences(user.id);
       } catch {
         // Fallback — localStorage values or defaults already applied
       }
-    }
-
-    initTheme();
-  }, [resetToDefaults, loadUserPreferences]);
-
-  // Listen for auth state changes to switch themes on sign-in/sign-out
-  useEffect(() => {
-    let cancelled = false;
-
-    async function setupAuthListener() {
-      const { createClient } = await import('@/lib/supabase/client');
-      const supabase = createClient();
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (cancelled) return;
-
-          if (event === 'SIGNED_OUT' || !session?.user) {
-            resetToDefaults();
-            return;
-          }
-
-          if (event === 'SIGNED_IN' && session.user) {
-            await loadUserPreferences(session.user.id);
-          }
-        },
-      );
-
-      return subscription;
-    }
-
-    let sub: { unsubscribe: () => void } | undefined;
-    setupAuthListener().then((s) => {
-      if (!cancelled) sub = s;
-    });
+    })();
 
     return () => {
-      cancelled = true;
-      sub?.unsubscribe();
+      window.removeEventListener('sd-auth-change', handleAuthChange);
     };
   }, [resetToDefaults, loadUserPreferences]);
 

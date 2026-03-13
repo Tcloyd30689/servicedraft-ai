@@ -16,11 +16,12 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 export default function MainMenuPage() {
   const router = useRouter();
-  const { profile, loading, signOut } = useAuth();
+  const { profile, loading, signOut, forceReset } = useAuth();
   const { resetAll } = useNarrativeStore();
   const [showFAQ, setShowFAQ] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [loadingTooLong, setLoadingTooLong] = useState(false);
 
   // Guard: redirect to onboarding if profile is incomplete
   useEffect(() => {
@@ -39,6 +40,20 @@ export default function MainMenuPage() {
     }
   }, [loading, profile, router]);
 
+  // If loading takes more than 8 seconds, show recovery option
+  useEffect(() => {
+    if (!loading) {
+      setLoadingTooLong(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (loading) setLoadingTooLong(true);
+    }, 8000);
+
+    return () => clearTimeout(timer);
+  }, [loading]);
+
   // Show loading while checking onboarding status
   if (loading || !profile || !profile.subscription_status ||
       profile.subscription_status === 'trial' || !profile.username) {
@@ -47,6 +62,20 @@ export default function MainMenuPage() {
         <LiquidCard size="spacious">
           <div className="py-12">
             <LoadingSpinner message="Loading..." />
+            {loadingTooLong && (
+              <div className="mt-6 text-center">
+                <p className="text-[var(--text-muted)] text-sm mb-3">
+                  Taking longer than expected? Your session may need to be refreshed.
+                </p>
+                <Button
+                  variant="secondary"
+                  onClick={forceReset}
+                  className="text-sm"
+                >
+                  RESET SESSION
+                </Button>
+              </div>
+            )}
           </div>
         </LiquidCard>
       </div>

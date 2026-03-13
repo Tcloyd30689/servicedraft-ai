@@ -23,8 +23,9 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-03-12
-**Current Phase:** Sprint E — Team Dashboard: Migrate Activity Tab to Narrative Tracker — COMPLETE
+**Last Updated:** 2026-03-13
+**Current Phase:** Auth Session Resilience Sprint — COMPLETE
+**Auth Session Resilience Sprint:** COMPLETE — Fixed loading lockup caused by competing getUser() token refresh race condition. Added timeout wrappers (5s auth timeout + 10s failsafe), unified auth state management (removed duplicate onAuthStateChange in ThemeProvider), replaced getUser() with getSession() in ThemeProvider/signup (local reads, no network calls), added loading timeout failsafes on login (6s), signup (6s), main-menu (8s + RESET SESSION button), and forceSessionReset() nuclear recovery option
 **Sprint D — Polish & Cleanup:** COMPLETE — Updated admin API get_user_details to return recent_tracker_entries (5 most recent), replaced User Management expanded row "Recent Activity" section with clickable tracker entries showing R.O.#/vehicle/story type badge/action pills/timestamps that open ActivityDetailModal, added console.warn for tracker RPC/update partial failures, verified all trackerId null guards and resetAll flow, added proofread_apply to ACTION_BORDER_COLORS, updated formatActionLabel to use consistent past-tense labels (Generated/Regenerated/Customized/etc.) across admin page and detail modal, added trackerError state with ErrorState retry UI on Activity Log tab, improved empty state messaging, added NarrativeTrackerEntry and TrackerActionEntry types to database.ts and used them in ActivityDetailModal
 **Sprint C — Dashboard Redesign:** COMPLETE — Added list_tracker_entries and get_tracker_detail admin API actions with search/filter/pagination, created new ActivityDetailModal in src/components/dashboard/ with vehicle info header, Block/C-C-C narrative toggle, and expandable action timeline with version snapshots, completely redesigned Activity Log tab on Owner Dashboard to use narrative_tracker data with new columns (User, R.O.#, Vehicle, Story Type, Actions pills, Last Activity), color-coded left borders by story type, tracker-specific filter/search/pagination, removed old activity_log query and inline expand behavior
 **Sprint B — Narrative Lifecycle Tracker Wiring:** COMPLETE — Wired all narrative actions to lifecycle tracker: generate (createTrackerEntry with await for ID), regenerate/customize/proofread/proofread_apply/save (updateTrackerAction fire-and-forget), export_copy/export_print/export_pdf/export_docx (ShareExportModal trackerId prop), simplified all logActivity calls to remove heavy metadata (tracker handles rich data), activityLogger always sets output_preview to null
@@ -3032,6 +3033,60 @@ The migration file has been updated for future deployments, but the existing dat
   - Added DEPRECATED comment to src/components/admin/ActivityDetailModal.tsx
   - Verified no dead code in team-dashboard/page.tsx (old interfaces, state vars, helpers already cleaned up in Tasks 1-3)
   - Remaining activity_log references in src/ are all in separate features: activityLogger.ts (fire-and-forget logging), admin API routes, analytics, delete-account — not part of Team Dashboard migration scope
+
+---
+
+## Auth Session Resilience Sprint
+
+**Date:** 2026-03-13
+**Status:** COMPLETE
+
+### Problem
+
+The app experienced complete UI lockups (permanent loading spinner, all buttons/navigation dead) caused by:
+1. Multiple simultaneous `supabase.auth.getUser()` calls racing to refresh expired tokens
+2. Zero timeout/recovery mechanism when auth calls hang
+3. ThemeProvider maintaining its own parallel auth state (second `onAuthStateChange` subscription) instead of using shared useAuth
+4. Login page making redundant independent `getUser()` calls
+
+### Completed Tasks
+
+- [x] **New file: src/lib/supabase/authWithTimeout.ts**
+  - `getUserWithTimeout()` — wraps `getUser()` with 5-second timeout, auto-clears corrupted state on timeout
+  - `isSessionCorrupted()` — detects stale auth cookies with no valid user
+  - `forceSessionReset()` — nuclear option: clears all Supabase cookies + localStorage, hard reloads to `/`
+
+- [x] **Modified: src/hooks/useAuth.ts**
+  - Replaced bare `getUser()` with `getUserWithTimeout()` in `initializeAuth()`
+  - Added 10-second failsafe timer: if `loading` still true after 10s, forces `{ user: null, profile: null, loading: false }`
+  - Added `setAuthState({ loading: false })` in `onAuthStateChange` catch block (was missing — loading could stay true on error)
+  - Added custom event dispatch: `window.dispatchEvent(new CustomEvent('sd-auth-change'))` after auth state changes
+  - Added `forceReset` function to hook return value
+
+- [x] **Modified: src/components/ThemeProvider.tsx**
+  - Removed `initTheme` useEffect that independently called `supabase.auth.getUser()` (was a duplicate network call)
+  - Removed `setupAuthListener` useEffect that created a SECOND `onAuthStateChange` subscription (race condition source)
+  - Replaced both with single useEffect using `getSession()` (local, no network) + `sd-auth-change` custom event listener
+  - ThemeProvider now piggybacks on useAuth's single auth subscription instead of creating its own
+
+- [x] **Modified: src/app/(auth)/login/page.tsx**
+  - Removed component-level `createClient()` call and independent `getUser()` check
+  - Now uses `useAuth()` hook for auth state — shares the single global subscription
+  - `createClient()` only called inside `handleLogin()` where it's needed for `signInWithPassword`
+  - Added 6-second timeout failsafe: if `checkingAuth` still true, shows login form regardless
+
+- [x] **Modified: src/app/(protected)/main-menu/page.tsx**
+  - Added `loadingTooLong` state with 8-second timeout
+  - Loading screen now shows "RESET SESSION" button after 8s of stuck loading
+  - Uses `forceReset` from useAuth to clear corrupted session and reload
+
+- [x] **Modified: src/app/(auth)/signup/page.tsx**
+  - Replaced `supabase.auth.getUser()` with `supabase.auth.getSession()` in initial auth check (no network call)
+  - Added 6-second timeout failsafe: if still `initializing`, defaults to step 1
+
+### Key Architectural Insight
+
+The root cause was **three independent `onAuthStateChange` subscriptions** (useAuth, ThemeProvider, login page) each calling `getUser()` which triggers token refresh. When the token was expired, all three raced to refresh simultaneously, causing Supabase's token refresh mutex to deadlock or timeout. The fix consolidates to a single subscription in useAuth, with ThemeProvider listening via custom DOM events and other pages reading shared state.
 
 ---
 

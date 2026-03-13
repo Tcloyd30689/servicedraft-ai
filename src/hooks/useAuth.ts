@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { getUserWithTimeout, forceSessionReset } from '@/lib/supabase/authWithTimeout';
 import type { User } from '@supabase/supabase-js';
 
 interface UserProfile {
@@ -25,6 +26,7 @@ interface UseAuthReturn {
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  forceReset: () => void;
 }
 
 // --------------- Module-level shared state ---------------
@@ -120,10 +122,18 @@ function initializeAuth() {
   if (initialized) return;
   initialized = true;
 
-  // Initial fetch
+  // FAILSAFE: If loading is still true after 10 seconds, force recovery
+  const failsafeTimer = setTimeout(() => {
+    if (authState.loading) {
+      console.warn('Auth initialization stuck for 10s — forcing recovery');
+      setAuthState({ user: null, profile: null, loading: false });
+    }
+  }, 10000);
+
+  // Initial fetch — uses timeout wrapper to prevent hanging
   (async () => {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { user: authUser } = await getUserWithTimeout();
       setAuthState({ user: authUser });
 
       if (authUser) {
@@ -133,6 +143,7 @@ function initializeAuth() {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       console.error('Error getting user:', err);
     } finally {
+      clearTimeout(failsafeTimer);
       setAuthState({ loading: false });
     }
   })();
@@ -150,9 +161,17 @@ function initializeAuth() {
           setAuthState({ profile: null });
         }
         setAuthState({ loading: false });
+
+        // Dispatch custom event for ThemeProvider and other listeners
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('sd-auth-change', {
+            detail: { user: currentUser, event: _event }
+          }));
+        }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
         console.error('Auth state change error:', err);
+        setAuthState({ loading: false });
       }
     },
   );
@@ -203,11 +222,16 @@ export function useAuth(): UseAuthReturn {
     }
   }, []);
 
+  const forceReset = useCallback(() => {
+    forceSessionReset();
+  }, []);
+
   return {
     user: authState.user,
     profile: authState.profile,
     loading: authState.loading,
     signOut,
     refreshProfile,
+    forceReset,
   };
 }

@@ -56,14 +56,19 @@ function SignupContent() {
   const supabase = createClient();
 
   // On mount: check auth status and determine the correct step
+  // Uses getSession (local, no network call) instead of getUser to avoid
+  // the token refresh race condition that causes loading lockups
   useEffect(() => {
     let active = true;
 
     const checkAuthStatus = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        // Use getSession — reads from local state without a network request
+        const { data: { session } } = await supabase.auth.getSession();
 
         if (!active) return;
+
+        const user = session?.user ?? null;
 
         if (user) {
           // User is authenticated — determine which step they need
@@ -101,15 +106,27 @@ function SignupContent() {
         }
       } catch (err) {
         console.error('Error checking auth status:', err);
-        setStep(1);
+        if (active) setStep(1);
       }
 
       if (active) setInitializing(false);
     };
 
+    // Timeout failsafe: if still initializing after 6 seconds, default to step 1
+    const failsafe = setTimeout(() => {
+      if (active && initializing) {
+        console.warn('Signup auth check stuck — defaulting to step 1');
+        setInitializing(false);
+        setStep(1);
+      }
+    }, 6000);
+
     checkAuthStatus();
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+      clearTimeout(failsafe);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Step 1: Create account — sends confirmation email

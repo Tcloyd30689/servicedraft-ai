@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import WaveBackground from '@/components/ui/WaveBackground';
 import LiquidCard from '@/components/ui/LiquidCard';
 import Logo from '@/components/ui/Logo';
@@ -17,57 +18,43 @@ import { logActivity } from '@/lib/activityLogger';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user, profile, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  const supabase = createClient();
-
-  // Redirect if already authenticated
+  // Redirect if already authenticated — uses shared useAuth state
   useEffect(() => {
-    let active = true;
+    // Wait for the shared auth state to finish loading
+    if (authLoading) return;
 
-    const checkAuth = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (!active) return;
-
-        if (user) {
-          // Check onboarding status
-          const { data: profile, error: profileError } = await supabase
-            .from('users')
-            .select('subscription_status, username')
-            .eq('id', user.id)
-            .single();
-
-          if (profileError) {
-            console.error('Login mount profile query failed:', profileError.message, profileError.code);
-          }
-
-          if (!active) return;
-
-          if (!profile || !profile.subscription_status || profile.subscription_status === 'trial') {
-            router.replace('/signup?step=2');
-          } else if (!profile.username) {
-            router.replace('/signup?step=3');
-          } else {
-            router.replace('/main-menu');
-          }
-          return;
-        }
-      } catch (err) {
-        console.error('Error checking auth:', err);
+    if (user && profile) {
+      // Check onboarding status from the shared profile
+      if (!profile.subscription_status || profile.subscription_status === 'trial') {
+        router.replace('/signup?step=2');
+      } else if (!profile.username) {
+        router.replace('/signup?step=3');
+      } else {
+        router.replace('/main-menu');
       }
+      return;
+    }
 
-      if (active) setCheckingAuth(false);
-    };
+    // No user or auth finished loading with no user — show login form
+    setCheckingAuth(false);
+  }, [authLoading, user, profile, router]);
 
-    checkAuth();
-
-    return () => { active = false; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Timeout failsafe: if checkingAuth is still true after 6 seconds, show the form
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (checkingAuth) {
+        console.warn('Login auth check stuck — showing login form');
+        setCheckingAuth(false);
+      }
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [checkingAuth]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +66,7 @@ export default function LoginPage() {
 
     setLoading(true);
 
+    const supabase = createClient();
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -92,7 +80,7 @@ export default function LoginPage() {
 
     // Check onboarding status before routing
     if (data.user) {
-      const { data: profile, error: profileError } = await supabase
+      const { data: userProfile, error: profileError } = await supabase
         .from('users')
         .select('subscription_status, username')
         .eq('id', data.user.id)
@@ -102,13 +90,13 @@ export default function LoginPage() {
         console.error('Login handler profile query failed:', profileError.message, profileError.code);
       }
 
-      if (!profile || !profile.subscription_status || profile.subscription_status === 'trial') {
+      if (!userProfile || !userProfile.subscription_status || userProfile.subscription_status === 'trial') {
         toast.success('Please complete your account setup');
         router.push('/signup?step=2');
         return;
       }
 
-      if (!profile.username) {
+      if (!userProfile.username) {
         toast.success('Please complete your profile');
         router.push('/signup?step=3');
         return;
