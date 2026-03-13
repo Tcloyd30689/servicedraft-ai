@@ -3,6 +3,7 @@ import { Orbitron, Inter } from "next/font/google";
 import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
 import ToastProvider from "@/components/ui/ToastProvider";
+import AuthErrorRecovery from "@/components/AuthErrorRecovery";
 import { validateEnv } from "@/lib/env";
 
 // Validate environment variables at build/startup time
@@ -36,6 +37,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`${orbitron.variable} ${inter.variable} antialiased`}>
+        <AuthErrorRecovery />
         <ThemeProvider>
           {children}
           <ToastProvider />

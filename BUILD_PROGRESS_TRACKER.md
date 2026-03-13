@@ -24,7 +24,8 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-13
-**Current Phase:** Auth Session Resilience Sprint — COMPLETE
+**Current Phase:** Corrupted Cookie Crash Guard — COMPLETE
+**Corrupted Cookie Crash Guard:** COMPLETE — Added cookie validation layer that detects and clears corrupted Supabase auth cookies before the SDK attempts to parse them. Prevents 'Invalid UTF-8 sequence' crash. Three-layer defense: middleware validation, client-side pre-validation, and global error recovery handler.
 **Auth Session Resilience Sprint:** COMPLETE — Fixed loading lockup caused by competing getUser() token refresh race condition. Added timeout wrappers (5s auth timeout + 10s failsafe), unified auth state management (removed duplicate onAuthStateChange in ThemeProvider), replaced getUser() with getSession() in ThemeProvider/signup (local reads, no network calls), added loading timeout failsafes on login (6s), signup (6s), main-menu (8s + RESET SESSION button), and forceSessionReset() nuclear recovery option
 **Sprint D — Polish & Cleanup:** COMPLETE — Updated admin API get_user_details to return recent_tracker_entries (5 most recent), replaced User Management expanded row "Recent Activity" section with clickable tracker entries showing R.O.#/vehicle/story type badge/action pills/timestamps that open ActivityDetailModal, added console.warn for tracker RPC/update partial failures, verified all trackerId null guards and resetAll flow, added proofread_apply to ACTION_BORDER_COLORS, updated formatActionLabel to use consistent past-tense labels (Generated/Regenerated/Customized/etc.) across admin page and detail modal, added trackerError state with ErrorState retry UI on Activity Log tab, improved empty state messaging, added NarrativeTrackerEntry and TrackerActionEntry types to database.ts and used them in ActivityDetailModal
 **Sprint C — Dashboard Redesign:** COMPLETE — Added list_tracker_entries and get_tracker_detail admin API actions with search/filter/pagination, created new ActivityDetailModal in src/components/dashboard/ with vehicle info header, Block/C-C-C narrative toggle, and expandable action timeline with version snapshots, completely redesigned Activity Log tab on Owner Dashboard to use narrative_tracker data with new columns (User, R.O.#, Vehicle, Story Type, Actions pills, Last Activity), color-coded left borders by story type, tracker-specific filter/search/pagination, removed old activity_log query and inline expand behavior
@@ -3087,6 +3088,16 @@ The app experienced complete UI lockups (permanent loading spinner, all buttons/
 ### Key Architectural Insight
 
 The root cause was **three independent `onAuthStateChange` subscriptions** (useAuth, ThemeProvider, login page) each calling `getUser()` which triggers token refresh. When the token was expired, all three raced to refresh simultaneously, causing Supabase's token refresh mutex to deadlock or timeout. The fix consolidates to a single subscription in useAuth, with ThemeProvider listening via custom DOM events and other pages reading shared state.
+
+---
+
+## Corrupted Cookie Crash Guard (2026-03-13)
+
+- [x] **client.ts cookie pre-validation** — Added `clearCorruptedAuthCookies()` that tests base64 decoding of all `sb-*` cookies before Supabase client creation. Corrupted cookies are deleted with both root and domain-scoped expiry.
+- [x] **middleware.ts server-side validation + try-catch** — Added pre-parse base64 validation of all `sb-*` cookies using `Buffer.from()`. If corrupted, clears cookies and redirects to `/login`. Wrapped entire Supabase session block in try-catch as fallback. Also added `/team-dashboard` to protectedRoutes array.
+- [x] **AuthErrorRecovery.tsx global error handler** — Created last-resort client-side component that listens for `error` and `unhandledrejection` events containing "Invalid UTF-8 sequence" or "invalid base64". On detection: clears all `sb-*` cookies, removes `sd-login-timestamp` from localStorage, prevents error overlay, and redirects to `/login`.
+- [x] **layout.tsx integration** — Mounted `<AuthErrorRecovery />` in root layout before ThemeProvider.
+- [x] **Build verification** — `npm run build` passes with zero errors.
 
 ---
 
