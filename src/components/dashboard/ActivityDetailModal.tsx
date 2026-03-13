@@ -80,9 +80,10 @@ interface ActivityDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   trackerId: string | null;
+  fetchDetailFn?: (trackerId: string) => Promise<TrackerDetailData>;
 }
 
-export default function ActivityDetailModal({ isOpen, onClose, trackerId }: ActivityDetailModalProps) {
+export default function ActivityDetailModal({ isOpen, onClose, trackerId, fetchDetailFn }: ActivityDetailModalProps) {
   const [mounted, setMounted] = useState(false);
   const [data, setData] = useState<TrackerDetailData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -99,23 +100,28 @@ export default function ActivityDetailModal({ isOpen, onClose, trackerId }: Acti
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get_tracker_detail', tracker_id: trackerId }),
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Failed to fetch detail');
+      if (fetchDetailFn) {
+        const detail = await fetchDetailFn(trackerId);
+        setData(detail);
+      } else {
+        const response = await fetch('/api/admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_tracker_detail', tracker_id: trackerId }),
+        });
+        if (!response.ok) {
+          const err = await response.json();
+          throw new Error(err.error || 'Failed to fetch detail');
+        }
+        const result = await response.json();
+        setData(result.data);
       }
-      const result = await response.json();
-      setData(result.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
     }
-  }, [trackerId]);
+  }, [trackerId, fetchDetailFn]);
 
   useEffect(() => {
     if (isOpen && trackerId) {

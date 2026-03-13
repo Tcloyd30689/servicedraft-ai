@@ -24,7 +24,7 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-12
-**Current Phase:** Narrative Lifecycle Tracker — Sprint D COMPLETE (Polish & Cleanup)
+**Current Phase:** Sprint E — Team Dashboard: Migrate Activity Tab to Narrative Tracker — COMPLETE
 **Sprint D — Polish & Cleanup:** COMPLETE — Updated admin API get_user_details to return recent_tracker_entries (5 most recent), replaced User Management expanded row "Recent Activity" section with clickable tracker entries showing R.O.#/vehicle/story type badge/action pills/timestamps that open ActivityDetailModal, added console.warn for tracker RPC/update partial failures, verified all trackerId null guards and resetAll flow, added proofread_apply to ACTION_BORDER_COLORS, updated formatActionLabel to use consistent past-tense labels (Generated/Regenerated/Customized/etc.) across admin page and detail modal, added trackerError state with ErrorState retry UI on Activity Log tab, improved empty state messaging, added NarrativeTrackerEntry and TrackerActionEntry types to database.ts and used them in ActivityDetailModal
 **Sprint C — Dashboard Redesign:** COMPLETE — Added list_tracker_entries and get_tracker_detail admin API actions with search/filter/pagination, created new ActivityDetailModal in src/components/dashboard/ with vehicle info header, Block/C-C-C narrative toggle, and expandable action timeline with version snapshots, completely redesigned Activity Log tab on Owner Dashboard to use narrative_tracker data with new columns (User, R.O.#, Vehicle, Story Type, Actions pills, Last Activity), color-coded left borders by story type, tracker-specific filter/search/pagination, removed old activity_log query and inline expand behavior
 **Sprint B — Narrative Lifecycle Tracker Wiring:** COMPLETE — Wired all narrative actions to lifecycle tracker: generate (createTrackerEntry with await for ID), regenerate/customize/proofread/proofread_apply/save (updateTrackerAction fire-and-forget), export_copy/export_print/export_pdf/export_docx (ShareExportModal trackerId prop), simplified all logActivity calls to remove heavy metadata (tracker handles rich data), activityLogger always sets output_preview to null
@@ -2978,6 +2978,60 @@ The migration file has been updated for future deployments, but the existing dat
   - Added `create_team` action to admin API: creates team with auto-generated access code, owner-only
   - User Management table Team column updates immediately after successful assignment
   - Newly created teams available immediately in Assign to Team dropdown via refetch
+
+---
+
+## Sprint E — Team Dashboard: Migrate Activity Tab to Narrative Tracker
+
+**Date:** 2026-03-12
+**Status:** COMPLETE
+
+### Completed Tasks
+
+- [x] **Task 1 — Rewrite /api/teams/activity/route.ts to query narrative_tracker**
+  - Replaced activity_log query with narrative_tracker query
+  - Select same columns as admin API's list_tracker_entries: id, user_id, ro_number, vehicle_year/make/model, story_type, created_at, last_action_at, is_regenerated/customized/proofread/saved/exported, export_type
+  - Filter by team membership: get users where team_id matches, then filter narrative_tracker by user_id IN those IDs
+  - Updated filters from action_type-based to boolean-based: all/regenerated/customized/proofread/saved/exported
+  - Updated search to match ro_number ILIKE OR user name/email
+  - Sort by last_action_at instead of created_at
+  - Enrich rows with user_first_name, user_last_name, user_email from users table
+  - Added detail_id query param: when present, fetches single tracker entry with ALL columns (full_narrative, concern, cause, correction, action_history) plus user info, with team membership verification for admin users
+
+- [x] **Task 2 — Update ActivityDetailModal to support custom fetch**
+  - Added optional `fetchDetailFn` prop to src/components/dashboard/ActivityDetailModal.tsx
+  - When provided, modal uses the custom function instead of the default POST to /api/admin
+  - This allows team admins (role='admin') to use the modal via the teams/activity endpoint since they don't have access to /api/admin (owner-only)
+
+- [x] **Task 3 — Update Team Dashboard Activity tab UI**
+  - Changed import from src/components/admin/ActivityDetailModal (OLD) to src/components/dashboard/ActivityDetailModal (NEW)
+  - Replaced ActivityRow interface with TrackerEntry interface matching tracker data shape
+  - Replaced activityLogs/ActivityRow[] state with trackerEntries/TrackerEntry[]
+  - Replaced selectedActivity/activityExpandedRow with selectedTrackerId/showDetailModal
+  - Updated ACTION_FILTERS to boolean-based: All Entries, Regenerated, Customized, Proofread, Saved, Exported
+  - Replaced ACTION_BORDER_COLORS with TRACKER_PILL_COLORS matching admin page
+  - Updated table columns: User | R.O. # | Vehicle | Story Type | Actions (pills) | Last Activity
+  - Added color-coded action pills (Regen, Custom, Proofread, Saved, PDF/COPY/PRINT/DOCX) matching admin page
+  - Left border color: accent for diagnostic_only, green for repair_complete
+  - Row click sets selectedTrackerId and opens detail modal
+  - Updated modal rendering to use new props (isOpen, onClose, trackerId, fetchDetailFn)
+  - Added fetchTrackerDetail callback that calls GET /api/teams/activity?detail_id=xxx
+  - Updated search placeholder to "Search by name, email, or R.O. #..."
+  - Removed old formatActionLabel and formatDateReadable helper functions (no longer needed)
+
+- [x] **Task 4 — Update /api/teams/members to use narrative_tracker**
+  - Replaced activity_log query with narrative_tracker query in GET handler
+  - last_active now derived from MAX(last_action_at) via narrative_tracker (ordered desc, first per user_id)
+  - narrative_count still sourced from narratives table (counts saved narratives, not tracker entries)
+  - Response shape unchanged — Overview tab stats (Active This Week, Active Today) continue working via member.last_active
+  - No other activity_log references remain in the teams API path
+
+- [x] **Task 5 — Clean up dead code and verify imports**
+  - Verified NO files import from src/components/admin/ActivityDetailModal.tsx (old modal)
+  - Both admin/page.tsx and team-dashboard/page.tsx import from src/components/dashboard/ActivityDetailModal.tsx (new modal)
+  - Added DEPRECATED comment to src/components/admin/ActivityDetailModal.tsx
+  - Verified no dead code in team-dashboard/page.tsx (old interfaces, state vars, helpers already cleaned up in Tasks 1-3)
+  - Remaining activity_log references in src/ are all in separate features: activityLogger.ts (fire-and-forget logging), admin API routes, analytics, delete-account — not part of Team Dashboard migration scope
 
 ---
 

@@ -1,3 +1,4 @@
+// DEPRECATED — This modal is no longer in use. The new ActivityDetailModal is at src/components/dashboard/ActivityDetailModal.tsx
 'use client';
 
 import { useState } from 'react';

@@ -15,7 +15,7 @@ import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
-import ActivityDetailModal from '@/components/admin/ActivityDetailModal';
+import ActivityDetailModal from '@/components/dashboard/ActivityDetailModal';
 
 // ─── Interfaces ──────────────────────────────────────────
 interface TeamInfo {
@@ -45,44 +45,45 @@ const ROLE_BADGE: Record<string, { bg: string; text: string; label: string }> = 
   user: { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af', label: 'User' },
 };
 
-// ─── Activity Log Constants ──────────────────────────────
+// ─── Activity Log Constants (Tracker-based) ──────────────
 const ACTION_FILTERS = [
-  { value: 'all', label: 'All Actions' },
-  { value: 'generate', label: 'Generate' },
-  { value: 'regenerate', label: 'Regenerate' },
-  { value: 'save', label: 'Save' },
-  { value: 'export_copy', label: 'Export (Copy)' },
-  { value: 'export_print', label: 'Export (Print)' },
-  { value: 'export_pdf', label: 'Export (PDF)' },
-  { value: 'export_docx', label: 'Export (DOCX)' },
-  { value: 'login', label: 'Login' },
-  { value: 'customize', label: 'Customize' },
+  { value: 'all', label: 'All Entries' },
+  { value: 'regenerated', label: 'Regenerated' },
+  { value: 'customized', label: 'Customized' },
   { value: 'proofread', label: 'Proofread' },
+  { value: 'saved', label: 'Saved' },
+  { value: 'exported', label: 'Exported' },
 ];
 
-const ACTION_BORDER_COLORS: Record<string, string> = {
-  generate: 'var(--accent-primary)',
-  regenerate: 'var(--accent-primary)',
-  save: '#16a34a',
-  export_copy: '#3b82f6',
-  export_print: '#3b82f6',
-  export_pdf: '#3b82f6',
-  export_docx: '#3b82f6',
-  login: '#6b7280',
-  customize: 'var(--accent-hover)',
-  proofread: '#f59e0b',
+const TRACKER_PILL_COLORS: Record<string, string> = {
+  regenerated: '#f59e0b',
+  customized: '#8b5cf6',
+  proofread: '#06b6d4',
+  saved: '#22c55e',
+  pdf: '#ef4444',
+  copy: '#64748b',
+  print: '#64748b',
+  docx: '#3b82f6',
 };
 
-interface ActivityRow {
+interface TrackerEntry {
   id: string;
   user_id: string;
-  action_type: string;
+  ro_number: string | null;
+  vehicle_year: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
   story_type: string | null;
-  input_data: Record<string, unknown> | null;
-  output_preview: string | null;
-  metadata: Record<string, unknown>;
   created_at: string;
-  user_name: string;
+  last_action_at: string;
+  is_regenerated: boolean;
+  is_customized: boolean;
+  is_proofread: boolean;
+  is_saved: boolean;
+  is_exported: boolean;
+  export_type: string | null;
+  user_first_name: string | null;
+  user_last_name: string | null;
   user_email: string;
 }
 
@@ -137,16 +138,16 @@ export default function TeamDashboardPage() {
   const [removeTarget, setRemoveTarget] = useState<{ id: string; name: string } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  // Activity log state
-  const [activityLogs, setActivityLogs] = useState<ActivityRow[]>([]);
+  // Activity log state (tracker-based)
+  const [trackerEntries, setTrackerEntries] = useState<TrackerEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityTotalCount, setActivityTotalCount] = useState(0);
   const [activityPage, setActivityPage] = useState(1);
   const [activityFilter, setActivityFilter] = useState('all');
   const [activitySearch, setActivitySearch] = useState('');
   const [activitySortAsc, setActivitySortAsc] = useState(false);
-  const [activityExpandedRow, setActivityExpandedRow] = useState<string | null>(null);
-  const [selectedActivity, setSelectedActivity] = useState<ActivityRow | null>(null);
+  const [selectedTrackerId, setSelectedTrackerId] = useState<string | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Title spotlight
   const titleRef = useRef<HTMLDivElement>(null);
@@ -225,7 +226,7 @@ export default function TeamDashboardPage() {
     }
   }, [team, fetchMembers]);
 
-  // ─── Fetch Activity Logs ──────────────────────────────
+  // ─── Fetch Tracker Entries ──────────────────────────────
   const fetchActivityLogs = useCallback(async () => {
     if (!team) return;
     setActivityLoading(true);
@@ -240,19 +241,30 @@ export default function TeamDashboardPage() {
       const res = await fetch(`/api/teams/activity?${params}`);
       const json = await res.json();
       if (json.success) {
-        setActivityLogs(json.data || []);
+        setTrackerEntries(json.data || []);
         setActivityTotalCount(json.totalCount ?? 0);
       } else {
-        console.error('Activity fetch error:', json.error);
-        setActivityLogs([]);
+        console.error('Tracker fetch error:', json.error);
+        setTrackerEntries([]);
         setActivityTotalCount(0);
       }
     } catch (err) {
-      console.error('Activity log fetch error:', err);
+      console.error('Tracker fetch error:', err);
     } finally {
       setActivityLoading(false);
     }
   }, [team, activityPage, activityFilter, activitySearch, activitySortAsc]);
+
+  // ─── Detail Fetch for Modal ──────────────────────────────
+  const fetchTrackerDetail = useCallback(async (trackerId: string) => {
+    const res = await fetch(`/api/teams/activity?detail_id=${trackerId}`);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to fetch detail');
+    }
+    const result = await res.json();
+    return result.data;
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'activity' && team) {
@@ -265,24 +277,6 @@ export default function TeamDashboardPage() {
   }, [activityFilter, activitySearch]);
 
   const activityTotalPages = Math.max(1, Math.ceil(activityTotalCount / ACTIVITY_PAGE_SIZE));
-
-  const formatActionLabel = (action: string) => {
-    return action
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-  };
-
-  const formatDateReadable = (iso: string) => {
-    const d = new Date(iso);
-    return d.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
 
   // ─── Overview Stats ────────────────────────────────────
   const memberCount = members.length;
@@ -982,7 +976,7 @@ export default function TeamDashboardPage() {
                     <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
                     <input
                       type="text"
-                      placeholder="Search by name or email..."
+                      placeholder="Search by name, email, or R.O. #..."
                       value={activitySearch}
                       onChange={(e) => setActivitySearch(e.target.value)}
                       className="w-full pl-10 pr-4 py-2.5 bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] text-sm focus:outline-none focus:border-[var(--accent-hover)] transition-all"
@@ -1021,74 +1015,120 @@ export default function TeamDashboardPage() {
 
                 {activityLoading ? (
                   <div className="py-12">
-                    <LoadingSpinner size="medium" message="Loading activity logs..." />
+                    <LoadingSpinner size="medium" message="Loading narrative tracker..." />
                   </div>
-                ) : activityLogs.length === 0 ? (
-                  <p className="text-center text-[var(--text-muted)] py-12 text-base">No activity logs found.</p>
+                ) : trackerEntries.length === 0 ? (
+                  <p className="text-center text-[var(--text-muted)] py-12 text-base">
+                    No narrative activity recorded yet. Activity will appear here as team members generate stories.
+                  </p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
                         <tr className="text-center text-[var(--text-muted)] text-sm uppercase tracking-wider border-b border-[var(--accent-15)]">
-                          <th className="pb-3 pr-4 text-center">Date/Time</th>
                           <th className="pb-3 pr-4 text-center">User</th>
-                          <th className="pb-3 pr-4 text-center hidden md:table-cell">Email</th>
-                          <th className="pb-3 pr-4 text-center">Action</th>
+                          <th className="pb-3 pr-4 text-center">R.O. #</th>
+                          <th className="pb-3 pr-4 text-center hidden md:table-cell">Vehicle</th>
                           <th className="pb-3 pr-4 text-center hidden lg:table-cell">Story Type</th>
-                          <th className="pb-3 text-left hidden lg:table-cell">Preview</th>
+                          <th className="pb-3 pr-4 text-center">Actions</th>
+                          <th className="pb-3 text-center">Last Activity</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {activityLogs.map((log) => (
-                          <motion.tr
-                            key={log.id}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="border-b border-[var(--accent-10)] transition-all duration-200 ease-in-out cursor-pointer text-sm"
-                            onClick={() => setSelectedActivity(log)}
-                            style={{
-                              borderLeft: `3px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}`,
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.boxShadow = '0 0 8px 1px rgba(168, 85, 247, 0.3)';
-                              e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.05)';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.boxShadow = 'none';
-                              e.currentTarget.style.backgroundColor = 'transparent';
-                            }}
-                          >
-                            <td className="py-3 pr-4 text-center text-[var(--text-secondary)] whitespace-nowrap">
-                              {formatDateReadable(log.created_at)}
-                            </td>
-                            <td className="py-3 pr-4 text-center text-[var(--text-primary)] font-medium">
-                              {log.user_name}
-                            </td>
-                            <td className="py-3 pr-4 text-center hidden md:table-cell">
-                              <span className="inline-block max-w-[180px] overflow-hidden text-ellipsis whitespace-nowrap text-[var(--text-muted)]" title={log.user_email}>
-                                {log.user_email}
-                              </span>
-                            </td>
-                            <td className="py-3 pr-4 text-center">
-                              <span
-                                className="inline-block px-2.5 py-1 rounded-full text-sm font-medium"
-                                style={{
-                                  background: `${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}20`,
-                                  color: ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-bright)',
-                                  border: `1px solid ${ACTION_BORDER_COLORS[log.action_type] || 'var(--accent-30)'}40`,
-                                }}
-                              >
-                                {formatActionLabel(log.action_type)}
-                              </span>
-                            </td>
-                            <td className="py-3 pr-4 text-center text-[var(--text-muted)] capitalize hidden lg:table-cell">
-                              {log.story_type?.replace(/_/g, ' ') || '\u2014'}
-                            </td>
-                            <td className="py-3 text-left text-[var(--text-muted)] max-w-[200px] truncate hidden lg:table-cell">
-                              {log.output_preview || '\u2014'}
-                            </td>
-                          </motion.tr>
-                        ))}
+                        {trackerEntries.map((entry) => {
+                          const userName = [entry.user_first_name, entry.user_last_name].filter(Boolean).join(' ') || 'Unknown';
+                          const vehicle = [entry.vehicle_year, entry.vehicle_make, entry.vehicle_model].filter(Boolean).join(' ') || '\u2014';
+                          const storyLabel = entry.story_type === 'diagnostic_only' ? 'Diagnostic Only' : entry.story_type === 'repair_complete' ? 'Repair Complete' : '\u2014';
+                          const borderColor = entry.story_type === 'repair_complete' ? '#22c55e' : 'var(--accent-primary)';
+                          const lastAct = entry.last_action_at ? formatDateTimeStacked(entry.last_action_at) : null;
+
+                          // Build action pills
+                          const pills: Array<{ label: string; color: string }> = [];
+                          if (entry.is_regenerated) pills.push({ label: 'Regen', color: TRACKER_PILL_COLORS.regenerated });
+                          if (entry.is_customized) pills.push({ label: 'Custom', color: TRACKER_PILL_COLORS.customized });
+                          if (entry.is_proofread) pills.push({ label: 'Proofread', color: TRACKER_PILL_COLORS.proofread });
+                          if (entry.is_saved) pills.push({ label: 'Saved', color: TRACKER_PILL_COLORS.saved });
+                          if (entry.is_exported && entry.export_type) {
+                            const etLabel = entry.export_type.toUpperCase();
+                            const etColor = TRACKER_PILL_COLORS[entry.export_type] || '#64748b';
+                            pills.push({ label: etLabel, color: etColor });
+                          }
+
+                          return (
+                            <motion.tr
+                              key={entry.id}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="border-b border-[var(--accent-10)] transition-all duration-200 ease-in-out cursor-pointer text-sm"
+                              onClick={() => {
+                                setSelectedTrackerId(entry.id);
+                                setShowDetailModal(true);
+                              }}
+                              style={{
+                                borderLeft: `3px solid ${borderColor}`,
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.boxShadow = '0 0 8px 1px rgba(168, 85, 247, 0.3)';
+                                e.currentTarget.style.backgroundColor = 'rgba(168, 85, 247, 0.05)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.boxShadow = 'none';
+                                e.currentTarget.style.backgroundColor = 'transparent';
+                              }}
+                            >
+                              <td className="py-3 pr-4 text-center text-[var(--text-primary)] font-medium">
+                                {userName}
+                              </td>
+                              <td className="py-3 pr-4 text-center text-[var(--text-secondary)] font-mono">
+                                {entry.ro_number || '\u2014'}
+                              </td>
+                              <td className="py-3 pr-4 text-center text-[var(--text-muted)] hidden md:table-cell">
+                                {vehicle}
+                              </td>
+                              <td className="py-3 pr-4 text-center hidden lg:table-cell">
+                                {entry.story_type ? (
+                                  <span
+                                    className="inline-block px-2 py-0.5 rounded-full text-xs font-medium"
+                                    style={{
+                                      backgroundColor: entry.story_type === 'repair_complete'
+                                        ? 'rgba(34,197,94,0.15)'
+                                        : 'color-mix(in srgb, var(--accent-primary) 15%, transparent)',
+                                      color: entry.story_type === 'repair_complete' ? '#22c55e' : 'var(--accent-bright)',
+                                      border: `1px solid ${entry.story_type === 'repair_complete' ? 'rgba(34,197,94,0.3)' : 'var(--accent-30)'}`,
+                                    }}
+                                  >
+                                    {storyLabel}
+                                  </span>
+                                ) : '\u2014'}
+                              </td>
+                              <td className="py-3 pr-4 text-center">
+                                <div className="flex flex-wrap justify-center gap-1">
+                                  {pills.map((pill, i) => (
+                                    <span
+                                      key={i}
+                                      className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                                      style={{
+                                        backgroundColor: `color-mix(in srgb, ${pill.color} 15%, transparent)`,
+                                        color: pill.color,
+                                        border: `1px solid ${pill.color}`,
+                                      }}
+                                    >
+                                      {pill.label}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="py-3 text-center">
+                                {lastAct ? (
+                                  <div>
+                                    <p className="text-[var(--text-secondary)] text-sm">{lastAct.date}</p>
+                                    <p className="text-[var(--text-muted)] text-xs">{lastAct.time}</p>
+                                  </div>
+                                ) : '\u2014'}
+                              </td>
+                            </motion.tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1127,12 +1167,12 @@ export default function TeamDashboardPage() {
         </AnimatePresence>
 
         {/* Activity Detail Modal */}
-        {selectedActivity && (
-          <ActivityDetailModal
-            activity={selectedActivity}
-            onClose={() => setSelectedActivity(null)}
-          />
-        )}
+        <ActivityDetailModal
+          isOpen={showDetailModal}
+          onClose={() => { setShowDetailModal(false); setSelectedTrackerId(null); }}
+          trackerId={selectedTrackerId}
+          fetchDetailFn={fetchTrackerDetail}
+        />
 
         {/* Promote/Demote Confirmation Modal */}
         <Modal

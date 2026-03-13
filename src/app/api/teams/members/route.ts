@@ -84,15 +84,15 @@ export async function GET(request: Request) {
         narrativeCounts[n.user_id] = (narrativeCounts[n.user_id] || 0) + 1;
       });
 
-      // Get last activity per member
-      const { data: activityRows } = await svc
-        .from('activity_log')
-        .select('user_id, created_at')
+      // Get last activity per member from narrative_tracker
+      const { data: trackerRows } = await svc
+        .from('narrative_tracker')
+        .select('user_id, last_action_at')
         .in('user_id', memberIds)
-        .order('created_at', { ascending: false });
+        .order('last_action_at', { ascending: false });
 
-      (activityRows || []).forEach((a: { user_id: string; created_at: string }) => {
-        if (!lastActiveMap[a.user_id]) lastActiveMap[a.user_id] = a.created_at;
+      (trackerRows || []).forEach((t: { user_id: string; last_action_at: string }) => {
+        if (!lastActiveMap[t.user_id]) lastActiveMap[t.user_id] = t.last_action_at;
       });
     }
 
