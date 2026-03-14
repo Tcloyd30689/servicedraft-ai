@@ -208,16 +208,21 @@ export function useAuth(): UseAuthReturn {
 
   const signOut = useCallback(async () => {
     try {
-      // Clear session and theme localStorage so landing page defaults to purple dark
+      // Clear app-specific localStorage first (always succeeds)
       localStorage.removeItem('sd-login-timestamp');
       localStorage.removeItem('sd-accent-color');
       localStorage.removeItem('sd-color-mode');
       localStorage.removeItem('sd-bg-animation');
-      await supabase.auth.signOut();
+
+      // Use scope: 'local' to avoid network request with potentially expired token.
+      // This clears the local session (cookies + in-memory state) without calling
+      // Supabase's auth server, which can hang if the access token is expired.
+      await supabase.auth.signOut({ scope: 'local' });
       setAuthState({ user: null, profile: null });
-      window.location.href = '/';
     } catch (err) {
       console.error('Sign out error:', err);
+    } finally {
+      // ALWAYS redirect regardless of what happened above
       window.location.href = '/';
     }
   }, []);

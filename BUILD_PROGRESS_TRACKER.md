@@ -24,7 +24,8 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-13
-**Current Phase:** Activity Detail Modal z-index/positioning Fix — COMPLETE
+**Current Phase:** SignOut Hang Fix — COMPLETE
+**SignOut Hang Fix:** COMPLETE — Fixed silent signOut hang on expired sessions by switching to scope: 'local' to avoid network requests with expired tokens, and moved redirect to finally block for guaranteed execution.
 **Activity Detail Modal Fix:** COMPLETE — Bumped backdrop to z-[120] and modal container to z-[130] so it renders above the hero area (z-[110]). Switched from items-center to items-start with pt-[20px] to prevent top of modal from hiding behind fixed navbar. Widened to max-w-5xl, increased max-h to 95vh, made close button sticky with float-right so it stays visible when scrolling. Added full-width CLOSE button at the bottom of the modal with standard motion.button hover animations (scale 1.05, glow shadow, spring transition).
 **ProofreadResults setState Fix:** COMPLETE — Moved notifyParent calls out of setCheckedEdits updater and toggleAll synchronous flow into a dedicated useEffect watching checkedEdits. Eliminates React "Cannot update a component while rendering a different component" console error when toggling suggested edit checkboxes.
 **PGRST116 Login Fix:** COMPLETE — Fixed PGRST116 crash on login for new/incomplete accounts by replacing .single() with .maybeSingle() on profile queries in login/page.tsx (handleLogin) and signup/page.tsx (checkAuthStatus). Both already handled null profile gracefully; only the query method needed changing.
