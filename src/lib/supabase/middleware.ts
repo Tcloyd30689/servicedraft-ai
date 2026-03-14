@@ -9,14 +9,15 @@ export async function updateSession(request: NextRequest) {
   let cookiesCorrupted = false;
 
   for (const cookie of authCookies) {
-    try {
-      if (cookie.value) {
-        const base64Part = cookie.value.split('.')[0];
-        if (base64Part) {
-          Buffer.from(base64Part.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
-        }
-      }
-    } catch {
+    // Only flag cookies that are clearly broken
+    const isClearlyCorrupted =
+      !cookie.value ||
+      cookie.value.length < 10 ||
+      cookie.value.includes('\0') ||
+      cookie.value === 'undefined' ||
+      cookie.value === 'null';
+
+    if (isClearlyCorrupted) {
       console.warn(`Corrupted Supabase cookie detected in middleware: ${cookie.name}`);
       cookiesCorrupted = true;
       break;

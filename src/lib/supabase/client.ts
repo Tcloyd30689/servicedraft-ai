@@ -1,28 +1,39 @@
 import { createBrowserClient } from '@supabase/ssr';
 
 /**
- * Validates all Supabase auth cookies (sb-*) and clears any with corrupted
- * base64 data. This prevents the "Invalid UTF-8 sequence" crash inside
- * @supabase/ssr's internal base64url decoder.
+ * Checks for clearly corrupted Supabase auth cookies and removes them.
+ *
+ * IMPORTANT: This must be very conservative. Supabase SSR uses a custom
+ * chunked base64 encoding that does NOT pass standard atob() tests.
+ * Only clear cookies that are obviously broken — empty values, null bytes,
+ * or truncated to just a few characters (indicating a failed write).
  */
 function clearCorruptedAuthCookies(): void {
   try {
     document.cookie.split(';').forEach(cookie => {
-      const name = cookie.split('=')[0].trim();
-      if (name.startsWith('sb-')) {
-        const value = cookie.split('=').slice(1).join('=').trim();
-        if (value) {
-          try {
-            const base64Part = value.split('.')[0];
-            if (base64Part) {
-              atob(base64Part.replace(/-/g, '+').replace(/_/g, '/'));
-            }
-          } catch {
-            console.warn(`Clearing corrupted Supabase cookie: ${name}`);
-            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}`;
-          }
-        }
+      const eqIndex = cookie.indexOf('=');
+      if (eqIndex === -1) return;
+
+      const name = cookie.substring(0, eqIndex).trim();
+      if (!name.startsWith('sb-')) return;
+
+      const value = cookie.substring(eqIndex + 1).trim();
+
+      // Only clear if the cookie is clearly broken:
+      // 1. Empty value
+      // 2. Contains null bytes
+      // 3. Value is suspiciously short (< 10 chars) for an auth token
+      const isClearlyCorrupted =
+        !value ||
+        value.length < 10 ||
+        value.includes('\0') ||
+        value === 'undefined' ||
+        value === 'null';
+
+      if (isClearlyCorrupted) {
+        console.warn(`Clearing corrupted Supabase cookie: ${name} (reason: ${!value ? 'empty' : value.length < 10 ? 'too short' : 'invalid content'})`);
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}`;
       }
     });
   } catch (err) {
@@ -31,8 +42,6 @@ function clearCorruptedAuthCookies(): void {
 }
 
 export function createClient() {
-  // Validate cookies BEFORE creating the Supabase client
-  // This prevents the "Invalid UTF-8 sequence" crash inside @supabase/ssr
   if (typeof document !== 'undefined') {
     clearCorruptedAuthCookies();
   }
