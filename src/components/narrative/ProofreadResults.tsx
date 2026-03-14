@@ -56,18 +56,18 @@ export default function ProofreadResults({
 
   // Reset checkboxes when data changes
   useEffect(() => {
-    const fresh = new Array(data.suggested_edits.length).fill(false);
-    setCheckedEdits(fresh);
-    // Defer parent notification to avoid setState-during-render
-    const timer = setTimeout(() => notifyParent(fresh), 0);
-    return () => clearTimeout(timer);
-  }, [data.suggested_edits, notifyParent]);
+    setCheckedEdits(new Array(data.suggested_edits.length).fill(false));
+  }, [data.suggested_edits]);
+
+  // Notify parent of selection changes AFTER render
+  useEffect(() => {
+    notifyParent(checkedEdits);
+  }, [checkedEdits, notifyParent]);
 
   const toggleEdit = (index: number) => {
     setCheckedEdits(prev => {
       const next = [...prev];
       next[index] = !next[index];
-      notifyParent(next);
       return next;
     });
   };
@@ -76,9 +76,7 @@ export default function ProofreadResults({
 
   const toggleAll = () => {
     const newState = !allChecked;
-    const next = new Array(data.suggested_edits.length).fill(newState);
-    setCheckedEdits(next);
-    notifyParent(next);
+    setCheckedEdits(new Array(data.suggested_edits.length).fill(newState));
   };
 
   const rating = ratingConfig[data.overall_rating];

@@ -24,7 +24,8 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-13
-**Current Phase:** PGRST116 Login Fix — COMPLETE
+**Current Phase:** ProofreadResults setState-during-render Fix — COMPLETE
+**ProofreadResults setState Fix:** COMPLETE — Moved notifyParent calls out of setCheckedEdits updater and toggleAll synchronous flow into a dedicated useEffect watching checkedEdits. Eliminates React "Cannot update a component while rendering a different component" console error when toggling suggested edit checkboxes.
 **PGRST116 Login Fix:** COMPLETE — Fixed PGRST116 crash on login for new/incomplete accounts by replacing .single() with .maybeSingle() on profile queries in login/page.tsx (handleLogin) and signup/page.tsx (checkAuthStatus). Both already handled null profile gracefully; only the query method needed changing.
 **Corrupted Cookie Crash Guard:** COMPLETE — Added cookie validation layer that detects and clears corrupted Supabase auth cookies before the SDK attempts to parse them. Prevents 'Invalid UTF-8 sequence' crash. Three-layer defense: middleware validation, client-side pre-validation, and global error recovery handler.
 **Auth Session Resilience Sprint:** COMPLETE — Fixed loading lockup caused by competing getUser() token refresh race condition. Added timeout wrappers (5s auth timeout + 10s failsafe), unified auth state management (removed duplicate onAuthStateChange in ThemeProvider), replaced getUser() with getSession() in ThemeProvider/signup (local reads, no network calls), added loading timeout failsafes on login (6s), signup (6s), main-menu (8s + RESET SESSION button), and forceSessionReset() nuclear recovery option
