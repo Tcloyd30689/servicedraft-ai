@@ -78,7 +78,7 @@ function SignupContent() {
             .from('users')
             .select('subscription_status, username')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
 
           if (!active) return;
 

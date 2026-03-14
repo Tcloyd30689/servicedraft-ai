@@ -84,7 +84,7 @@ export default function LoginPage() {
         .from('users')
         .select('subscription_status, username')
         .eq('id', data.user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error('Login handler profile query failed:', profileError.message, profileError.code);
