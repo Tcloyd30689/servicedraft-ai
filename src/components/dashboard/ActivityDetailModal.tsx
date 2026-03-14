@@ -436,6 +436,19 @@ export default function ActivityDetailModal({ isOpen, onClose, trackerId, fetchD
                         <p className="text-sm text-[var(--text-muted)]">No activity recorded.</p>
                       )}
                     </div>
+
+                    {/* ─── Close Button ─────────────────────────── */}
+                    <div className="mt-8 flex justify-center">
+                      <motion.button
+                        onClick={onClose}
+                        className="w-full max-w-2xl py-3.5 px-6 text-base font-semibold rounded-lg cursor-pointer bg-[var(--accent-hover)] text-[var(--btn-text-on-accent)] hover:bg-[var(--accent-primary)] active:bg-[var(--accent-border)] transition-colors"
+                        whileHover={{ scale: 1.05, boxShadow: 'var(--shadow-glow-sm)' }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                      >
+                        CLOSE
+                      </motion.button>
+                    </div>
                   </>
                 )}
               </div>
