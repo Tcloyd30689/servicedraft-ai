@@ -168,7 +168,7 @@ export default function ActivityDetailModal({ isOpen, onClose, trackerId, fetchD
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -177,9 +177,9 @@ export default function ActivityDetailModal({ isOpen, onClose, trackerId, fetchD
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+          <div className="fixed inset-0 z-[130] flex items-start justify-center pointer-events-none pt-[20px] pb-4 px-4 overflow-y-auto">
             <motion.div
-              className="w-[90vw] max-w-4xl pointer-events-auto bg-[var(--bg-elevated)] border-2 border-[var(--accent-border)] rounded-[16px] backdrop-blur-xl shadow-[var(--shadow-glow-lg)] max-h-[90vh] overflow-y-auto"
+              className="w-[85vw] max-w-5xl pointer-events-auto bg-[var(--bg-elevated)] border-2 border-[var(--accent-border)] rounded-[16px] backdrop-blur-xl shadow-[var(--shadow-glow-lg)] max-h-[95vh] overflow-y-auto my-auto"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -188,7 +188,7 @@ export default function ActivityDetailModal({ isOpen, onClose, trackerId, fetchD
               {/* Close button */}
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 z-10 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer p-1"
+                className="sticky top-0 float-right z-10 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer p-1 -mb-8"
                 aria-label="Close modal"
               >
                 <X size={22} />
