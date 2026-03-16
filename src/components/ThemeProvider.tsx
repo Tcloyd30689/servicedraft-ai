@@ -258,15 +258,15 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
       const supabase = createClient();
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
+        async (_event: string, session: { user: { id: string } } | null) => {
           if (cancelled) return;
 
-          if (event === 'SIGNED_OUT' || !session?.user) {
+          if (_event === 'SIGNED_OUT' || !session?.user) {
             resetToDefaults();
             return;
           }
 
-          if (event === 'SIGNED_IN' && session.user) {
+          if (_event === 'SIGNED_IN' && session.user) {
             await loadUserPreferences(session.user.id);
           }
         },

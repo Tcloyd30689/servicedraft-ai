@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useTypingAnimation } from '@/hooks/useTypingAnimation';
 
 interface ParsedIssue {
@@ -43,31 +43,26 @@ export default function ProofreadResults({
     { speed: 10, enabled: animate },
   );
 
-  // Notify parent of selection changes
-  const notifyParent = useCallback((checks: boolean[]) => {
+  // Notify parent of selection changes AFTER render via useEffect
+  useEffect(() => {
     if (onSelectionChange) {
-      const indices = checks.reduce<number[]>((acc, checked, i) => {
+      const indices = checkedEdits.reduce<number[]>((acc, checked, i) => {
         if (checked) acc.push(i);
         return acc;
       }, []);
       onSelectionChange(indices);
     }
-  }, [onSelectionChange]);
+  }, [checkedEdits, onSelectionChange]);
 
   // Reset checkboxes when data changes
   useEffect(() => {
-    const fresh = new Array(data.suggested_edits.length).fill(false);
-    setCheckedEdits(fresh);
-    // Defer parent notification to avoid setState-during-render
-    const timer = setTimeout(() => notifyParent(fresh), 0);
-    return () => clearTimeout(timer);
-  }, [data.suggested_edits, notifyParent]);
+    setCheckedEdits(new Array(data.suggested_edits.length).fill(false));
+  }, [data.suggested_edits]);
 
   const toggleEdit = (index: number) => {
     setCheckedEdits(prev => {
       const next = [...prev];
       next[index] = !next[index];
-      notifyParent(next);
       return next;
     });
   };
@@ -76,9 +71,7 @@ export default function ProofreadResults({
 
   const toggleAll = () => {
     const newState = !allChecked;
-    const next = new Array(data.suggested_edits.length).fill(newState);
-    setCheckedEdits(next);
-    notifyParent(next);
+    setCheckedEdits(new Array(data.suggested_edits.length).fill(newState));
   };
 
   const rating = ratingConfig[data.overall_rating];

@@ -168,7 +168,7 @@ export default function ActivityDetailModal({ isOpen, onClose, trackerId, fetchD
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -177,18 +177,18 @@ export default function ActivityDetailModal({ isOpen, onClose, trackerId, fetchD
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4">
+          <div className="fixed inset-0 z-[130] flex items-start justify-center pointer-events-none p-4 pt-[20px] overflow-y-auto">
             <motion.div
-              className="w-[90vw] max-w-4xl pointer-events-auto bg-[var(--bg-elevated)] border-2 border-[var(--accent-border)] rounded-[16px] backdrop-blur-xl shadow-[var(--shadow-glow-lg)] max-h-[90vh] overflow-y-auto"
+              className="relative w-[85vw] max-w-5xl pointer-events-auto bg-[var(--bg-elevated)] border-2 border-[var(--accent-border)] rounded-[16px] backdrop-blur-xl shadow-[var(--shadow-glow-lg)] my-4"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
-              {/* Close button */}
+              {/* Sticky close button (top-right) */}
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 z-10 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer p-1"
+                className="sticky top-0 float-right z-10 mt-4 mr-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer p-1 bg-[var(--bg-elevated)] rounded-full"
                 aria-label="Close modal"
               >
                 <X size={22} />
@@ -435,6 +435,19 @@ export default function ActivityDetailModal({ isOpen, onClose, trackerId, fetchD
                       ) : (
                         <p className="text-sm text-[var(--text-muted)]">No activity recorded.</p>
                       )}
+                    </div>
+
+                    {/* ─── Bottom Close Button ──────────────────── */}
+                    <div className="mt-8 flex justify-center">
+                      <motion.button
+                        onClick={onClose}
+                        className="px-8 py-2.5 rounded-lg bg-[var(--accent-primary)] text-[var(--btn-text-on-accent)] text-sm font-semibold cursor-pointer transition-opacity"
+                        whileHover={{ scale: 1.05, boxShadow: 'var(--shadow-glow-sm)' }}
+                        whileTap={{ scale: 0.95 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                      >
+                        CLOSE
+                      </motion.button>
                     </div>
                   </>
                 )}

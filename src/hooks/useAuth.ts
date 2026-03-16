@@ -52,22 +52,6 @@ function setAuthState(partial: Partial<AuthState>) {
   notify();
 }
 
-function buildFallbackProfile(userId: string, email: string): UserProfile {
-  return {
-    id: userId,
-    email,
-    username: null,
-    first_name: null,
-    last_name: null,
-    location: null,
-    position: null,
-    profile_picture_url: null,
-    subscription_status: 'trial',
-    role: 'user',
-    is_restricted: false,
-  };
-}
-
 async function fetchProfileForUser(userId: string, userEmail?: string) {
   try {
     const { data, error } = await supabase
@@ -91,7 +75,7 @@ async function fetchProfileForUser(userId: string, userEmail?: string) {
 
       if (insertError) {
         console.error('Failed to create user profile:', insertError.message);
-        setAuthState({ profile: buildFallbackProfile(userId, userEmail || '') });
+        setAuthState({ profile: null });
         return;
       }
 
@@ -103,7 +87,7 @@ async function fetchProfileForUser(userId: string, userEmail?: string) {
 
     if (error) {
       console.error('Failed to fetch user profile:', error.message);
-      setAuthState({ profile: buildFallbackProfile(userId, userEmail || '') });
+      setAuthState({ profile: null });
       return;
     }
 
@@ -112,7 +96,7 @@ async function fetchProfileForUser(userId: string, userEmail?: string) {
     }
   } catch (err) {
     console.error('Error fetching profile:', err);
-    setAuthState({ profile: buildFallbackProfile(userId, userEmail || '') });
+    setAuthState({ profile: null });
   }
 }
 
@@ -120,10 +104,15 @@ function initializeAuth() {
   if (initialized) return;
   initialized = true;
 
-  // Initial fetch
+  // Initial fetch with 5-second timeout on getUser()
   (async () => {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { data: { user: authUser } } = await Promise.race([
+        supabase.auth.getUser(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Auth timeout: getUser took longer than 5s')), 5000)
+        ),
+      ]);
       setAuthState({ user: authUser });
 
       if (authUser) {
@@ -131,15 +120,34 @@ function initializeAuth() {
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
-      console.error('Error getting user:', err);
+
+      if (err instanceof Error && err.message.includes('Auth timeout')) {
+        console.warn(err.message);
+        // Clear stale local session so next load starts fresh
+        try {
+          supabase.auth.signOut({ scope: 'local' });
+        } catch { /* fire-and-forget */ }
+      } else {
+        console.error('Error getting user:', err);
+      }
+
+      setAuthState({ user: null, profile: null });
     } finally {
       setAuthState({ loading: false });
     }
   })();
 
+  // 10-second failsafe: if loading is still true, force it off
+  setTimeout(() => {
+    if (authState.loading) {
+      console.warn('Auth failsafe: forcing loading=false after 10s');
+      setAuthState({ user: null, profile: null, loading: false });
+    }
+  }, 10000);
+
   // Auth state change listener — single global subscription
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (_event, session) => {
+    async (_event: string, session: { user: User } | null) => {
       try {
         const currentUser = session?.user ?? null;
         setAuthState({ user: currentUser });
@@ -194,11 +202,11 @@ export function useAuth(): UseAuthReturn {
       localStorage.removeItem('sd-accent-color');
       localStorage.removeItem('sd-color-mode');
       localStorage.removeItem('sd-bg-animation');
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       setAuthState({ user: null, profile: null });
-      window.location.href = '/';
     } catch (err) {
       console.error('Sign out error:', err);
+    } finally {
       window.location.href = '/';
     }
   }, []);

@@ -23,8 +23,10 @@ This file is a living document that Claude Code reads at the start of every sess
 
 ## CURRENT STATUS
 
-**Last Updated:** 2026-03-12
-**Current Phase:** Sprint E — Team Dashboard: Migrate Activity Tab to Narrative Tracker — COMPLETE
+**Last Updated:** 2026-03-16
+**Current Phase:** Sprint F — Clean Auth Loading Fix — COMPLETE
+**Sprint F — Clean Auth Loading Fix:** COMPLETE — Singleton Supabase browser client (prevents duplicate instances/network calls), removed buildFallbackProfile (root cause of redirect loops — was setting subscription_status:'trial' on any error, causing main-menu→signup→main-menu loop), all profile fetch errors now set profile:null, added 5s timeout on getUser() with stale session cleanup, 10s failsafe timer in initializeAuth, main-menu guard skips redirect when profile is null (shows spinner instead), added 8s loadingTooLong "Reset Session" button for user escape hatch, changed post-signup redirect from router.push to window.location.href (forces full page load with fresh middleware/cookies), fixed signOut to use scope:'local' (prevents hang on expired tokens) with finally-block redirect, fixed ProofreadResults setState-during-render (moved parent notifications to useEffect watching checkedEdits), fixed ActivityDetailModal z-index (z-[120]/z-[130] above HeroArea z-[90]/z-[110]), top-anchored positioning, wider modal (85vw/max-w-5xl), sticky X button, added bottom CLOSE button with hover animation, fixed ThemeProvider onAuthStateChange type annotations
+**Sprint E — Team Dashboard Activity Tab Migration:** COMPLETE
 **Sprint D — Polish & Cleanup:** COMPLETE — Updated admin API get_user_details to return recent_tracker_entries (5 most recent), replaced User Management expanded row "Recent Activity" section with clickable tracker entries showing R.O.#/vehicle/story type badge/action pills/timestamps that open ActivityDetailModal, added console.warn for tracker RPC/update partial failures, verified all trackerId null guards and resetAll flow, added proofread_apply to ACTION_BORDER_COLORS, updated formatActionLabel to use consistent past-tense labels (Generated/Regenerated/Customized/etc.) across admin page and detail modal, added trackerError state with ErrorState retry UI on Activity Log tab, improved empty state messaging, added NarrativeTrackerEntry and TrackerActionEntry types to database.ts and used them in ActivityDetailModal
 **Sprint C — Dashboard Redesign:** COMPLETE — Added list_tracker_entries and get_tracker_detail admin API actions with search/filter/pagination, created new ActivityDetailModal in src/components/dashboard/ with vehicle info header, Block/C-C-C narrative toggle, and expandable action timeline with version snapshots, completely redesigned Activity Log tab on Owner Dashboard to use narrative_tracker data with new columns (User, R.O.#, Vehicle, Story Type, Actions pills, Last Activity), color-coded left borders by story type, tracker-specific filter/search/pagination, removed old activity_log query and inline expand behavior
 **Sprint B — Narrative Lifecycle Tracker Wiring:** COMPLETE — Wired all narrative actions to lifecycle tracker: generate (createTrackerEntry with await for ID), regenerate/customize/proofread/proofread_apply/save (updateTrackerAction fire-and-forget), export_copy/export_print/export_pdf/export_docx (ShareExportModal trackerId prop), simplified all logActivity calls to remove heavy metadata (tracker handles rich data), activityLogger always sets output_preview to null
@@ -2978,6 +2980,73 @@ The migration file has been updated for future deployments, but the existing dat
   - Added `create_team` action to admin API: creates team with auto-generated access code, owner-only
   - User Management table Team column updates immediately after successful assignment
   - Newly created teams available immediately in Assign to Team dropdown via refetch
+
+---
+
+## Sprint F — Clean Auth Loading Fix
+
+**Date:** 2026-03-16
+**Status:** COMPLETE
+
+Previous auth loading fix attempts (commits de85135 through 199b4ef) were reverted because they stacked band-aids without addressing the root cause. This sprint implements a clean, single-pass fix.
+
+### Root Cause
+`buildFallbackProfile()` in `useAuth.ts` set `subscription_status: 'trial'` on ANY profile fetch error. The main-menu page guard saw `trial` status and redirected to `/signup?step=2`. Signup checked auth, saw a completed profile, and redirected back to `/main-menu` — creating an infinite redirect loop.
+
+### Changes Made
+
+- [x] **Task 1: Singleton Supabase browser client** (`src/lib/supabase/client.ts`)
+  - Added module-level `browserClient` variable
+  - `createClient()` now returns existing instance if already created
+  - Prevents multiple components from spinning up independent clients with separate `getUser()` calls
+
+- [x] **Task 2: Remove buildFallbackProfile** (`src/hooks/useAuth.ts`)
+  - Deleted the entire `buildFallbackProfile()` function
+  - All error paths in `fetchProfileForUser()` now set `profile: null` instead of a fake trial profile
+  - PGRST116 (no row) handler still creates a real profile row via INSERT — kept as-is
+  - Added 5-second timeout wrapper around initial `getUser()` call using `Promise.race`
+  - On timeout: logs warning, calls `signOut({ scope: 'local' })` fire-and-forget, sets `{ user: null, profile: null }`
+  - Added 10-second failsafe timer that forces `{ user: null, profile: null, loading: false }` if still loading
+
+- [x] **Task 3: Fix main-menu redirect guard** (`src/app/(protected)/main-menu/page.tsx`)
+  - Added `if (!profile) return;` at top of useEffect — null profile no longer triggers redirect
+  - Simplified loading condition to `if (loading || !profile)` — shows spinner while resolving
+  - Added 8-second `loadingTooLong` timer that shows "Reset Session" button
+  - Reset button clears all `sb-` cookies, removes `sd-*` localStorage keys, redirects to `/`
+
+- [x] **Task 4: Fix post-signup redirect** (`src/app/(auth)/signup/page.tsx`)
+  - Changed `router.push('/main-menu')` to `window.location.href = '/main-menu'`
+  - Forces full page load ensuring middleware runs fresh with proper cookies
+
+- [x] **Task 5: Fix signOut hang** (`src/hooks/useAuth.ts`)
+  - Changed `supabase.auth.signOut()` to `supabase.auth.signOut({ scope: 'local' })`
+  - Prevents hang when access token is expired (no network request to Supabase auth server)
+  - Added `finally` block with `window.location.href = '/'` — always redirects regardless of signOut success
+
+- [x] **Task 6: Verify ThemeProvider singleton** (`src/components/ThemeProvider.tsx`)
+  - Dynamic import `createClient()` now returns singleton — no changes needed for logic
+  - Fixed `onAuthStateChange` callback type annotations (event/session) for TypeScript strict mode
+
+- [x] **Task 7: Fix ProofreadResults setState-during-render** (`src/components/narrative/ProofreadResults.tsx`)
+  - Removed `notifyParent()` calls from inside `setCheckedEdits` updater and `toggleAll`
+  - Moved all parent notifications to a `useEffect` that watches `checkedEdits` state
+  - Eliminated React warning about updating a component during rendering of another component
+
+- [x] **Task 8: Fix ActivityDetailModal z-index and positioning** (`src/components/dashboard/ActivityDetailModal.tsx`)
+  - Backdrop: `z-[120]` (was `z-40`), modal container: `z-[130]` (was `z-50`)
+  - Switched from `items-center` to `items-start` with `pt-[20px]` for top-anchored positioning
+  - Increased width to `w-[85vw] max-w-5xl` (was `w-[90vw] max-w-4xl`)
+  - Made top-right X button sticky with `sticky top-0 float-right` and bg for visibility
+  - Added CLOSE button at bottom with `motion.button` hover animation
+
+### Files Modified
+1. `src/lib/supabase/client.ts`
+2. `src/hooks/useAuth.ts`
+3. `src/app/(protected)/main-menu/page.tsx`
+4. `src/app/(auth)/signup/page.tsx`
+5. `src/components/ThemeProvider.tsx`
+6. `src/components/narrative/ProofreadResults.tsx`
+7. `src/components/dashboard/ActivityDetailModal.tsx`
 
 ---
 

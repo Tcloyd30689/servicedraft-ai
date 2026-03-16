@@ -238,7 +238,7 @@ function SignupContent() {
 
     setLoginTimestamp();
     toast.success('Account created successfully!');
-    router.push('/main-menu');
+    window.location.href = '/main-menu';
   };
 
   const stepTitles: Record<Step, string> = {

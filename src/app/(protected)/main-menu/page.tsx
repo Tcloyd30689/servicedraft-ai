@@ -21,32 +21,69 @@ export default function MainMenuPage() {
   const [showFAQ, setShowFAQ] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
+  const [loadingTooLong, setLoadingTooLong] = useState(false);
 
   // Guard: redirect to onboarding if profile is incomplete
   useEffect(() => {
     if (loading) return;
+    if (!profile) return; // Profile failed to load — show spinner, don't redirect
 
-    if (profile) {
-      const needsPayment =
-        !profile.subscription_status || profile.subscription_status === 'trial';
-      const needsProfile = !needsPayment && !profile.username;
+    const needsPayment =
+      !profile.subscription_status || profile.subscription_status === 'trial';
+    const needsProfile = !needsPayment && !profile.username;
 
-      if (needsPayment) {
-        router.replace('/signup?step=2');
-      } else if (needsProfile) {
-        router.replace('/signup?step=3');
-      }
+    if (needsPayment) {
+      router.replace('/signup?step=2');
+    } else if (needsProfile) {
+      router.replace('/signup?step=3');
     }
   }, [loading, profile, router]);
 
-  // Show loading while checking onboarding status
-  if (loading || !profile || !profile.subscription_status ||
-      profile.subscription_status === 'trial' || !profile.username) {
+  // 8-second timer: if still loading/no profile, show reset button
+  useEffect(() => {
+    if (!loading && profile) return; // Already loaded fine
+    const timer = setTimeout(() => {
+      setLoadingTooLong(true);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [loading, profile]);
+
+  const handleResetSession = () => {
+    // Clear all sb- cookies
+    document.cookie.split(';').forEach((c) => {
+      const name = c.trim().split('=')[0];
+      if (name.startsWith('sb-')) {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      }
+    });
+    // Clear localStorage keys
+    localStorage.removeItem('sd-login-timestamp');
+    localStorage.removeItem('sd-accent-color');
+    localStorage.removeItem('sd-color-mode');
+    localStorage.removeItem('sd-bg-animation');
+    window.location.href = '/';
+  };
+
+  // Show loading while auth is resolving or profile is null
+  if (loading || !profile) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-164px)] px-4">
         <LiquidCard size="spacious">
-          <div className="py-12">
+          <div className="py-12 flex flex-col items-center gap-4">
             <LoadingSpinner message="Loading..." />
+            {loadingTooLong && (
+              <div className="mt-4 text-center">
+                <p className="text-[var(--text-muted)] text-sm mb-3">
+                  Taking longer than expected. You can reset your session to start fresh.
+                </p>
+                <button
+                  onClick={handleResetSession}
+                  className="px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-[var(--btn-text-on-accent)] text-sm font-medium hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  Reset Session
+                </button>
+              </div>
+            )}
           </div>
         </LiquidCard>
       </div>
