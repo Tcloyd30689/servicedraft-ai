@@ -61,7 +61,8 @@ function SignupContent() {
 
     const checkAuthStatus = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user ?? null;
 
         if (!active) return;
 
@@ -96,12 +97,17 @@ function SignupContent() {
             setStep(urlStep === '3' ? 3 : 2);
           }
         } else {
-          // Not authenticated — must start at step 1
-          setStep(1);
+          // Not authenticated — preserve URL step if present, else step 1
+          const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
+          setStep(fallbackStep as Step);
         }
       } catch (err) {
         console.error('Error checking auth status:', err);
-        setStep(1);
+        // Preserve URL step param instead of defaulting to 1
+        if (active) {
+          const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
+          setStep(fallbackStep as Step);
+        }
       }
 
       if (active) setInitializing(false);
