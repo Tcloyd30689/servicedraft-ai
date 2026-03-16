@@ -24,7 +24,8 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-16
-**Current Phase:** Sprint F — Clean Auth Loading Fix — COMPLETE
+**Current Phase:** Hotfix (Post Sprint F) — Auth page getSession fix — COMPLETE
+**Hotfix (Post Sprint F):** COMPLETE — Changed mount-time auth checks on login and signup pages from getUser() (network request) to getSession() (local memory read) to prevent step revert race condition when token refresh hasn't settled. Added URL step parameter preservation in signup catch/else branches so the page stays on the correct step even if auth check fails.
 **Sprint F — Clean Auth Loading Fix:** COMPLETE — Singleton Supabase browser client (prevents duplicate instances/network calls), removed buildFallbackProfile (root cause of redirect loops — was setting subscription_status:'trial' on any error, causing main-menu→signup→main-menu loop), all profile fetch errors now set profile:null, added 5s timeout on getUser() with stale session cleanup, 10s failsafe timer in initializeAuth, main-menu guard skips redirect when profile is null (shows spinner instead), added 8s loadingTooLong "Reset Session" button for user escape hatch, changed post-signup redirect from router.push to window.location.href (forces full page load with fresh middleware/cookies), fixed signOut to use scope:'local' (prevents hang on expired tokens) with finally-block redirect, fixed ProofreadResults setState-during-render (moved parent notifications to useEffect watching checkedEdits), fixed ActivityDetailModal z-index (z-[120]/z-[130] above HeroArea z-[90]/z-[110]), top-anchored positioning, wider modal (85vw/max-w-5xl), sticky X button, added bottom CLOSE button with hover animation, fixed ThemeProvider onAuthStateChange type annotations
 **Sprint E — Team Dashboard Activity Tab Migration:** COMPLETE
 **Sprint D — Polish & Cleanup:** COMPLETE — Updated admin API get_user_details to return recent_tracker_entries (5 most recent), replaced User Management expanded row "Recent Activity" section with clickable tracker entries showing R.O.#/vehicle/story type badge/action pills/timestamps that open ActivityDetailModal, added console.warn for tracker RPC/update partial failures, verified all trackerId null guards and resetAll flow, added proofread_apply to ACTION_BORDER_COLORS, updated formatActionLabel to use consistent past-tense labels (Generated/Regenerated/Customized/etc.) across admin page and detail modal, added trackerError state with ErrorState retry UI on Activity Log tab, improved empty state messaging, added NarrativeTrackerEntry and TrackerActionEntry types to database.ts and used them in ActivityDetailModal
@@ -2980,6 +2981,28 @@ The migration file has been updated for future deployments, but the existing dat
   - Added `create_team` action to admin API: creates team with auto-generated access code, owner-only
   - User Management table Team column updates immediately after successful assignment
   - Newly created teams available immediately in Assign to Team dropdown via refetch
+
+---
+
+## Hotfix (Post Sprint F) — Auth Page getSession Fix
+
+**Date:** 2026-03-16
+**Status:** COMPLETE
+
+### Problem
+Signup page useEffect calls `supabase.auth.getUser()` on mount to determine which step to show. `getUser()` makes a network request to validate/refresh the token. When navigating from /login to /signup?step=2, if the token refresh hasn't settled yet, `getUser()` momentarily returns `{ user: null }`, causing the page to revert to step 1 (account creation screen).
+
+### Changes Made
+
+- [x] **Signup mount check** (`src/app/(auth)/signup/page.tsx` line 64): Changed `supabase.auth.getUser()` to `supabase.auth.getSession()` — reads from local memory/cookies without network request, returns user immediately
+- [x] **Signup "not authenticated" branch** (line 98-101): Changed from `setStep(1)` to preserve URL step param (`urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1`)
+- [x] **Signup catch block** (line 102-104): Same URL step preservation instead of defaulting to step 1
+- [x] **Login mount check** (`src/app/(auth)/login/page.tsx` line 33): Same `getUser()` → `getSession()` change
+- [x] handlePaymentStep and handleProfileCreation left unchanged — user-initiated actions where session is established
+
+### Files Modified
+1. `src/app/(auth)/signup/page.tsx`
+2. `src/app/(auth)/login/page.tsx`
 
 ---
 
