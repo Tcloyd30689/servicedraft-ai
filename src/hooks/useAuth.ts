@@ -40,6 +40,7 @@ let authState: AuthState = { user: null, profile: null, loading: true };
 const listeners = new Set<() => void>();
 let initialized = false;
 let authSubscription: { unsubscribe: () => void } | null = null;
+let appFullyInitialized = false;
 
 const supabase = createClient();
 
@@ -112,6 +113,11 @@ async function fetchProfileForUser(userId: string, userEmail?: string) {
       setAuthState({ profile: data as UserProfile });
     }
   } catch (err) {
+    // FIX B — Skip fallback profile when fetch is legitimately cancelled
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      console.warn('[useAuth] fetchProfileForUser aborted — skipping');
+      return;
+    }
     console.error('Error fetching profile:', err);
     setAuthState({ profile: null });
   }
@@ -142,6 +148,8 @@ function initializeAuth() {
       setAuthState({ user: null, profile: null });
     } finally {
       setAuthState({ loading: false });
+      // FIX A — Mark app as fully initialized AFTER initial auth check completes
+      appFullyInitialized = true;
     }
   })();
 
@@ -170,6 +178,8 @@ function initializeAuth() {
   // FIX 2 — Visibility change guard to prevent pile-up on tab re-activation
   // Uses getSession() (reads from cookie cache, no network call) instead of getUser()
   document.addEventListener('visibilitychange', async () => {
+    // FIX A — Prevent firing until initial auth check completes
+    if (!appFullyInitialized) return;
     if (document.visibilityState === 'visible' && !isRefreshing) {
       isRefreshing = true;
       try {
