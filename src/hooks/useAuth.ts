@@ -52,6 +52,23 @@ function setAuthState(partial: Partial<AuthState>) {
   notify();
 }
 
+// FIX 2 — Visibility change guard to prevent concurrent refresh pile-up
+let isRefreshing = false;
+
+// FIX 3 — Global failsafe timer (last line of defense)
+let failsafeTriggered = false;
+
+function startGlobalFailsafe() {
+  if (failsafeTriggered) return;
+  failsafeTriggered = true;
+  setTimeout(() => {
+    if (authState.loading) {
+      console.error('[useAuth] FAILSAFE: loading still true after 10s — forcing false');
+      setAuthState({ loading: false });
+    }
+  }, 10000);
+}
+
 async function fetchProfileForUser(userId: string, userEmail?: string) {
   try {
     const { data, error } = await supabase
@@ -104,46 +121,29 @@ function initializeAuth() {
   if (initialized) return;
   initialized = true;
 
-  // Initial fetch with 5-second timeout on getUser()
+  // FIX 3 — Start global failsafe before anything else
+  startGlobalFailsafe();
+
+  // FIX 1 — Initial fetch with 7-second hard timeout on getUser()
   (async () => {
     try {
       const { data: { user: authUser } } = await Promise.race([
         supabase.auth.getUser(),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Auth timeout: getUser took longer than 5s')), 5000)
+          setTimeout(() => reject(new Error('Auth check timed out after 7000ms')), 7000)
         ),
       ]);
       setAuthState({ user: authUser });
-
       if (authUser) {
-        await fetchProfileForUser(authUser.id, authUser.email || '');
+        await fetchProfileForUser(authUser.id, authUser.email ?? '');
       }
     } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return;
-
-      if (err instanceof Error && err.message.includes('Auth timeout')) {
-        console.warn(err.message);
-        // Clear stale local session so next load starts fresh
-        try {
-          supabase.auth.signOut({ scope: 'local' });
-        } catch { /* fire-and-forget */ }
-      } else {
-        console.error('Error getting user:', err);
-      }
-
+      console.error('[useAuth] getUser timed out or failed — treating as unauthenticated:', err);
       setAuthState({ user: null, profile: null });
     } finally {
       setAuthState({ loading: false });
     }
   })();
-
-  // 10-second failsafe: if loading is still true, force it off
-  setTimeout(() => {
-    if (authState.loading) {
-      console.warn('Auth failsafe: forcing loading=false after 10s');
-      setAuthState({ user: null, profile: null, loading: false });
-    }
-  }, 10000);
 
   // Auth state change listener — single global subscription
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -166,6 +166,28 @@ function initializeAuth() {
   );
 
   authSubscription = subscription;
+
+  // FIX 2 — Visibility change guard to prevent pile-up on tab re-activation
+  // Uses getSession() (reads from cookie cache, no network call) instead of getUser()
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && !isRefreshing) {
+      isRefreshing = true;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setAuthState({ user: session.user });
+          await fetchProfileForUser(session.user.id, session.user.email ?? '');
+        } else {
+          setAuthState({ user: null, profile: null });
+        }
+      } catch {
+        // Silently handle errors — Supabase's own visibilitychange handler
+        // will manage the actual token refresh separately
+      } finally {
+        isRefreshing = false;
+      }
+    }
+  });
 }
 
 // --------------- Hook ---------------
