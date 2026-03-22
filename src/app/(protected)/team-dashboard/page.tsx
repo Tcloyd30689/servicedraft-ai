@@ -454,8 +454,56 @@ export default function TeamDashboardPage() {
     );
   }
 
-  if (!profile || profile.role === 'user') {
-    return null;
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <LiquidCard size="spacious">
+          <div className="py-12 flex flex-col items-center gap-4">
+            <p className="text-[var(--text-muted)] text-sm text-center">
+              Unable to load your profile. This can happen if your session timed out.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="primary"
+                size="small"
+                onClick={() => window.location.reload()}
+              >
+                Refresh Page
+              </Button>
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={() => {
+                  document.cookie.split(';').forEach((c) => {
+                    const name = c.trim().split('=')[0];
+                    if (name.startsWith('sb-')) {
+                      document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                    }
+                  });
+                  localStorage.removeItem('sd-login-timestamp');
+                  window.location.href = '/login';
+                }}
+              >
+                Re-Login
+              </Button>
+            </div>
+          </div>
+        </LiquidCard>
+      </div>
+    );
+  }
+
+  if (profile.role === 'user') {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <LiquidCard size="spacious">
+          <div className="py-8 text-center">
+            <p className="text-[var(--text-primary)] font-medium mb-2">Access Denied</p>
+            <p className="text-[var(--text-muted)] text-sm">This page is restricted to team managers.</p>
+          </div>
+        </LiquidCard>
+      </div>
+    );
   }
 
   if (teamLoading) {

@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
+import LiquidCard from '@/components/ui/LiquidCard';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ProfileSection from '@/components/dashboard/ProfileSection';
 import EditProfileModal from '@/components/dashboard/EditProfileModal';
@@ -38,10 +39,39 @@ export default function DashboardPage() {
 
   if (!profile) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="text-center py-12 text-[var(--text-muted)]">
-          <p>Unable to load profile data. Please try refreshing the page.</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <LiquidCard size="spacious">
+          <div className="py-12 flex flex-col items-center gap-4">
+            <p className="text-[var(--text-muted)] text-sm text-center">
+              Unable to load your profile. This can happen if your session timed out.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="primary"
+                size="small"
+                onClick={() => window.location.reload()}
+              >
+                Refresh Page
+              </Button>
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={() => {
+                  document.cookie.split(';').forEach((c) => {
+                    const name = c.trim().split('=')[0];
+                    if (name.startsWith('sb-')) {
+                      document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                    }
+                  });
+                  localStorage.removeItem('sd-login-timestamp');
+                  window.location.href = '/login';
+                }}
+              >
+                Re-Login
+              </Button>
+            </div>
+          </div>
+        </LiquidCard>
       </div>
     );
   }

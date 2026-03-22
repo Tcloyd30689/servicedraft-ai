@@ -44,7 +44,7 @@ export default function MainMenuPage() {
     if (!loading && profile) return; // Already loaded fine
     const timer = setTimeout(() => {
       setLoadingTooLong(true);
-    }, 8000);
+    }, 5000);
     return () => clearTimeout(timer);
   }, [loading, profile]);
 
@@ -64,8 +64,8 @@ export default function MainMenuPage() {
     window.location.href = '/';
   };
 
-  // Show loading while auth is resolving or profile is null
-  if (loading || !profile) {
+  // Show loading spinner while auth is resolving
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-164px)] px-4">
         <LiquidCard size="spacious">
@@ -84,6 +84,37 @@ export default function MainMenuPage() {
                 </button>
               </div>
             )}
+          </div>
+        </LiquidCard>
+      </div>
+    );
+  }
+
+  // Auth finished loading but profile is null — show recovery UI
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-164px)] px-4">
+        <LiquidCard size="spacious">
+          <div className="py-12 flex flex-col items-center gap-4">
+            <p className="text-[var(--text-muted)] text-sm text-center">
+              Unable to load your profile. This can happen if your session timed out.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="primary"
+                size="small"
+                onClick={() => window.location.reload()}
+              >
+                Refresh Page
+              </Button>
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={handleResetSession}
+              >
+                Re-Login
+              </Button>
+            </div>
           </div>
         </LiquidCard>
       </div>

@@ -56,20 +56,6 @@ function setAuthState(partial: Partial<AuthState>) {
 // FIX 2 — Visibility change guard to prevent concurrent refresh pile-up
 let isRefreshing = false;
 
-// FIX 3 — Global failsafe timer (last line of defense)
-let failsafeTriggered = false;
-
-function startGlobalFailsafe() {
-  if (failsafeTriggered) return;
-  failsafeTriggered = true;
-  setTimeout(() => {
-    if (authState.loading) {
-      console.error('[useAuth] FAILSAFE: loading still true after 10s — forcing false');
-      setAuthState({ loading: false });
-    }
-  }, 10000);
-}
-
 async function fetchProfileForUser(_userId: string, _userEmail?: string) {
   const doFetch = async (): Promise<void> => {
     const res = await fetch('/api/me', { credentials: 'include' });
@@ -103,10 +89,7 @@ function initializeAuth() {
   if (initialized) return;
   initialized = true;
 
-  // FIX 3 — Start global failsafe before anything else
-  startGlobalFailsafe();
-
-  // FIX 1 — Initial fetch with 7-second hard timeout on getUser()
+  // Initial fetch with 7-second hard timeout on getUser()
   (async () => {
     try {
       const { data: { user: authUser } } = await Promise.race([
@@ -143,7 +126,6 @@ function initializeAuth() {
         }
         setAuthState({ loading: false });
       } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') return;
         console.error('Auth state change error:', err);
       }
     },

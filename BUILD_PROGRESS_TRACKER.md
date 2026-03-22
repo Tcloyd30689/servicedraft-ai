@@ -24,7 +24,7 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-22
-**Current Phase:** Auth Overhaul Sprint 1 — Eliminate getUser() Race Conditions — COMPLETE
+**Current Phase:** Auth Overhaul Sprint 2 — Recovery Hardening + Cleanup — COMPLETE
 **Auth Overhaul Sprint 1 — Eliminate getUser() Race Conditions:** [x] COMPLETE (2026-03-22) — Created /api/me server-side profile route (cookie-based auth, auto-create profile on first visit). Rewrote fetchProfileForUser in useAuth.ts to use /api/me with retry logic instead of direct Supabase browser client query. Replaced all ThemeProvider getUser() calls with getSession() (cache-only, no network call) in both initTheme and saveToSupabase. Fixed activityLogger to accept optional userId parameter instead of calling getUser() — falls back to getSession() cache. Updated login page to pass data.user.id to logActivity. Simplified visibilitychange handler to only fetch profile when profile is null (prevents unnecessary /api/me calls on every tab switch). Root cause: multiple browser-side components (useAuth, ThemeProvider, activityLogger) independently calling getUser() through the singleton Supabase client, causing GoTrueClient's internal AbortController to cancel in-flight requests, resulting in permanent null profile and blank pages. Build verified with zero TypeScript errors.
 **Hotfix (Post Sprint F) — visibilitychange Init Collision + AbortError Handling:** [x] COMPLETE (2026-03-17) — Fixed regression introduced by previous hotfix: visibilitychange listener was firing immediately on page load (document already 'visible' at module init), colliding with initializeAuth() IIFE and causing both to call fetchProfileForUser simultaneously. One fetch would abort the other, triggering "Unable to load profile data" error. Applied two fixes: (FIX A) Added module-level appFullyInitialized flag, set to true in initializeAuth finally block after loading:false, added guard at top of visibilitychange handler to prevent activation until initial auth completes. (FIX B) Added AbortError check at top of fetchProfileForUser catch block — when fetch is legitimately cancelled, log warning and return early instead of setting profile:null, preventing false-positive error message. Build verified with zero TypeScript errors.
 **Hotfix (Post Sprint F) — Auth Loading Lockup Fix:** [x] COMPLETE (2026-03-17) — Fixed auth loading state getting stuck on true when returning to an idle session after tab/browser has been inactive. Applied three complementary fixes: (1) Promise.race with 7-second timeout wrapping supabase.auth.getUser() in initializeAuth() — treats timeout as unauthenticated rather than hanging, (2) visibilitychange event listener using async/await getSession() with isRefreshing guard — prevents concurrent refresh pile-up when tab re-activates, reads from cookie cache instead of network to avoid race conditions, (3) startGlobalFailsafe() function with 10-second timeout forcing loading: false — last line of defense if all other guards fail. Build verified with zero TypeScript errors.
@@ -3127,6 +3127,36 @@ Previous auth loading fix attempts (commits de85135 through 199b4ef) were revert
   - Added DEPRECATED comment to src/components/admin/ActivityDetailModal.tsx
   - Verified no dead code in team-dashboard/page.tsx (old interfaces, state vars, helpers already cleaned up in Tasks 1-3)
   - Remaining activity_log references in src/ are all in separate features: activityLogger.ts (fire-and-forget logging), admin API routes, analytics, delete-account — not part of Team Dashboard migration scope
+
+---
+
+## Auth Overhaul Sprint 2 — Recovery Hardening + Cleanup (2026-03-22)
+
+- [x] **Task 1 — Replace blank page fallbacks with recovery UI**
+  - Admin page (`admin/page.tsx`): Split `if (!profile || profile.role !== 'owner') return null` into two guards — !profile shows recovery UI with Refresh Page / Re-Login buttons, non-owner shows "Access Denied" message
+  - Team Dashboard (`team-dashboard/page.tsx`): Same pattern — !profile shows recovery UI, role=user shows "Access Denied — restricted to team managers"
+  - Dashboard (`dashboard/page.tsx`): Upgraded existing plain-text !profile fallback to LiquidCard recovery UI with Refresh Page / Re-Login buttons (added LiquidCard import)
+  - Main Menu (`main-menu/page.tsx`): Split `if (loading || !profile)` guard into two branches — loading=true shows spinner with loadingTooLong reset button (existing behavior), loading=false && !profile shows recovery UI with Refresh Page / Re-Login buttons
+
+- [x] **Task 2 — Remove 10-second failsafe timer from useAuth**
+  - Removed `failsafeTriggered` variable declaration
+  - Removed entire `startGlobalFailsafe()` function
+  - Removed `startGlobalFailsafe()` call from `initializeAuth()`
+  - Natural auth flow now handles all cases: initializeAuth → getUser (7s timeout) → fetchProfileForUser via /api/me → loading:false. If /api/me fails, retry handles it. If both fail, profile stays null and recovery UI shows.
+
+- [x] **Task 3 — Update main-menu loading timer**
+  - Changed loadingTooLong timeout from 8000ms to 5000ms — with server-side profile fetch, >5s genuinely indicates a problem
+
+- [x] **Task 4 — Clean up stale useAuth code**
+  - Removed AbortError check from onAuthStateChange callback — no longer needed since profile fetching uses /api/me (plain fetch) instead of Supabase browser client
+  - Verified `useCallback` still used by `signOut` and `refreshProfile` — kept import
+  - `appFullyInitialized` and `isRefreshing` flags confirmed still needed — kept
+
+- [x] **Task 5 — Verify auth flow end-to-end**
+  - Confirmed getUser() calls: useAuth.ts (1 call in initializeAuth — legitimate), signup/page.tsx (2 calls in step handlers — legitimate, user-action-triggered), middleware.ts (server-side — fine), all API routes (server-side — fine)
+  - ThemeProvider: ZERO getUser() calls (all getSession now)
+  - activityLogger: ZERO getUser() calls (uses getSession fallback)
+  - Build verified with zero TypeScript errors
 
 ---
 
