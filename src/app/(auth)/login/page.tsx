@@ -117,7 +117,7 @@ export default function LoginPage() {
     }
 
     setLoginTimestamp();
-    logActivity('login');
+    logActivity('login', undefined, data.user.id);
     toast.success('Signed in successfully');
     router.push('/main-menu');
   };

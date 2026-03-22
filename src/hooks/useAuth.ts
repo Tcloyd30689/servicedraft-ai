@@ -70,56 +70,32 @@ function startGlobalFailsafe() {
   }, 10000);
 }
 
-async function fetchProfileForUser(userId: string, userEmail?: string) {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (error && error.code === 'PGRST116') {
-      // No profile row exists — create one
-      console.warn('No profile found, creating one for user:', userId);
-      const { data: newProfile, error: insertError } = await supabase
-        .from('users')
-        .insert({
-          id: userId,
-          email: userEmail || '',
-          subscription_status: 'trial',
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Failed to create user profile:', insertError.message);
+async function fetchProfileForUser(_userId: string, _userEmail?: string) {
+  const doFetch = async (): Promise<void> => {
+    const res = await fetch('/api/me', { credentials: 'include' });
+    if (!res.ok) {
+      if (res.status === 401) {
         setAuthState({ profile: null });
         return;
       }
-
-      if (newProfile) {
-        setAuthState({ profile: newProfile as UserProfile });
-      }
-      return;
+      throw new Error(`Profile fetch failed: ${res.status}`);
     }
+    const data = await res.json();
+    setAuthState({ profile: data as UserProfile });
+  };
 
-    if (error) {
-      console.error('Failed to fetch user profile:', error.message);
-      setAuthState({ profile: null });
-      return;
-    }
-
-    if (data) {
-      setAuthState({ profile: data as UserProfile });
-    }
+  try {
+    await doFetch();
   } catch (err) {
-    // FIX B — Skip fallback profile when fetch is legitimately cancelled
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      console.warn('[useAuth] fetchProfileForUser aborted — skipping');
-      return;
+    console.warn('[useAuth] Profile fetch failed, retrying in 500ms...', err);
+    // Single retry after 500ms
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await doFetch();
+    } catch (retryErr) {
+      console.error('[useAuth] Profile fetch retry failed:', retryErr);
+      setAuthState({ profile: null });
     }
-    console.error('Error fetching profile:', err);
-    setAuthState({ profile: null });
   }
 }
 
@@ -175,27 +151,29 @@ function initializeAuth() {
 
   authSubscription = subscription;
 
-  // FIX 2 — Visibility change guard to prevent pile-up on tab re-activation
-  // Uses getSession() (reads from cookie cache, no network call) instead of getUser()
+  // Visibility change: re-validate profile on tab re-activation
+  // Uses getSession() (cache-only) to check if user is still logged in,
+  // then refreshes profile from server-side /api/me
   document.addEventListener('visibilitychange', async () => {
-    // FIX A — Prevent firing until initial auth check completes
     if (!appFullyInitialized) return;
-    if (document.visibilityState === 'visible' && !isRefreshing) {
-      isRefreshing = true;
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setAuthState({ user: session.user });
+    if (document.visibilityState !== 'visible') return;
+    if (isRefreshing) return;
+    isRefreshing = true;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        // Only refresh profile if we don't already have one
+        // (prevents unnecessary API calls on every tab switch)
+        if (!authState.profile) {
           await fetchProfileForUser(session.user.id, session.user.email ?? '');
-        } else {
-          setAuthState({ user: null, profile: null });
         }
-      } catch {
-        // Silently handle errors — Supabase's own visibilitychange handler
-        // will manage the actual token refresh separately
-      } finally {
-        isRefreshing = false;
+      } else {
+        setAuthState({ user: null, profile: null, loading: false });
       }
+    } catch {
+      // Silent — don't break anything on visibility change
+    } finally {
+      isRefreshing = false;
     }
   });
 }

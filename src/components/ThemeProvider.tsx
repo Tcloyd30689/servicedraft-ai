@@ -143,7 +143,8 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     try {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
       if (!user) return;
 
       // Read existing preferences first to merge
@@ -231,7 +232,8 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
       try {
         const { createClient } = await import('@/lib/supabase/client');
         const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user ?? null;
 
         if (!user) {
           // Not authenticated — force purple dark defaults
