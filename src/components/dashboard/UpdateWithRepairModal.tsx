@@ -141,7 +141,7 @@ export default function UpdateWithRepairModal({
   }, [isOpen]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Update Narrative with Repair" width="max-w-3xl">
+    <Modal isOpen={isOpen} onClose={onClose} title="Update Narrative with Repair">
       {/* Vehicle Info Badges */}
       <div className="flex flex-wrap gap-2 mb-6">
         {narrative.vehicle_year && (

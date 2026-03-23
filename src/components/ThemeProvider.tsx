@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
-import { ACCENT_COLORS, DEFAULT_ACCENT, getAccentByKey, buildCssVars, perceivedBrightness, type AccentColor } from '@/lib/constants/themeColors';
+import { ACCENT_COLORS, DEFAULT_ACCENT, getAccentByKey, buildCssVars, perceivedBrightness, computeLightBgPrimary, type AccentColor } from '@/lib/constants/themeColors';
 import type { UserPreferences } from '@/types/database';
 
 const STORAGE_KEY = 'sd-accent-color';
@@ -49,36 +49,53 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
   root.style.setProperty('color-scheme', effectiveMode === 'light' ? 'light' : 'dark');
   root.setAttribute('data-mode', effectiveMode);
 
-  // Override bg/text if user explicitly toggled mode (non-Black accent in light mode)
+  const [r, g, b] = accent.rgb;
+
+  // Override backgrounds if user explicitly toggled to light mode (non-Black accent).
+  // Only page-level surfaces change — card/modal internals keep their accent-tinted glass styling.
   if (effectiveMode === 'light' && !accent.isLightMode) {
-    root.style.setProperty('--bg-primary', '#ffffff');
-    root.style.setProperty('--bg-gradient-1', '#f0f2f5');
-    root.style.setProperty('--bg-gradient-2', '#e8eaee');
-    root.style.setProperty('--bg-input', '#f1f5f9');
-    root.style.setProperty('--bg-elevated', '#e2e8f0');
-    root.style.setProperty('--bg-modal', 'rgba(255, 255, 255, 0.95)');
-    root.style.setProperty('--bg-nav', 'rgba(255, 255, 255, 0.9)');
-    root.style.setProperty('--text-primary', '#0f172a');
-    root.style.setProperty('--text-muted', '#64748b');
-    root.style.setProperty('--card-border', accent.border);
-    root.style.setProperty('--modal-border', accent.border);
-    root.style.setProperty('--scrollbar-track', 'var(--bg-elevated)');
-    root.style.setProperty('--body-bg', 'linear-gradient(135deg, #f0f2f5 0%, #ffffff 50%, #e8eaee 100%)');
+    // Page background → accent color (80/20 blend with neutral, darkened for bright accents)
+    let bgR = Math.round(r * 0.8 + 50 * 0.2);
+    let bgG = Math.round(g * 0.8 + 50 * 0.2);
+    let bgB = Math.round(b * 0.8 + 50 * 0.2);
+
+    const bgBrightness = 0.299 * bgR + 0.587 * bgG + 0.114 * bgB;
+    if (bgBrightness > 180) {
+      bgR = Math.round(r * 0.55 + 30 * 0.45);
+      bgG = Math.round(g * 0.55 + 30 * 0.45);
+      bgB = Math.round(b * 0.55 + 30 * 0.45);
+    }
+    const bgPrimary = `rgb(${bgR}, ${bgG}, ${bgB})`;
+
+    // Nav: denser/darker accent shade for visual weight
+    const navR = Math.round(r * 0.5);
+    const navG = Math.round(g * 0.5);
+    const navB = Math.round(b * 0.5);
+
+    root.style.setProperty('--bg-primary', bgPrimary);
+    root.style.setProperty('--bg-nav', `rgba(${navR}, ${navG}, ${navB}, 0.85)`);
+    root.style.setProperty('--bg-modal', `rgba(${Math.round(r * 0.15)}, ${Math.round(g * 0.15)}, ${Math.round(b * 0.15)}, 0.92)`);
+    root.style.setProperty('--bg-input', 'rgba(0, 0, 0, 0.2)');
+    root.style.setProperty('--bg-elevated', 'rgba(0, 0, 0, 0.15)');
+    root.style.setProperty('--text-primary', '#f0f0f5');
+    root.style.setProperty('--text-muted', '#9ca3af');
+    root.style.setProperty('--body-bg', `linear-gradient(135deg, ${accent.gradient1} 0%, ${bgPrimary} 50%, ${accent.gradient2} 100%)`);
+    root.style.setProperty('--scrollbar-track', 'rgba(0, 0, 0, 0.2)');
+
+    // All accent colors, opacity layers, borders, and component styling remain
+    // untouched — cards and their contents keep their tinted glass look from dark mode.
   }
 
   // Mode-adaptive variables — apply to ALL light modes (Black native + user-toggled)
-  const [r, g, b] = accent.rgb;
   if (effectiveMode === 'light') {
-    // Solid accent-tinted card bg (6% accent blended into white)
-    const cr = Math.round(255 * 0.94 + r * 0.06);
-    const cg = Math.round(255 * 0.94 + g * 0.06);
-    const cb = Math.round(255 * 0.94 + b * 0.06);
-    root.style.setProperty('--bg-card', `rgb(${cr}, ${cg}, ${cb})`);
-    root.style.setProperty('--border-default', 'rgba(0, 0, 0, 0.1)');
-    root.style.setProperty('--accent-text-emphasis', '#0f172a');
-    root.style.setProperty('--accent-text-emphasis-weight', '700');
-    root.style.setProperty('--btn-text-on-accent', '#0f172a');
-    root.style.setProperty('--accent-vivid', accent.border);
+    // Dark frosted glass card bg — cards need contrast against colored page background
+    root.style.setProperty('--bg-card', 'rgba(15, 15, 25, 0.75)');
+    root.style.setProperty('--border-default', 'rgba(255, 255, 255, 0.1)');
+    // Accent colors stay themed — card internals look the same as dark mode
+    root.style.setProperty('--accent-text-emphasis', accent.hex);
+    root.style.setProperty('--accent-text-emphasis-weight', 'inherit');
+    root.style.setProperty('--accent-vivid', accent.hover);
+    root.style.setProperty('--scrollbar-track', 'rgba(0, 0, 0, 0.2)');
   } else {
     root.style.setProperty('--bg-card', `rgba(${r}, ${g}, ${b}, 0.05)`);
     root.style.setProperty('--border-default', 'transparent');
@@ -94,7 +111,7 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
   const hoverBrightness = perceivedBrightness(accent.hover);
   root.style.setProperty('--btn-text-on-accent', hoverBrightness > 180 ? '#000000' : '#ffffff');
 
-  // Light mode: if accent.border is too light on white bg, darken secondary/ghost text & borders
+  // Light mode: if accent.border is too light on dark glass cards, use accent.hover for borders
   if (effectiveMode === 'light') {
     const borderBrightness = perceivedBrightness(accent.border);
     if (borderBrightness > 180) {

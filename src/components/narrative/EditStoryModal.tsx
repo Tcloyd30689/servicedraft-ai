@@ -104,7 +104,7 @@ export default function EditStoryModal({
   ].join(' ');
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Story" width="max-w-[700px]">
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Story">
       {displayFormat === 'block' ? (
         <div className="mb-5">
           <label className="block text-[var(--text-secondary)] text-sm font-medium mb-2">

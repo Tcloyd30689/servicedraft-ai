@@ -18,11 +18,13 @@ interface HeroWave {
 }
 
 const heroWaves: HeroWave[] = [
-  { baseAmplitude: 15.4, frequency: 0.02,  speed: 0.025, offset: 0, baseOpacity: 0.25 },
-  { baseAmplitude: 11,   frequency: 0.015, speed: 0.018, offset: Math.PI / 3, baseOpacity: 0.3 },
-  { baseAmplitude: 17.6, frequency: 0.025, speed: 0.03,  offset: Math.PI / 2, baseOpacity: 0.2 },
-  { baseAmplitude: 13.2, frequency: 0.018, speed: 0.012, offset: Math.PI, baseOpacity: 0.22 },
-  { baseAmplitude: 8.8,  frequency: 0.03,  speed: 0.022, offset: Math.PI * 1.5, baseOpacity: 0.18 },
+  { baseAmplitude: 12, frequency: 0.020, speed: 0.012, offset: 0, baseOpacity: 0.18 },
+  { baseAmplitude: 8, frequency: 0.014, speed: 0.027, offset: Math.PI / 3, baseOpacity: 0.14 },
+  { baseAmplitude: 10, frequency: 0.030, speed: 0.018, offset: Math.PI * 0.7, baseOpacity: 0.16 },
+  { baseAmplitude: 6, frequency: 0.018, speed: 0.035, offset: Math.PI * 1.2, baseOpacity: 0.11 },
+  { baseAmplitude: 14, frequency: 0.011, speed: 0.008, offset: Math.PI * 0.4, baseOpacity: 0.22 },
+  { baseAmplitude: 5, frequency: 0.038, speed: 0.045, offset: Math.PI * 1.6, baseOpacity: 0.09 },
+  { baseAmplitude: 9, frequency: 0.024, speed: 0.021, offset: Math.PI * 2.1, baseOpacity: 0.15 },
 ];
 
 export default function HeroArea() {
@@ -137,7 +139,7 @@ export default function HeroArea() {
     <>
       {/* Hero background — wave canvas + gradient */}
       <div
-        className="fixed top-0 left-0 right-0 overflow-hidden bg-[var(--bg-primary)] z-[90]"
+        className="fixed top-0 left-0 right-0 overflow-hidden bg-[var(--bg-nav)] backdrop-blur-[8px] z-[90]"
         style={{ height: `${HERO_HEIGHT}px` }}
       >
         {/* Animated wave canvas — fills entire hero */}
@@ -151,7 +153,7 @@ export default function HeroArea() {
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: `linear-gradient(90deg, var(--bg-primary) 0%, transparent 8%, transparent 92%, var(--bg-primary) 100%)`,
+            background: `linear-gradient(90deg, var(--bg-nav) 0%, transparent 8%, transparent 92%, var(--bg-nav) 100%)`,
           }}
         />
       </div>

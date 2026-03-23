@@ -152,7 +152,7 @@ export function buildPrintHtml(payload: ExportPayload): string {
 
   <!-- Footer logo -->
   <div class="footer-logo">
-    <img src="https://servicedraft.ai/ServiceDraft-Ai%20Vector%20Logo.png" alt="ServiceDraft.AI" />
+    <img src="https://servicedraft.ai/ServiceDraft-Ai%20Vector%20Logo.png" alt="ServiceDraft.AI" onerror="this.style.display='none'" />
   </div>
 </body>
 </html>`;

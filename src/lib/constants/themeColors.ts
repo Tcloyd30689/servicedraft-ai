@@ -214,10 +214,34 @@ export function perceivedBrightness(hex: string): number {
  * Build all CSS custom property values for a given accent color.
  * Returns a Record of `--var-name` → `value` pairs.
  */
+/**
+ * Compute accent-tinted bg-primary RGB for light mode.
+ * Blends accent RGB into a neutral base to create a muted, tinted background.
+ */
+export function computeLightBgPrimary(r: number, g: number, b: number): [number, number, number] {
+  let bgR = Math.round(200 * 0.7 + r * 0.3);
+  let bgG = Math.round(200 * 0.7 + g * 0.3);
+  let bgB = Math.round(210 * 0.7 + b * 0.3);
+  // If too bright (yellow/light accents), darken the base
+  const brightness = 0.299 * bgR + 0.587 * bgG + 0.114 * bgB;
+  if (brightness > 200) {
+    bgR = Math.round(150 * 0.7 + r * 0.3);
+    bgG = Math.round(150 * 0.7 + g * 0.3);
+    bgB = Math.round(160 * 0.7 + b * 0.3);
+  }
+  return [bgR, bgG, bgB];
+}
+
 export function buildCssVars(accent: AccentColor): Record<string, string> {
   const [r, g, b] = accent.rgb;
   const [wr, wg, wb] = accent.waveRgb;
   const isLight = accent.isLightMode;
+
+  // Compute light mode accent-tinted backgrounds
+  const [bgR, bgG, bgB] = computeLightBgPrimary(r, g, b);
+  const bgPrimaryLight = `rgb(${bgR}, ${bgG}, ${bgB})`;
+  const bgInputLight = `rgb(${Math.round(r * 0.25 + 40)}, ${Math.round(g * 0.25 + 40)}, ${Math.round(b * 0.25 + 40)})`;
+  const bgElevatedLight = `rgb(${Math.round(r * 0.2 + 35)}, ${Math.round(g * 0.2 + 35)}, ${Math.round(b * 0.2 + 35)})`;
 
   return {
     // Accent hex
@@ -245,29 +269,30 @@ export function buildCssVars(accent: AccentColor): Record<string, string> {
     '--shadow-glow-md': `0 0 40px rgba(${r}, ${g}, ${b}, 0.4)`,
     '--shadow-glow-lg': `0 0 60px rgba(${r}, ${g}, ${b}, 0.5)`,
     '--shadow-glow-accent': `0 0 20px rgba(${r}, ${g}, ${b}, 0.4)`,
+    '--shadow-glow-btn': `0 0 15px rgba(${r}, ${g}, ${b}, 0.4), 0 0 30px rgba(${r}, ${g}, ${b}, 0.2)`,
 
-    // Backgrounds
-    '--bg-primary': isLight ? '#ffffff' : '#000000',
+    // Backgrounds — light mode uses accent-tinted bg with dark glass surfaces
+    '--bg-primary': isLight ? bgPrimaryLight : '#000000',
     '--bg-gradient-1': accent.gradient1,
     '--bg-gradient-2': accent.gradient2,
-    '--bg-input': accent.bgInput,
-    '--bg-elevated': accent.bgElevated,
-    '--bg-modal': isLight ? 'rgba(255, 255, 255, 0.95)' : 'rgba(15, 10, 30, 0.85)',
-    '--bg-nav': isLight ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 0, 0, 0.8)',
+    '--bg-input': isLight ? bgInputLight : accent.bgInput,
+    '--bg-elevated': isLight ? bgElevatedLight : accent.bgElevated,
+    '--bg-modal': isLight ? 'rgba(20, 20, 30, 0.92)' : 'rgba(15, 10, 30, 0.85)',
+    '--bg-nav': isLight ? 'rgba(15, 15, 25, 0.85)' : 'rgba(0, 0, 0, 0.8)',
 
     // Body gradient (fully resolved — CSS var() composition in :root is unreliable with inline overrides)
     '--body-bg': isLight
-      ? `linear-gradient(135deg, ${accent.gradient1} 0%, #ffffff 50%, ${accent.gradient2} 100%)`
+      ? `linear-gradient(135deg, ${accent.gradient1} 0%, ${bgPrimaryLight} 50%, ${accent.gradient2} 100%)`
       : `linear-gradient(135deg, ${accent.gradient1} 0%, #000000 50%, ${accent.gradient2} 100%)`,
 
-    // Text
-    '--text-primary': isLight ? '#0f172a' : '#ffffff',
-    '--text-muted': isLight ? '#64748b' : '#9ca3af',
+    // Text — light mode uses light text on dark glass surfaces
+    '--text-primary': isLight ? '#f0f0f5' : '#ffffff',
+    '--text-muted': '#9ca3af',
 
     // Wave
     '--wave-color': `${wr}, ${wg}, ${wb}`,
 
-    // Card border for dark/light
+    // Card border
     '--card-border': isLight ? accent.border : '#000000',
 
     // Modal border

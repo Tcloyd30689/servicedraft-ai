@@ -31,9 +31,14 @@ export default function ParticleNetwork() {
     };
 
     // Read --wave-color which is an RGB triplet string like "195, 171, 226"
-    // This is set by buildCssVars() in themeColors.ts and updates per accent color
+    // This is set by buildCssVars() in themeColors.ts and updates per accent color.
+    // In light mode, use white particles for visibility on colored backgrounds.
     function readWaveColor(): string {
       const root = document.documentElement;
+      const mode = root.getAttribute('data-mode');
+      if (mode === 'light') {
+        return '255, 255, 255';
+      }
       return (
         root.style.getPropertyValue('--wave-color').trim() ||
         getComputedStyle(root).getPropertyValue('--wave-color').trim() ||

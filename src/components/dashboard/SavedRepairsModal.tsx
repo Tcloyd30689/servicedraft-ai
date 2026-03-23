@@ -182,7 +182,7 @@ export default function SavedRepairsModal({ isOpen, onClose }: SavedRepairsModal
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="My Saved Repairs" width="max-w-2xl">
+    <Modal isOpen={isOpen} onClose={onClose} title="My Saved Repairs">
       <div className="space-y-4">
         {/* New Template Button */}
         {!showNewForm && (

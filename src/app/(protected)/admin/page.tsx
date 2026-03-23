@@ -3542,7 +3542,6 @@ export default function AdminPage() {
             setTeamMembers([]);
           }}
           title={`${viewingTeamMembers?.name || 'Team'} — Members`}
-          width="max-w-[700px]"
         >
           {teamMembersLoading ? (
             <div className="py-8">

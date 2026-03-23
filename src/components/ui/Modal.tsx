@@ -18,7 +18,7 @@ export default function Modal({
   onClose,
   title,
   children,
-  width = 'max-w-[600px]',
+  width = 'max-w-[850px]',
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -52,7 +52,7 @@ export default function Modal({
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-[4px]"
+            className="fixed inset-0 z-[200] bg-black/75 backdrop-blur-[10px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -60,8 +60,8 @@ export default function Modal({
             onClick={onClose}
           />
 
-          {/* Modal container — centers modal below nav */}
-          <div className="fixed inset-0 z-50 pt-20 pb-4 flex items-center justify-center pointer-events-none">
+          {/* Modal container — centers modal in viewport */}
+          <div className="fixed inset-0 z-[210] p-4 flex items-center justify-center pointer-events-none">
             <motion.div
               className={`w-[90vw] ${width} pointer-events-auto
                 bg-[var(--bg-modal)] border-2 border-[var(--modal-border)] rounded-[23px]
@@ -71,7 +71,7 @@ export default function Modal({
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
-              <div className="p-6 md:p-8 max-h-[calc(100vh-8rem)] overflow-y-auto rounded-[23px]">
+              <div className="p-6 md:p-8 max-h-[90vh] overflow-y-auto rounded-[23px]">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-5">
                   {title && (

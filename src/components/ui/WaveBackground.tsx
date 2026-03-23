@@ -11,10 +11,13 @@ interface Wave {
 }
 
 const waves: Wave[] = [
-  { amplitude: 30, frequency: 0.02, speed: 0.02, offset: 0, opacity: 0.15 },
-  { amplitude: 25, frequency: 0.015, speed: 0.015, offset: Math.PI / 4, opacity: 0.2 },
-  { amplitude: 35, frequency: 0.025, speed: 0.025, offset: Math.PI / 2, opacity: 0.18 },
-  { amplitude: 20, frequency: 0.018, speed: 0.012, offset: Math.PI / 3, opacity: 0.15 },
+  { amplitude: 35, frequency: 0.020, speed: 0.010, offset: 0, opacity: 0.18 },
+  { amplitude: 22, frequency: 0.013, speed: 0.023, offset: Math.PI / 3, opacity: 0.14 },
+  { amplitude: 28, frequency: 0.028, speed: 0.016, offset: Math.PI * 0.7, opacity: 0.16 },
+  { amplitude: 18, frequency: 0.017, speed: 0.031, offset: Math.PI * 1.2, opacity: 0.12 },
+  { amplitude: 40, frequency: 0.010, speed: 0.007, offset: Math.PI * 0.4, opacity: 0.20 },
+  { amplitude: 15, frequency: 0.035, speed: 0.042, offset: Math.PI * 1.6, opacity: 0.10 },
+  { amplitude: 32, frequency: 0.022, speed: 0.019, offset: Math.PI * 2.1, opacity: 0.15 },
 ];
 
 interface WaveBackgroundProps {

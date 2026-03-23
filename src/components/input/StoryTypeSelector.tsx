@@ -35,12 +35,12 @@ export default function StoryTypeSelector({ selected, onSelect }: StoryTypeSelec
           key={option.type}
           onClick={() => onSelect(option.type)}
           className={cn(
-            'flex flex-col items-center gap-3 p-6 rounded-xl border-2 cursor-pointer',
+            'flex flex-col items-center gap-3 p-6 rounded-xl border-2 cursor-pointer transition-all duration-300',
+            'hover:shadow-[var(--shadow-glow-btn)]',
             selected === option.type
               ? 'border-[var(--accent-hover)] bg-[var(--accent-10)] shadow-[var(--shadow-glow-sm)]'
               : 'border-[var(--accent-border)] bg-[var(--accent-3)]',
           )}
-          whileHover={{ boxShadow: 'var(--shadow-glow-sm)' }}
           whileTap={{ scale: 0.97 }}
           transition={springTransition}
         >
