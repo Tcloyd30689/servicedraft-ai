@@ -8,6 +8,7 @@ import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Button from '@/components/ui/Button';
 import { POSITION_OPTIONS } from '@/constants/positions';
+import { US_STATES } from '@/constants/states';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -145,11 +146,15 @@ export default function EditProfileModal({
             onChange={(e) => setLastName(e.target.value)}
             required
           />
-          <Input
+          <Select
+            id="location"
             label="Location"
-            placeholder="e.g. Dallas, TX"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
+            options={[
+              { value: '', label: 'Select Your State' },
+              ...US_STATES.map((state) => ({ value: state, label: state })),
+            ]}
           />
           <Select
             label="Position"

@@ -189,12 +189,15 @@ export function useAuth(): UseAuthReturn {
 
   const signOut = useCallback(async () => {
     try {
-      // Clear session and theme localStorage so landing page defaults to purple dark
       localStorage.removeItem('sd-login-timestamp');
       localStorage.removeItem('sd-accent-color');
       localStorage.removeItem('sd-color-mode');
       localStorage.removeItem('sd-bg-animation');
-      await supabase.auth.signOut({ scope: 'local' });
+      // Race: signOut vs 3-second timeout — whichever finishes first wins
+      await Promise.race([
+        supabase.auth.signOut({ scope: 'local' }),
+        new Promise(resolve => setTimeout(resolve, 3000)),
+      ]);
       setAuthState({ user: null, profile: null });
     } catch (err) {
       console.error('Sign out error:', err);

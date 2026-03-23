@@ -138,7 +138,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Unauthorized — owner only' }, { status: 403 });
     }
 
-    const { id, name, access_code, description } = await request.json();
+    const { id, name, access_code, description, is_active } = await request.json();
 
     if (!id) {
       return NextResponse.json({ error: 'Team id is required' }, { status: 400 });
@@ -146,10 +146,11 @@ export async function PUT(request: Request) {
 
     const svc = createServiceClient();
 
-    const updates: Record<string, string | null> = {};
+    const updates: Record<string, string | boolean | null> = {};
     if (name !== undefined) updates.name = name.trim();
     if (access_code !== undefined) updates.access_code = access_code.trim();
     if (description !== undefined) updates.description = description?.trim() || null;
+    if (is_active !== undefined) updates.is_active = is_active;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });

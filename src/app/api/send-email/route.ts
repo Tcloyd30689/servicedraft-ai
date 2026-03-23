@@ -56,8 +56,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'At least one recipient email is required.' }, { status: 400 });
     }
 
-    if (to.length > 3) {
-      return NextResponse.json({ error: 'Maximum 3 recipients allowed.' }, { status: 400 });
+    if (to.length > 10) {
+      return NextResponse.json({ error: 'Maximum 10 recipients allowed.' }, { status: 400 });
     }
 
     const invalidEmails = to.filter((email) => !EMAIL_REGEX.test(email));

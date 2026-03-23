@@ -981,7 +981,7 @@ export default function AdminPage() {
         const res = await fetch('/api/teams', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: teamItem.id, name: teamItem.name }),
+          body: JSON.stringify({ id: teamItem.id, is_active: true }),
         });
         const json = await res.json();
         if (json.success) {

@@ -131,22 +131,22 @@ export default function NarrativeDisplay({
   issueDescriptions = [],
 }: NarrativeDisplayProps) {
   const blockText = useTypingAnimation(narrative.block_narrative, {
-    speed: 15,
+    speed: 7,
     enabled: animate && displayFormat === 'block',
   });
 
   const concernText = useTypingAnimation(narrative.concern, {
-    speed: 15,
+    speed: 7,
     enabled: animate && displayFormat === 'ccc',
   });
 
   const causeText = useTypingAnimation(narrative.cause, {
-    speed: 15,
+    speed: 7,
     enabled: animate && displayFormat === 'ccc',
   });
 
   const correctionText = useTypingAnimation(narrative.correction, {
-    speed: 15,
+    speed: 7,
     enabled: animate && displayFormat === 'ccc',
   });
 
