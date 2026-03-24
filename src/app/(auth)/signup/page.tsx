@@ -19,6 +19,7 @@ import { setLoginTimestamp } from '@/hooks/useSessionExpiry';
 import AccentColorPicker from '@/components/ui/AccentColorPicker';
 import { POSITION_OPTIONS } from '@/constants/positions';
 import { US_STATES } from '@/constants/states';
+import { withTimeout } from '@/lib/utils';
 
 type Step = 1 | 2 | 3;
 
@@ -62,8 +63,11 @@ function SignupContent() {
 
     const checkAuthStatus = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const user = session?.user ?? null;
+        // Server-validated auth check with 4s timeout
+        const { data: { user } } = await Promise.race([
+          supabase.auth.getUser(),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getUser timed out')), 4000)),
+        ]);
 
         if (!active) return;
 
@@ -71,29 +75,42 @@ function SignupContent() {
           // User is authenticated — determine which step they need
           if (user.email) setEmail(user.email);
 
-          const { data: profile } = await supabase
-            .from('users')
-            .select('subscription_status, username')
-            .eq('id', user.id)
-            .single();
+          // Server-side profile lookup — no browser-side PostgREST query
+          try {
+            const res = await withTimeout(fetch('/api/me', { credentials: 'include' }), 4000);
+            if (!active) return;
 
-          if (!active) return;
+            if (res.ok) {
+              const profile = await res.json();
 
-          if (profile) {
-            const needsProfile = !profile.username;
-            const needsPayment = !needsProfile && (!profile.subscription_status || profile.subscription_status === 'trial');
+              if (profile) {
+                const needsProfile = !profile.username;
+                const needsPayment = !needsProfile && (!profile.subscription_status || profile.subscription_status === 'trial');
 
-            if (needsProfile) {
-              setStep(2);
-            } else if (needsPayment) {
-              setStep(3);
+                if (needsProfile) {
+                  setStep(2);
+                } else if (needsPayment) {
+                  setStep(3);
+                } else {
+                  // Onboarding complete — redirect to main menu
+                  router.replace('/main-menu');
+                  return;
+                }
+              } else {
+                // No profile row yet — they need step 2 (profile + password)
+                setStep(urlStep === '3' ? 3 : 2);
+              }
+            } else if (res.status === 401) {
+              // Not authenticated server-side despite getUser() — stale session
+              const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
+              setStep(fallbackStep as Step);
             } else {
-              // Onboarding complete — redirect to main menu
-              router.replace('/main-menu');
-              return;
+              // Server error — fall through with URL step
+              setStep(urlStep === '3' ? 3 : 2);
             }
-          } else {
-            // No profile row yet — they need step 2 (profile + password)
+          } catch {
+            // /api/me timed out — fall through with URL step
+            console.warn('[signup] /api/me fetch failed or timed out');
             setStep(urlStep === '3' ? 3 : 2);
           }
         } else {
@@ -102,8 +119,8 @@ function SignupContent() {
           setStep(fallbackStep as Step);
         }
       } catch (err) {
-        console.error('Error checking auth status:', err);
-        // Preserve URL step param instead of defaulting to 1
+        // getUser() timed out or failed — session is invalid/expired
+        console.warn('[signup] getUser timed out or failed:', err);
         if (active) {
           const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
           setStep(fallbackStep as Step);
@@ -117,6 +134,16 @@ function SignupContent() {
 
     return () => { active = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Failsafe: if auth check hangs despite individual timeouts, show the form
+  useEffect(() => {
+    if (!initializing) return;
+    const failsafe = setTimeout(() => {
+      console.warn('[signup] Auth check failsafe triggered — showing signup form');
+      setInitializing(false);
+    }, 6000);
+    return () => clearTimeout(failsafe);
+  }, [initializing]);
 
   // Step 1: Request access — sends magic link email
   const handleRequestAccess = async (e: React.FormEvent) => {
@@ -167,43 +194,59 @@ function SignupContent() {
 
     setLoading(true);
 
-    // Set the password
-    const { error: passwordError } = await supabase.auth.updateUser({ password });
-    if (passwordError) {
-      toast.error(passwordError.message);
+    try {
+      // Set the password — 8s timeout
+      const { error: passwordError } = await Promise.race([
+        supabase.auth.updateUser({ password }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Password update timed out')), 8000)),
+      ]);
+      if (passwordError) {
+        toast.error(passwordError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Get the current user — 4s timeout
+      const { data: { user } } = await Promise.race([
+        supabase.auth.getUser(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getUser timed out')), 4000)),
+      ]);
+      if (!user) {
+        toast.error('Session expired. Please sign in again.');
+        setLoading(false);
+        router.push('/login');
+        return;
+      }
+
+      // Update the profile — 8s timeout
+      const username = (user.email || email).split('@')[0];
+      const { error } = await Promise.race([
+        supabase
+          .from('users')
+          .update({
+            username,
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
+            location: location || null,
+            position,
+          })
+          .eq('id', user.id),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Profile update timed out')), 8000)),
+      ]);
+
+      if (error) {
+        toast.error('Failed to save profile');
+        setLoading(false);
+        return;
+      }
+
       setLoading(false);
-      return;
-    }
-
-    // Get the current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error('Session expired. Please sign in again.');
-      router.push('/login');
-      return;
-    }
-
-    // Update the profile in public.users
-    const username = (user.email || email).split('@')[0];
-    const { error } = await supabase
-      .from('users')
-      .update({
-        username,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        location: location || null,
-        position,
-      })
-      .eq('id', user.id);
-
-    if (error) {
-      toast.error('Failed to save profile');
+      setStep(3);
+    } catch (err) {
+      console.error('[signup] Step 2 failed:', err);
+      toast.error('Something went wrong. Please try again.');
       setLoading(false);
-      return;
     }
-
-    setLoading(false);
-    setStep(3);
   };
 
   // Step 3: Verify access code or payment
@@ -217,46 +260,59 @@ function SignupContent() {
 
     setLoading(true);
 
-    // Validate access code
-    const response = await fetch('/api/stripe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessCode: accessCode.trim() }),
-    });
+    try {
+      // Validate access code — server-side route, 8s timeout
+      const response = await withTimeout(
+        fetch('/api/stripe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessCode: accessCode.trim() }),
+        }),
+        8000,
+      );
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (!response.ok) {
-      toast.error(data.error || 'Invalid access code');
-      setLoading(false);
-      return;
-    }
-
-    // Store team_id if the access code belongs to a team
-    const teamId = data.team_id || null;
-    setPendingTeamId(teamId);
-
-    // Update subscription status — upsert to handle missing profile row
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const upsertData: any = {
-        id: user.id,
-        email: user.email || email,
-        subscription_status: 'bypass',
-      };
-      if (teamId) {
-        upsertData.team_id = teamId;
+      if (!response.ok) {
+        toast.error(data.error || 'Invalid access code');
+        setLoading(false);
+        return;
       }
-      await supabase
-        .from('users')
-        .upsert(upsertData, { onConflict: 'id' });
-    }
 
-    setLoginTimestamp();
-    toast.success('Account created successfully!');
-    setLoading(false);
-    window.location.href = '/main-menu';
+      // Store team_id if the access code belongs to a team
+      const teamId = data.team_id || null;
+      setPendingTeamId(teamId);
+
+      // Update subscription status — 4s timeout on getUser, 8s on upsert
+      const { data: { user } } = await Promise.race([
+        supabase.auth.getUser(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getUser timed out')), 4000)),
+      ]);
+      if (user) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const upsertData: any = {
+          id: user.id,
+          email: user.email || email,
+          subscription_status: 'bypass',
+        };
+        if (teamId) {
+          upsertData.team_id = teamId;
+        }
+        await Promise.race([
+          supabase.from('users').upsert(upsertData, { onConflict: 'id' }),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Upsert timed out')), 8000)),
+        ]);
+      }
+
+      setLoginTimestamp();
+      toast.success('Account created successfully!');
+      setLoading(false);
+      window.location.href = '/main-menu';
+    } catch (err) {
+      console.error('[signup] Step 3 failed:', err);
+      toast.error('Something went wrong. Please try again.');
+      setLoading(false);
+    }
   };
 
   const stepTitles: Record<Step, string> = {

@@ -14,6 +14,7 @@ import Input from '@/components/ui/Input';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { setLoginTimestamp } from '@/hooks/useSessionExpiry';
 import { logActivity } from '@/lib/activityLogger';
+import { withTimeout } from '@/lib/utils';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,38 +31,43 @@ export default function LoginPage() {
 
     const checkAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const user = session?.user ?? null;
+        // Server-validated auth check with 4s timeout
+        // (unlike getSession() which reads cached/expired tokens without validation)
+        const { data: { user } } = await Promise.race([
+          supabase.auth.getUser(),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getUser timed out')), 4000)),
+        ]);
 
         if (!active) return;
 
         if (user) {
-          // Check onboarding status
-          const { data: profile, error: profileError } = await supabase
-            .from('users')
-            .select('subscription_status, username')
-            .eq('id', user.id)
-            .single();
+          // Server-side profile lookup — no browser-side PostgREST query
+          try {
+            const res = await withTimeout(fetch('/api/me', { credentials: 'include' }), 4000);
+            if (!active) return;
 
-          if (profileError) {
-            console.error('Login mount profile query failed:', profileError.message, profileError.code);
+            if (res.ok) {
+              const profile = await res.json();
+
+              if (!profile || !profile.username) {
+                router.replace('/signup?step=2');
+              } else if (!profile.subscription_status || profile.subscription_status === 'trial') {
+                router.replace('/signup?step=3');
+              } else {
+                router.replace('/main-menu');
+              }
+              // Don't leave checkingAuth stuck if redirect is slow
+              if (active) setCheckingAuth(false);
+              return;
+            }
+          } catch {
+            // /api/me timed out or failed — show login form
+            console.warn('[login] /api/me fetch failed or timed out');
           }
-
-          if (!active) return;
-
-          if (!profile || !profile.username) {
-            router.replace('/signup?step=2');
-          } else if (!profile.subscription_status || profile.subscription_status === 'trial') {
-            router.replace('/signup?step=3');
-          } else {
-            router.replace('/main-menu');
-          }
-          // Don't leave checkingAuth stuck if redirect is slow
-          if (active) setCheckingAuth(false);
-          return;
         }
       } catch (err) {
-        console.error('Error checking auth:', err);
+        // getUser() timed out or failed — session is invalid/expired, show login form
+        console.warn('[login] getUser timed out or failed:', err);
       }
 
       if (active) setCheckingAuth(false);
@@ -72,20 +78,13 @@ export default function LoginPage() {
     return () => { active = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Failsafe: if auth check hangs (stale cookies), clear them and show the form
+  // Failsafe: if auth check hangs despite individual timeouts, show the form
   useEffect(() => {
-    if (!checkingAuth) return; // Already resolved, no timer needed
+    if (!checkingAuth) return;
     const failsafe = setTimeout(() => {
-      console.warn('[login] Auth check timed out — clearing stale cookies');
-      // Clear all sb- auth cookies
-      document.cookie.split(';').forEach((c) => {
-        const name = c.trim().split('=')[0];
-        if (name.startsWith('sb-')) {
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-        }
-      });
+      console.warn('[login] Auth check failsafe triggered — showing login form');
       setCheckingAuth(false);
-    }, 4000);
+    }, 6000);
     return () => clearTimeout(failsafe);
   }, [checkingAuth]);
 
@@ -99,46 +98,57 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { data, error } = await Promise.race([
+        supabase.auth.signInWithPassword({ email, password }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Sign-in timed out')), 8000)),
+      ]);
 
-    if (error) {
-      toast.error(error.message);
+      if (error) {
+        toast.error(error.message);
+        setLoading(false);
+        return;
+      }
+
+      // Check onboarding status before routing (server-side via /api/me)
+      if (data.user) {
+        try {
+          const res = await withTimeout(fetch('/api/me', { credentials: 'include' }), 4000);
+          if (res.ok) {
+            const profile = await res.json();
+
+            if (!profile || !profile.username) {
+              toast.success('Please complete your profile setup');
+              setLoading(false);
+              router.push('/signup?step=2');
+              return;
+            }
+
+            if (!profile.subscription_status || profile.subscription_status === 'trial') {
+              toast.success('Please complete your account setup');
+              setLoading(false);
+              router.push('/signup?step=3');
+              return;
+            }
+          }
+        } catch {
+          // /api/me failed — fall through to main-menu (session is valid, useAuth will re-validate)
+          console.warn('[login] Post-login profile check failed — proceeding to main-menu');
+        }
+
+        setLoginTimestamp();
+        // Fire-and-forget — don't let logActivity block navigation
+        logActivity('login', undefined, data.user.id);
+      }
+
+      toast.success('Signed in successfully');
       setLoading(false);
-      return;
+      router.push('/main-menu');
+    } catch (err) {
+      console.error('[login] Sign-in failed:', err);
+      toast.error('Sign-in timed out. Please try again.');
+      setLoading(false);
     }
-
-    // Check onboarding status before routing
-    if (data.user) {
-      const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('subscription_status, username')
-        .eq('id', data.user.id)
-        .single();
-
-      if (profileError) {
-        console.error('Login handler profile query failed:', profileError.message, profileError.code);
-      }
-
-      if (!profile || !profile.username) {
-        toast.success('Please complete your profile setup');
-        router.push('/signup?step=2');
-        return;
-      }
-
-      if (!profile.subscription_status || profile.subscription_status === 'trial') {
-        toast.success('Please complete your account setup');
-        router.push('/signup?step=3');
-        return;
-      }
-    }
-
-    setLoginTimestamp();
-    logActivity('login', undefined, data.user.id);
-    toast.success('Signed in successfully');
-    router.push('/main-menu');
   };
 
   // Show loading while checking auth
