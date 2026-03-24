@@ -38,20 +38,21 @@ function SignupContent() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
 
-  // Step 1: Account
+  // Step 1: Email Verification
   const [email, setEmail] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
+
+  // Step 2: Profile + Password
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
-  // Step 2: Payment / Access Code
-  const [accessCode, setAccessCode] = useState('');
-  const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
-
-  // Step 3: Profile
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [location, setLocation] = useState('');
   const [position, setPosition] = useState('');
+
+  // Step 3: Payment / Access Code
+  const [accessCode, setAccessCode] = useState('');
+  const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -79,13 +80,12 @@ function SignupContent() {
           if (!active) return;
 
           if (profile) {
-            const needsPayment =
-              !profile.subscription_status || profile.subscription_status === 'trial';
-            const needsProfile = !needsPayment && !profile.username;
+            const needsProfile = !profile.username;
+            const needsPayment = !needsProfile && (!profile.subscription_status || profile.subscription_status === 'trial');
 
-            if (needsPayment) {
+            if (needsProfile) {
               setStep(2);
-            } else if (needsProfile) {
+            } else if (needsPayment) {
               setStep(3);
             } else {
               // Onboarding complete — redirect to main menu
@@ -93,7 +93,7 @@ function SignupContent() {
               return;
             }
           } else {
-            // No profile row yet — they need step 2 (payment/access code)
+            // No profile row yet — they need step 2 (profile + password)
             setStep(urlStep === '3' ? 3 : 2);
           }
         } else {
@@ -118,24 +118,20 @@ function SignupContent() {
     return () => { active = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Step 1: Create account — sends confirmation email
-  const handleAccountCreation = async (e: React.FormEvent) => {
+  // Step 1: Request access — sends magic link email
+  const handleRequestAccess = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+    if (email !== confirmEmail) {
+      toast.error('Email addresses do not match');
       return;
     }
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      password,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
 
     if (error) {
@@ -148,7 +144,69 @@ function SignupContent() {
     setEmailSent(true);
   };
 
-  // Step 2: Verify access code or payment
+  // Step 2: Set password and save profile
+  const handleProfileAndPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (!firstName.trim() || !lastName.trim()) {
+      toast.error('First name and last name are required');
+      return;
+    }
+    if (!position) {
+      toast.error('Please select a position');
+      return;
+    }
+
+    setLoading(true);
+
+    // Set the password
+    const { error: passwordError } = await supabase.auth.updateUser({ password });
+    if (passwordError) {
+      toast.error(passwordError.message);
+      setLoading(false);
+      return;
+    }
+
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error('Session expired. Please sign in again.');
+      router.push('/login');
+      return;
+    }
+
+    // Update the profile in public.users
+    const username = (user.email || email).split('@')[0];
+    const { error } = await supabase
+      .from('users')
+      .update({
+        username,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        location: location || null,
+        position,
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      toast.error('Failed to save profile');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(false);
+    setStep(3);
+  };
+
+  // Step 3: Verify access code or payment
   const handlePaymentStep = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -195,62 +253,16 @@ function SignupContent() {
         .upsert(upsertData, { onConflict: 'id' });
     }
 
-    setLoading(false);
-    setStep(3);
-  };
-
-  // Step 3: Save profile
-  const handleProfileCreation = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!firstName.trim() || !lastName.trim()) {
-      toast.error('First name and last name are required');
-      return;
-    }
-
-    if (!position) {
-      toast.error('Please select a position');
-      return;
-    }
-
-    setLoading(true);
-
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      toast.error('Session expired. Please sign in again.');
-      router.push('/login');
-      return;
-    }
-
-    const username = (user.email || email).split('@')[0];
-
-    const { error } = await supabase
-      .from('users')
-      .update({
-        username,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        location: location || null,
-        position,
-      })
-      .eq('id', user.id);
-
-    if (error) {
-      toast.error('Failed to save profile');
-      setLoading(false);
-      return;
-    }
-
     setLoginTimestamp();
     toast.success('Account created successfully!');
+    setLoading(false);
     window.location.href = '/main-menu';
   };
 
   const stepTitles: Record<Step, string> = {
-    1: 'Create Account',
-    2: 'Payment / Access Code',
-    3: 'Complete Your Profile',
+    1: 'Request Access',
+    2: 'Complete Your Profile',
+    3: 'Payment / Access Code',
   };
 
   // Show loading while determining auth state and correct step
@@ -318,23 +330,13 @@ function SignupContent() {
             </div>
           ) : (
             <>
-              {/* Email confirmation message (shown after step 1 signUp) */}
+              {/* Email confirmation message (shown after step 1 magic link) */}
               {emailSent && (
                 <div className="text-center space-y-4">
                   <p className="text-[var(--text-secondary)] text-sm">
-                    We&apos;ve sent a confirmation link to{' '}
+                    We&apos;ve sent a sign-up link to{' '}
                     <span className="text-[var(--text-primary)] font-medium">{email}</span>.
-                  </p>
-                  <p className="text-[var(--text-secondary)] text-sm">
-                    Please check your inbox and click the link to confirm your email,
-                    then{' '}
-                    <Link
-                      href="/login"
-                      className="text-[var(--accent-hover)] hover:text-[var(--accent-bright)] underline transition-colors"
-                    >
-                      sign in
-                    </Link>{' '}
-                    to continue setting up your account.
+                    Please check your inbox and click the link to continue setting up your account.
                   </p>
                   <p className="text-[var(--text-muted)] text-xs mt-4">
                     Didn&apos;t receive it? Check your spam folder or try signing up again.
@@ -342,9 +344,9 @@ function SignupContent() {
                 </div>
               )}
 
-              {/* Step 1: Account Creation */}
+              {/* Step 1: Request Access */}
               {!emailSent && step === 1 && (
-                <form onSubmit={handleAccountCreation} className="space-y-1">
+                <form onSubmit={handleRequestAccess} className="space-y-1">
                   <Input
                     id="email"
                     label="Email"
@@ -354,6 +356,43 @@ function SignupContent() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                   />
+                  <Input
+                    id="confirmEmail"
+                    label="Confirm Email"
+                    type="email"
+                    placeholder="Confirm your email"
+                    value={confirmEmail}
+                    onChange={(e) => setConfirmEmail(e.target.value)}
+                    required
+                  />
+                  <div className="flex items-start gap-2 pt-2 pb-1">
+                    <input
+                      type="checkbox"
+                      id="termsCheckbox"
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-[var(--accent-border)] accent-[var(--accent-primary)] cursor-pointer"
+                    />
+                    <label htmlFor="termsCheckbox" className="text-sm text-[var(--text-secondary)] cursor-pointer">
+                      I agree to the{' '}
+                      <button
+                        type="button"
+                        onClick={() => setShowTerms(true)}
+                        className="text-[var(--accent-hover)] hover:text-[var(--accent-bright)] underline transition-colors cursor-pointer"
+                      >
+                        Privacy Policy &amp; Terms of Use
+                      </button>
+                    </label>
+                  </div>
+                  <Button type="submit" size="fullWidth" disabled={!termsAccepted || !email || !confirmEmail || email !== confirmEmail}>
+                    SEND SIGN UP LINK
+                  </Button>
+                </form>
+              )}
+
+              {/* Step 2: Complete Your Profile */}
+              {step === 2 && !emailSent && (
+                <form onSubmit={handleProfileAndPassword} className="space-y-1">
                   <Input
                     id="password"
                     label="Password"
@@ -372,54 +411,6 @@ function SignupContent() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                   />
-                  <div className="flex items-start gap-2 pt-2 pb-1">
-                    <input
-                      type="checkbox"
-                      id="termsCheckbox"
-                      checked={termsAccepted}
-                      onChange={(e) => setTermsAccepted(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-[var(--accent-border)] accent-[var(--accent-primary)] cursor-pointer"
-                    />
-                    <label htmlFor="termsCheckbox" className="text-sm text-[var(--text-secondary)] cursor-pointer">
-                      I agree to the{' '}
-                      <button
-                        type="button"
-                        onClick={() => setShowTerms(true)}
-                        className="text-[var(--accent-hover)] hover:text-[var(--accent-bright)] underline transition-colors cursor-pointer"
-                      >
-                        Terms of Use
-                      </button>
-                    </label>
-                  </div>
-                  <Button type="submit" size="fullWidth" disabled={!termsAccepted}>
-                    CONTINUE
-                  </Button>
-                </form>
-              )}
-
-              {/* Step 2: Payment / Access Code */}
-              {step === 2 && !emailSent && (
-                <form onSubmit={handlePaymentStep} className="space-y-1">
-                  <p className="text-[var(--text-secondary)] text-sm mb-4 text-center">
-                    Enter an access code to activate your account, or proceed with payment.
-                  </p>
-                  <Input
-                    id="accessCode"
-                    label="Access Code"
-                    type="text"
-                    placeholder="Enter your access code"
-                    value={accessCode}
-                    onChange={(e) => setAccessCode(e.target.value)}
-                  />
-                  <Button type="submit" size="fullWidth">
-                    VERIFY CODE
-                  </Button>
-                </form>
-              )}
-
-              {/* Step 3: Profile Creation */}
-              {step === 3 && !emailSent && (
-                <form onSubmit={handleProfileCreation} className="space-y-1">
                   <Input
                     id="firstName"
                     label="First Name"
@@ -466,7 +457,27 @@ function SignupContent() {
                     <AccentColorPicker />
                   </div>
                   <Button type="submit" size="fullWidth">
-                    COMPLETE SETUP
+                    CREATE ACCOUNT
+                  </Button>
+                </form>
+              )}
+
+              {/* Step 3: Payment / Access Code */}
+              {step === 3 && !emailSent && (
+                <form onSubmit={handlePaymentStep} className="space-y-1">
+                  <p className="text-[var(--text-secondary)] text-sm mb-4 text-center">
+                    Enter an access code to activate your account, or proceed with payment.
+                  </p>
+                  <Input
+                    id="accessCode"
+                    label="Access Code"
+                    type="text"
+                    placeholder="Enter your access code"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value)}
+                  />
+                  <Button type="submit" size="fullWidth">
+                    VERIFY CODE
                   </Button>
                 </form>
               )}
@@ -498,7 +509,7 @@ export default function SignupPage() {
     <Suspense
       fallback={
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-  
+
           <WaveBackground centerYPercent={0.35} />
           <div className="relative z-30 w-full max-w-md">
             <div className="flex justify-center mb-8">

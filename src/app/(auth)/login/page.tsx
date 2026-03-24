@@ -49,9 +49,9 @@ export default function LoginPage() {
 
           if (!active) return;
 
-          if (!profile || !profile.subscription_status || profile.subscription_status === 'trial') {
+          if (!profile || !profile.username) {
             router.replace('/signup?step=2');
-          } else if (!profile.username) {
+          } else if (!profile.subscription_status || profile.subscription_status === 'trial') {
             router.replace('/signup?step=3');
           } else {
             router.replace('/main-menu');
@@ -103,14 +103,14 @@ export default function LoginPage() {
         console.error('Login handler profile query failed:', profileError.message, profileError.code);
       }
 
-      if (!profile || !profile.subscription_status || profile.subscription_status === 'trial') {
-        toast.success('Please complete your account setup');
+      if (!profile || !profile.username) {
+        toast.success('Please complete your profile setup');
         router.push('/signup?step=2');
         return;
       }
 
-      if (!profile.username) {
-        toast.success('Please complete your profile');
+      if (!profile.subscription_status || profile.subscription_status === 'trial') {
+        toast.success('Please complete your account setup');
         router.push('/signup?step=3');
         return;
       }

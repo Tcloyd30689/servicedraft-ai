@@ -28,13 +28,12 @@ export default function MainMenuPage() {
     if (loading) return;
     if (!profile) return; // Profile failed to load — show spinner, don't redirect
 
-    const needsPayment =
-      !profile.subscription_status || profile.subscription_status === 'trial';
-    const needsProfile = !needsPayment && !profile.username;
+    const needsProfile = !profile.username;
+    const needsPayment = !needsProfile && (!profile.subscription_status || profile.subscription_status === 'trial');
 
-    if (needsPayment) {
+    if (needsProfile) {
       router.replace('/signup?step=2');
-    } else if (needsProfile) {
+    } else if (needsPayment) {
       router.replace('/signup?step=3');
     }
   }, [loading, profile, router]);

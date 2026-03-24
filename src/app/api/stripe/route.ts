@@ -67,8 +67,8 @@ export async function POST(request: Request) {
         mode: 'subscription',
         payment_method_types: ['card'],
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/signup?step=3&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/signup?step=2`,
+        success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/main-menu`,
+        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/signup?step=3`,
         metadata: { userId: userId || '' },
       });
 
