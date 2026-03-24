@@ -31,8 +31,27 @@ export default function LoginPage() {
 
     const checkAuth = async () => {
       try {
-        // Server-validated auth check with 4s timeout
-        // (unlike getSession() which reads cached/expired tokens without validation)
+        // Fast path: peek at cached session and check JWT expiry locally.
+        // If the access token is missing or expired, show the form immediately
+        // instead of calling getUser() which triggers the SDK's internal
+        // auto-refresh — that refresh hangs when the refresh token is also expired.
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          if (active) setCheckingAuth(false);
+          return;
+        }
+        try {
+          const payload = JSON.parse(atob(session.access_token.split('.')[1]));
+          if (payload.exp && payload.exp * 1000 < Date.now()) {
+            console.log('[login] Access token expired — showing login form');
+            if (active) setCheckingAuth(false);
+            return;
+          }
+        } catch {
+          // Can't decode token — fall through to getUser for server validation
+        }
+
+        // Token looks valid — verify server-side with 4s timeout
         const { data: { user } } = await Promise.race([
           supabase.auth.getUser(),
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getUser timed out')), 4000)),

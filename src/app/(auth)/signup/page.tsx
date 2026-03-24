@@ -63,7 +63,34 @@ function SignupContent() {
 
     const checkAuthStatus = async () => {
       try {
-        // Server-validated auth check with 4s timeout
+        // Fast path: peek at cached session and check JWT expiry locally.
+        // If expired, skip getUser() (which hangs on internal auto-refresh)
+        // and fall through to URL-based step determination.
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
+          setStep(fallbackStep as Step);
+          if (active) setInitializing(false);
+          return;
+        }
+        let tokenExpired = false;
+        try {
+          const payload = JSON.parse(atob(session.access_token.split('.')[1]));
+          if (payload.exp && payload.exp * 1000 < Date.now()) {
+            tokenExpired = true;
+          }
+        } catch {
+          // Can't decode — fall through to getUser
+        }
+        if (tokenExpired) {
+          console.log('[signup] Access token expired — using URL step');
+          const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
+          setStep(fallbackStep as Step);
+          if (active) setInitializing(false);
+          return;
+        }
+
+        // Token looks valid — verify server-side with 4s timeout
         const { data: { user } } = await Promise.race([
           supabase.auth.getUser(),
           new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getUser timed out')), 4000)),
