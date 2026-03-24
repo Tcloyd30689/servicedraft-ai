@@ -30,63 +30,54 @@ export default function LoginPage() {
     let active = true;
 
     const checkAuth = async () => {
+      // Step 1: Peek at cached session (instant, no network call).
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        if (active) setCheckingAuth(false);
+        return;
+      }
+
+      // Step 2: Decode JWT and check expiry locally.
+      // If expired, show the form immediately — never call getUser() on the
+      // browser singleton because the SDK's internal auto-refresh hangs when
+      // the refresh token is also expired, AND it locks the singleton so
+      // subsequent signInWithPassword() calls also hang.
       try {
-        // Fast path: peek at cached session and check JWT expiry locally.
-        // If the access token is missing or expired, show the form immediately
-        // instead of calling getUser() which triggers the SDK's internal
-        // auto-refresh — that refresh hangs when the refresh token is also expired.
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
+        const payload = JSON.parse(atob(session.access_token.split('.')[1]));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          console.log('[login] Access token expired — showing login form');
           if (active) setCheckingAuth(false);
           return;
         }
-        try {
-          const payload = JSON.parse(atob(session.access_token.split('.')[1]));
-          if (payload.exp && payload.exp * 1000 < Date.now()) {
-            console.log('[login] Access token expired — showing login form');
-            if (active) setCheckingAuth(false);
-            return;
-          }
-        } catch {
-          // Can't decode token — fall through to getUser for server validation
-        }
+      } catch {
+        // Can't decode JWT — treat as invalid, show form
+        if (active) setCheckingAuth(false);
+        return;
+      }
 
-        // Token looks valid — verify server-side with 4s timeout
-        const { data: { user } } = await Promise.race([
-          supabase.auth.getUser(),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getUser timed out')), 4000)),
-        ]);
-
+      // Step 3: Token looks valid — verify via server-side /api/me.
+      // This uses a fresh server-side Supabase client (not the browser singleton)
+      // so it can't lock up the browser client that signInWithPassword() needs.
+      try {
+        const res = await withTimeout(fetch('/api/me', { credentials: 'include' }), 4000);
         if (!active) return;
 
-        if (user) {
-          // Server-side profile lookup — no browser-side PostgREST query
-          try {
-            const res = await withTimeout(fetch('/api/me', { credentials: 'include' }), 4000);
-            if (!active) return;
+        if (res.ok) {
+          const profile = await res.json();
 
-            if (res.ok) {
-              const profile = await res.json();
-
-              if (!profile || !profile.username) {
-                router.replace('/signup?step=2');
-              } else if (!profile.subscription_status || profile.subscription_status === 'trial') {
-                router.replace('/signup?step=3');
-              } else {
-                router.replace('/main-menu');
-              }
-              // Don't leave checkingAuth stuck if redirect is slow
-              if (active) setCheckingAuth(false);
-              return;
-            }
-          } catch {
-            // /api/me timed out or failed — show login form
-            console.warn('[login] /api/me fetch failed or timed out');
+          if (!profile || !profile.username) {
+            router.replace('/signup?step=2');
+          } else if (!profile.subscription_status || profile.subscription_status === 'trial') {
+            router.replace('/signup?step=3');
+          } else {
+            router.replace('/main-menu');
           }
+          if (active) setCheckingAuth(false);
+          return;
         }
-      } catch (err) {
-        // getUser() timed out or failed — session is invalid/expired, show login form
-        console.warn('[login] getUser timed out or failed:', err);
+        // Non-OK response (401 = invalid token, 500 = server error) — show form
+      } catch {
+        console.warn('[login] /api/me fetch failed or timed out');
       }
 
       if (active) setCheckingAuth(false);

@@ -62,96 +62,74 @@ function SignupContent() {
     let active = true;
 
     const checkAuthStatus = async () => {
+      // Step 1: Peek at cached session (instant, no network).
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
+        setStep(fallbackStep as Step);
+        if (active) setInitializing(false);
+        return;
+      }
+
+      // Step 2: Decode JWT and check expiry locally.
+      // Never call getUser() on the browser singleton — its internal
+      // auto-refresh hangs and locks the singleton, blocking all
+      // subsequent auth operations (including signInWithPassword).
       try {
-        // Fast path: peek at cached session and check JWT expiry locally.
-        // If expired, skip getUser() (which hangs on internal auto-refresh)
-        // and fall through to URL-based step determination.
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
-          setStep(fallbackStep as Step);
-          if (active) setInitializing(false);
-          return;
-        }
-        let tokenExpired = false;
-        try {
-          const payload = JSON.parse(atob(session.access_token.split('.')[1]));
-          if (payload.exp && payload.exp * 1000 < Date.now()) {
-            tokenExpired = true;
-          }
-        } catch {
-          // Can't decode — fall through to getUser
-        }
-        if (tokenExpired) {
+        const payload = JSON.parse(atob(session.access_token.split('.')[1]));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
           console.log('[signup] Access token expired — using URL step');
           const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
           setStep(fallbackStep as Step);
           if (active) setInitializing(false);
           return;
         }
+      } catch {
+        // Can't decode JWT — treat as invalid
+        const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
+        setStep(fallbackStep as Step);
+        if (active) setInitializing(false);
+        return;
+      }
 
-        // Token looks valid — verify server-side with 4s timeout
-        const { data: { user } } = await Promise.race([
-          supabase.auth.getUser(),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getUser timed out')), 4000)),
-        ]);
-
+      // Step 3: Token looks valid — verify via server-side /api/me.
+      // Uses a fresh server-side Supabase client (not the browser singleton).
+      try {
+        const res = await withTimeout(fetch('/api/me', { credentials: 'include' }), 4000);
         if (!active) return;
 
-        if (user) {
-          // User is authenticated — determine which step they need
-          if (user.email) setEmail(user.email);
+        if (res.ok) {
+          const profile = await res.json();
 
-          // Server-side profile lookup — no browser-side PostgREST query
-          try {
-            const res = await withTimeout(fetch('/api/me', { credentials: 'include' }), 4000);
-            if (!active) return;
+          // Pre-fill email from session
+          if (session.user?.email) setEmail(session.user.email);
 
-            if (res.ok) {
-              const profile = await res.json();
+          if (profile) {
+            const needsProfile = !profile.username;
+            const needsPayment = !needsProfile && (!profile.subscription_status || profile.subscription_status === 'trial');
 
-              if (profile) {
-                const needsProfile = !profile.username;
-                const needsPayment = !needsProfile && (!profile.subscription_status || profile.subscription_status === 'trial');
-
-                if (needsProfile) {
-                  setStep(2);
-                } else if (needsPayment) {
-                  setStep(3);
-                } else {
-                  // Onboarding complete — redirect to main menu
-                  router.replace('/main-menu');
-                  return;
-                }
-              } else {
-                // No profile row yet — they need step 2 (profile + password)
-                setStep(urlStep === '3' ? 3 : 2);
-              }
-            } else if (res.status === 401) {
-              // Not authenticated server-side despite getUser() — stale session
-              const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
-              setStep(fallbackStep as Step);
+            if (needsProfile) {
+              setStep(2);
+            } else if (needsPayment) {
+              setStep(3);
             } else {
-              // Server error — fall through with URL step
-              setStep(urlStep === '3' ? 3 : 2);
+              router.replace('/main-menu');
+              return;
             }
-          } catch {
-            // /api/me timed out — fall through with URL step
-            console.warn('[signup] /api/me fetch failed or timed out');
+          } else {
             setStep(urlStep === '3' ? 3 : 2);
           }
+        } else if (res.status === 401) {
+          // Token invalid server-side — show appropriate step
+          const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
+          setStep(fallbackStep as Step);
         } else {
-          // Not authenticated — preserve URL step if present, else step 1
-          const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
-          setStep(fallbackStep as Step);
+          setStep(urlStep === '3' ? 3 : 2);
         }
-      } catch (err) {
-        // getUser() timed out or failed — session is invalid/expired
-        console.warn('[signup] getUser timed out or failed:', err);
-        if (active) {
-          const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
-          setStep(fallbackStep as Step);
-        }
+      } catch {
+        console.warn('[signup] /api/me fetch failed or timed out');
+        const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
+        setStep(fallbackStep as Step);
       }
 
       if (active) setInitializing(false);
