@@ -25,9 +25,21 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const { data } = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Middleware auth check timed out')), 5000)
+      ),
+    ]);
+    user = data?.user ?? null;
+  } catch (err) {
+    // getUser() timed out or failed — proceed without user context.
+    // Protected routes will redirect to /login (correct fallback for stuck sessions).
+    // Auth routes (/login, /signup) will show their forms.
+    console.warn('[middleware] getUser() timed out or failed, proceeding without auth:', err instanceof Error ? err.message : err);
+  }
 
   const pathname = request.nextUrl.pathname;
 

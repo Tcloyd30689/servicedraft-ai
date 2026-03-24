@@ -56,6 +56,8 @@ export default function LoginPage() {
           } else {
             router.replace('/main-menu');
           }
+          // Don't leave checkingAuth stuck if redirect is slow
+          if (active) setCheckingAuth(false);
           return;
         }
       } catch (err) {
@@ -69,6 +71,23 @@ export default function LoginPage() {
 
     return () => { active = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Failsafe: if auth check hangs (stale cookies), clear them and show the form
+  useEffect(() => {
+    if (!checkingAuth) return; // Already resolved, no timer needed
+    const failsafe = setTimeout(() => {
+      console.warn('[login] Auth check timed out — clearing stale cookies');
+      // Clear all sb- auth cookies
+      document.cookie.split(';').forEach((c) => {
+        const name = c.trim().split('=')[0];
+        if (name.startsWith('sb-')) {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        }
+      });
+      setCheckingAuth(false);
+    }, 4000);
+    return () => clearTimeout(failsafe);
+  }, [checkingAuth]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -24,8 +24,9 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-03-24
-**Current Phase:** Signup Flow Reorder Sprint — COMPLETE
-**Next Task:** Manual testing of new signup flow, then push to GitHub
+**Current Phase:** Login Loading Lockup Hotfix — COMPLETE
+**Next Task:** Manual testing of login stale-cookie fix + signup flow, then push to GitHub
+**Login Loading Lockup Hotfix:** [x] COMPLETE (2026-03-24) — Hotfix: Added 5s timeout to middleware getUser() and 4s stale-cookie failsafe to login page to prevent loading lockup from expired auth cookies. (1) middleware.ts: wrapped bare getUser() call in Promise.race with 5000ms timeout — on timeout, user=null so protected routes redirect to /login and auth routes show their forms. (2) login/page.tsx: added 4-second failsafe useEffect that clears all sb- cookies via document.cookie expiry and sets checkingAuth=false if the auth check hangs. (3) login/page.tsx: added setCheckingAuth(false) before the return in the user-exists redirect path so the spinner doesn't stick if router.replace is slow. No new files, API routes, database changes, or RLS policies. Build verified with zero TypeScript errors.
 **Signup Flow Reorder Sprint:** [x] COMPLETE (2026-03-24) — Reordered 3-step signup flow from [Email+Password → Access Code → Profile] to [Email Verification via Magic Link → Profile+Password → Access Code/Payment]. Step 1 now uses signInWithOtp() to send magic link (replaces signUp()), adds Confirm Email field and "Privacy Policy & Terms of Use" checkbox, button text "SEND SIGN UP LINK". Step 2 now combines password setting (via updateUser({ password })) with profile creation (first/last name, location, position, accent color), button text "CREATE ACCOUNT". Step 3 remains access code/payment validation but now redirects to /main-menu on success (with setLoginTimestamp() call). Updated onboarding detection in signup, login, and main-menu pages to check needsProfile before needsPayment. Updated Stripe route success_url to /main-menu and cancel_url to /signup?step=3. Auth callback at /auth/callback unchanged — still redirects to /signup?step=2 which is now correctly the profile page. Files modified: signup/page.tsx (major rewrite), login/page.tsx (2 locations), main-menu/page.tsx (1 location), api/stripe/route.ts (2 URLs). No new files, API routes, database changes, or RLS policies. Build verified with zero TypeScript errors.
 **Sprint 2 Hotfix — Post-Testing Fixes (6 items):** [x] COMPLETE (2026-03-23) — (1) NavBar Hover Glow: added dual-layer --shadow-glow-btn CSS variable (15px@0.4 + 30px@0.2), applied to all nav buttons (Main Menu, Dashboard, Owner, Team, Log Out) replacing --shadow-glow-sm, increased transition duration from 200ms to 300ms. (2) Print Export Logo: added onerror="this.style.display='none'" to the footer logo img tag in buildPrintHtml() so broken images hide gracefully instead of showing placeholder. (3) Hero/Nav Unified Header: changed HeroArea background from bg-[var(--bg-primary)] to bg-[var(--bg-nav)] with backdrop-blur-[8px], also updated edge gradient overlay from --bg-primary to --bg-nav, creating seamless frosted glass header that matches NavBar. (4) Particle Network Light Mode: added data-mode check to readWaveColor() — returns '255, 255, 255' (white) when in light mode for visibility on colored backgrounds, keeps theme-colored particles in dark mode. (5) Story Type Selector Glow: replaced Framer Motion whileHover boxShadow with CSS hover:shadow-[var(--shadow-glow-btn)] for smooth dual-layer glow transition, added transition-all duration-300. (6) Light Mode Background Inversion: page-level backgrounds become the accent color (80/20 blend of accent RGB with neutral 50, auto-darkened for brightness>180), nav uses denser 50% accent shade, body gradient blends accent.gradient1 through bgPrimary to accent.gradient2. Cards use dark frosted glass (rgba(15,15,25,0.75)) for contrast against colored bg. All accent colors, opacity layers, borders, and component styling inside cards/modals remain untouched — their tinted glass look carries over from dark mode. Luminance checks restored to original behavior. Build verified with zero TypeScript errors.
 **Sprint 2 — UI Overhaul (4 items):** [x] COMPLETE (2026-03-23) — (1) Universal Modal Fixes: default width widened from max-w-[600px] to max-w-[850px], z-index raised to z-[200]/z-[210] to render above NavBar z-[100] and HeroArea z-[110], removed pt-20 offset for true viewport centering with p-4, max-h changed to 90vh, backdrop blur increased to 10px with bg-black/75. Removed width overrides from EditStoryModal, UpdateWithRepairModal, SavedRepairsModal, and admin team members modal (all now use wider default). Kept narrow widths on confirmation/action dialogs. (2) NavBar Restructure: replaced UserPopup dropdown with always-visible individual nav buttons — Dashboard, Owner (owner role), Team (admin role), Log Out — styled as compact secondary pills with icons, icon-only on tablet, full labels on desktop. Mobile hamburger menu includes all nav items. Deleted UserPopup.tsx. (3) Sine Wave Enhancement: replaced 4-wave arrays in WaveBackground.tsx and 5-wave arrays in HeroArea.tsx with 7-wave desynchronized configurations (6x speed spread from 0.007-0.042, offsets across 2pi+, inverse amplitude-speed relationship). (4) Light Mode Overhaul: completely redesigned light mode from white/bright to "tinted dark mode" — accent color becomes environment background via computeLightBgPrimary() formula (70/30 blend of neutral base and accent RGB, auto-darkened for bright accents with perceived brightness >200), cards/modals/nav use dark frosted glass (rgba(15,15,25,0.75-0.92)), text flipped to light (#f0f0f5), borders changed to rgba(255,255,255,0.1), accent-text-emphasis uses bright accent color. Updated both buildCssVars() in themeColors.ts and applyTheme() in ThemeProvider.tsx. Build verified with zero TypeScript errors.
@@ -3162,6 +3163,36 @@ Previous auth loading fix attempts (commits de85135 through 199b4ef) were revert
   - ThemeProvider: ZERO getUser() calls (all getSession now)
   - activityLogger: ZERO getUser() calls (uses getSession fallback)
   - Build verified with zero TypeScript errors
+
+---
+
+## Hotfix — Login Page Loading Lockup / Stale Cookie Defense (2026-03-24)
+
+**Problem:** When stale sb- auth cookies exist (from expired sessions, magic link testing, etc.), two failures occurred: (1) middleware getUser() hangs indefinitely trying to refresh expired tokens, blocking page HTML from reaching the browser, and (2) login page auth check enters the "user exists" path from stale cached session, tries a profile query that fails, attempts a redirect, but never calls setCheckingAuth(false) — permanent loading spinner.
+
+**Files Modified:**
+- `src/lib/supabase/middleware.ts` — 1 change
+- `src/app/(auth)/login/page.tsx` — 2 changes
+
+**Changes:**
+
+- [x] **Fix 1 — Middleware getUser() timeout** (middleware.ts)
+  - Wrapped bare `getUser()` in `Promise.race` with 5000ms timeout
+  - On timeout: user=null, protected routes redirect to /login, auth routes show their forms
+  - Existing route protection logic unchanged — works identically since `user` is just `null` on timeout
+
+- [x] **Fix 2 — Login page stale-cookie failsafe** (login/page.tsx)
+  - Added 4-second failsafe useEffect after existing checkAuth useEffect
+  - If checkingAuth is still true after 4s: clears all sb- cookies via document.cookie expiry, sets checkingAuth=false
+  - Same pattern as main-menu/page.tsx loadingTooLong failsafe, adapted for login page
+
+- [x] **Fix 3 — setCheckingAuth(false) in user-exists path** (login/page.tsx)
+  - Added `if (active) setCheckingAuth(false)` before the `return` in the user-exists redirect block
+  - Prevents spinner from sticking if router.replace is slow or fails
+
+**Files NOT changed:** auth/callback/route.ts, signup/page.tsx, main-menu/page.tsx, useAuth.ts, all database tables/RLS/API routes.
+
+**Build:** Verified with zero TypeScript errors.
 
 ---
 
