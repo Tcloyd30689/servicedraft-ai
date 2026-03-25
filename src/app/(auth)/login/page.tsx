@@ -44,7 +44,12 @@ export default function LoginPage() {
       try {
         const payload = JSON.parse(atob(session.access_token.split('.')[1]));
         if (payload.exp && payload.exp * 1000 < Date.now()) {
-          console.log('[login] Access token expired — showing login form');
+          console.log('[login] Access token expired — clearing stale session');
+          // Clear the stale session to release the singleton's auth mutex.
+          // Without this, the SDK's internal auto-refresh (triggered by
+          // getSession) permanently locks the mutex when the refresh token
+          // is also expired, causing signInWithPassword() to hang.
+          await supabase.auth.signOut({ scope: 'local' });
           if (active) setCheckingAuth(false);
           return;
         }
