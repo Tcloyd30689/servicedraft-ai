@@ -108,8 +108,8 @@ When accessing field values in the narrative store: `state.fieldValues['year']` 
 
 | Layer | Technology | Version | Purpose |
 |-------|------------|---------|---------|
-| **Framework** | Next.js (App Router) | 16.1.6 | React framework with SSR |
-| **React** | React | 19.2.3 | UI library |
+| **Framework** | Next.js (App Router) | 16.2.1 | React framework with SSR |
+| **React** | React | 19.2.4 | UI library |
 | **Language** | TypeScript | 5.x | Type safety |
 | **Styling** | Tailwind CSS | 4.x | CSS-first config via @theme in globals.css |
 | **Database/Auth** | Supabase | @supabase/supabase-js 2.95+ / @supabase/ssr 0.8+ | PostgreSQL + Auth + RLS |
