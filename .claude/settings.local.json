@@ -5,7 +5,13 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git config:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next build)",
+      "Bash(grep:*)",
+      "Bash(npx next upgrade)",
+      "Bash(npm install:*)",
+      "Bash(timeout 15 npm run dev:*)"
     ]
   }
 }

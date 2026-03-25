@@ -53,7 +53,7 @@ function setAuthState(partial: Partial<AuthState>) {
   notify();
 }
 
-// FIX 2 — Visibility change guard to prevent concurrent refresh pile-up
+// Visibility change guard to prevent concurrent refresh pile-up
 let isRefreshing = false;
 
 async function fetchProfileForUser(_userId: string, _userEmail?: string) {
@@ -89,25 +89,21 @@ function initializeAuth() {
   if (initialized) return;
   initialized = true;
 
-  // Initial fetch with 7-second hard timeout on getUser()
+  // Initial fetch — uses getSession() which reads from local cache (no network call).
+  // The middleware has already validated the session and refreshed cookies if needed.
   (async () => {
     try {
-      const { data: { user: authUser } } = await Promise.race([
-        supabase.auth.getUser(),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Auth check timed out after 7000ms')), 7000)
-        ),
-      ]);
+      const { data: { session } } = await supabase.auth.getSession();
+      const authUser = session?.user ?? null;
       setAuthState({ user: authUser });
       if (authUser) {
         await fetchProfileForUser(authUser.id, authUser.email ?? '');
       }
     } catch (err) {
-      console.error('[useAuth] getUser timed out or failed — treating as unauthenticated:', err);
+      console.error('[useAuth] getSession failed — treating as unauthenticated:', err);
       setAuthState({ user: null, profile: null });
     } finally {
       setAuthState({ loading: false });
-      // FIX A — Mark app as fully initialized AFTER initial auth check completes
       appFullyInitialized = true;
     }
   })();
@@ -189,13 +185,14 @@ export function useAuth(): UseAuthReturn {
 
   const signOut = useCallback(async () => {
     try {
-      localStorage.removeItem('sd-login-timestamp');
       localStorage.removeItem('sd-accent-color');
       localStorage.removeItem('sd-color-mode');
       localStorage.removeItem('sd-bg-animation');
+      // scope: 'global' kills the server-side session and all refresh tokens,
+      // preventing zombie sessions from accumulating in the database.
       // Race: signOut vs 3-second timeout — whichever finishes first wins
       await Promise.race([
-        supabase.auth.signOut({ scope: 'local' }),
+        supabase.auth.signOut({ scope: 'global' }),
         new Promise(resolve => setTimeout(resolve, 3000)),
       ]);
       setAuthState({ user: null, profile: null });

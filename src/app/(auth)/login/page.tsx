@@ -12,7 +12,6 @@ import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { setLoginTimestamp } from '@/hooks/useSessionExpiry';
 import { logActivity } from '@/lib/activityLogger';
 import { withTimeout } from '@/lib/utils';
 
@@ -146,7 +145,6 @@ export default function LoginPage() {
           console.warn('[login] Post-login profile check failed — proceeding to main-menu');
         }
 
-        setLoginTimestamp();
         // Fire-and-forget — don't let logActivity block navigation
         logActivity('login', undefined, data.user.id);
       }

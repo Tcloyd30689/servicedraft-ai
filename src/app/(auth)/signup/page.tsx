@@ -15,7 +15,6 @@ import Select from '@/components/ui/Select';
 import Modal from '@/components/ui/Modal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import TermsOfUse from '@/components/layout/TermsOfUse';
-import { setLoginTimestamp } from '@/hooks/useSessionExpiry';
 import AccentColorPicker from '@/components/ui/AccentColorPicker';
 import { POSITION_OPTIONS } from '@/constants/positions';
 import { US_STATES } from '@/constants/states';
@@ -309,7 +308,6 @@ function SignupContent() {
         ]);
       }
 
-      setLoginTimestamp();
       toast.success('Account created successfully!');
       setLoading(false);
       window.location.href = '/main-menu';
