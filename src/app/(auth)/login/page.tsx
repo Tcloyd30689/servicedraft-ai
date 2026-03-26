@@ -13,7 +13,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { logActivity } from '@/lib/activityLogger';
-import { withTimeout } from '@/lib/utils';
+import { withTimeout, clearExpiredAuthCookies } from '@/lib/utils';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,6 +29,17 @@ export default function LoginPage() {
     let active = true;
 
     const checkAuth = async () => {
+      // Step 0: Clear expired auth cookies BEFORE the SDK touches them.
+      // Prevents the auto-refresh daemon from entering an infinite retry loop
+      // on revoked refresh tokens (e.g., after server-side session cleanup).
+      const cookiesCleared = clearExpiredAuthCookies();
+      if (cookiesCleared) {
+        // Cookies were stale and have been nuked — no valid session exists.
+        // Show the login form immediately without touching the SDK.
+        if (active) setCheckingAuth(false);
+        return;
+      }
+
       // Step 1: Peek at cached session (instant, no network call).
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
@@ -54,7 +65,8 @@ export default function LoginPage() {
           return;
         }
       } catch {
-        // Can't decode JWT — treat as invalid, show form
+        // Can't decode JWT — treat as invalid, clear stale state and show form
+        await supabase.auth.signOut({ scope: 'local' });
         if (active) setCheckingAuth(false);
         return;
       }
