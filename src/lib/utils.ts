@@ -40,7 +40,18 @@ export function clearExpiredAuthCookies(): boolean {
     if (authChunks.length === 0) return false;
 
     // Reassemble the full cookie value from chunks
-    const fullValue = authChunks.join('');
+    let fullValue = authChunks.join('');
+
+    // @supabase/ssr encodes cookies in base64url format by default (prefix "base64-").
+    // Strip the prefix and decode to plain JSON before matching.
+    const BASE64_PREFIX = 'base64-';
+    if (fullValue.startsWith(BASE64_PREFIX)) {
+      const encoded = fullValue.substring(BASE64_PREFIX.length);
+      // Convert base64url → standard base64 (- → +, _ → /) and add padding
+      const base64 = encoded.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+      fullValue = atob(padded);
+    }
 
     // Extract the access_token JWT from the JSON cookie value
     const tokenMatch = fullValue.match(/"access_token"\s*:\s*"([^"]+)"/);
@@ -51,8 +62,12 @@ export function clearExpiredAuthCookies(): boolean {
     if (jwtParts.length !== 3) return false;
 
     const payload = JSON.parse(atob(jwtParts[1]));
-    if (!payload.exp || payload.exp * 1000 > Date.now()) {
-      // Token is still valid — don't touch anything
+    // 90-second margin matches the SDK's EXPIRY_MARGIN_MS (3 ticks × 30s).
+    // Prevents the edge case where we say "valid" but the SDK considers it
+    // "near-expiry" and triggers auto-refresh with a revoked refresh token.
+    const EXPIRY_MARGIN_S = 90;
+    if (!payload.exp || (payload.exp - EXPIRY_MARGIN_S) * 1000 > Date.now()) {
+      // Token is still valid (with margin) — don't touch anything
       return false;
     }
 
