@@ -11,7 +11,6 @@ import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { logActivity } from '@/lib/activityLogger';
 import { withTimeout } from '@/lib/utils';
 
 export default function LoginPage() {
@@ -98,10 +97,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Fire-and-forget activity log
-      if (data.userId) {
-        logActivity('login', undefined, data.userId);
-      }
+      // Activity log is handled server-side in /api/auth/login
 
       toast.success('Signed in successfully');
       setLoading(false);
