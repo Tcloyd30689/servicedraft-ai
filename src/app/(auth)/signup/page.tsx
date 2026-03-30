@@ -52,7 +52,6 @@ function SignupContent() {
 
   // Step 3: Payment / Access Code
   const [accessCode, setAccessCode] = useState('');
-  const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -186,7 +185,10 @@ function SignupContent() {
     setEmailSent(true);
   };
 
-  // Step 2: Set password and save profile
+  // Step 2: Set password and save profile — via server-side API route
+  // The browser Supabase singleton's auto-refresh daemon can lock up after
+  // exchangeCodeForSession() runs server-side in the callback route.
+  // Routing through a server API avoids the singleton lock entirely.
   const handleProfileAndPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -210,47 +212,26 @@ function SignupContent() {
     setLoading(true);
 
     try {
-      // Set the password — 8s timeout
-      const { error: passwordError } = await Promise.race([
-        supabase.auth.updateUser({ password }),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Password update timed out')), 8000)),
-      ]);
-      if (passwordError) {
-        toast.error(passwordError.message);
-        setLoading(false);
-        return;
-      }
-
-      // Get the current user — 4s timeout
-      const { data: { user } } = await Promise.race([
-        supabase.auth.getUser(),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getUser timed out')), 4000)),
-      ]);
-      if (!user) {
-        toast.error('Session expired. Please sign in again.');
-        setLoading(false);
-        router.push('/login');
-        return;
-      }
-
-      // Update the profile — 8s timeout
-      const username = (user.email || email).split('@')[0];
-      const { error } = await Promise.race([
-        supabase
-          .from('users')
-          .update({
-            username,
-            first_name: firstName.trim(),
-            last_name: lastName.trim(),
+      const res = await withTimeout(
+        fetch('/api/signup/complete-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            password,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
             location: location || null,
             position,
-          })
-          .eq('id', user.id),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Profile update timed out')), 8000)),
-      ]);
+          }),
+        }),
+        15000, // 15s timeout — generous because this does password update + profile save
+      );
 
-      if (error) {
-        toast.error('Failed to save profile');
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to create profile');
         setLoading(false);
         return;
       }
@@ -259,7 +240,7 @@ function SignupContent() {
       setStep(3);
     } catch (err) {
       console.error('[signup] Step 2 failed:', err);
-      toast.error('Something went wrong. Please try again.');
+      toast.error('Request timed out. Please try again.');
       setLoading(false);
     }
   };
@@ -294,29 +275,21 @@ function SignupContent() {
         return;
       }
 
-      // Store team_id if the access code belongs to a team
-      const teamId = data.team_id || null;
-      setPendingTeamId(teamId);
+      // Activate account server-side (avoids browser client singleton lock)
+      const activateRes = await withTimeout(
+        fetch('/api/signup/activate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ teamId: data.team_id || null }),
+        }),
+        10000,
+      );
 
-      // Update subscription status — 4s timeout on getUser, 8s on upsert
-      const { data: { user } } = await Promise.race([
-        supabase.auth.getUser(),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('getUser timed out')), 4000)),
-      ]);
-      if (user) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const upsertData: any = {
-          id: user.id,
-          email: user.email || email,
-          subscription_status: 'bypass',
-        };
-        if (teamId) {
-          upsertData.team_id = teamId;
-        }
-        await Promise.race([
-          supabase.from('users').upsert(upsertData, { onConflict: 'id' }),
-          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Upsert timed out')), 8000)),
-        ]);
+      if (!activateRes.ok) {
+        const activateData = await activateRes.json();
+        console.error('[signup] Activation failed:', activateData.error);
+        // Non-fatal — access code was valid, proceed anyway
       }
 
       toast.success('Account created successfully!');
