@@ -38,19 +38,6 @@ export async function POST(request: Request) {
       redirectTo = '/signup?step=3';
     }
 
-    // Fire-and-forget activity log — server-side, no browser client needed.
-    // Don't await — logging must never delay the login response.
-    supabase.from('activity_log').insert({
-      user_id: data.user.id,
-      action_type: 'login',
-      story_type: null,
-      input_data: null,
-      output_preview: null,
-      metadata: {},
-    }).then(({ error: logErr }) => {
-      if (logErr) console.error('[/api/auth/login] Activity log error:', logErr.message);
-    });
-
     return NextResponse.json({
       success: true,
       redirectTo,

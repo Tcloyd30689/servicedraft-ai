@@ -89,9 +89,8 @@ function initializeAuth() {
   if (initialized) return;
   initialized = true;
 
-  // Initial fetch — tries getSession() first (local cache, fast), then falls back
-  // to /api/me if the browser client's _acquireLock fails (e.g., Web Lock held by
-  // a previous page's Supabase client that didn't release before navigation).
+  // Initial fetch — uses getSession() which reads from local cache (no network call).
+  // The middleware has already validated the session and refreshed cookies if needed.
   (async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -101,29 +100,8 @@ function initializeAuth() {
         await fetchProfileForUser(authUser.id, authUser.email ?? '');
       }
     } catch (err) {
-      console.warn('[useAuth] getSession failed — falling back to /api/me:', err);
-      // Browser client lock failure — use server-side /api/me as fallback.
-      // This handles the case where a Web Lock from a previous page's browser
-      // client wasn't released before navigation (e.g., login → main-menu).
-      try {
-        const res = await fetch('/api/me', { credentials: 'include' });
-        if (res.ok) {
-          const profile = await res.json();
-          if (profile && profile.id) {
-            setAuthState({
-              user: { id: profile.id, email: profile.email } as import('@supabase/supabase-js').User,
-              profile: profile as UserProfile,
-            });
-          } else {
-            setAuthState({ user: null, profile: null });
-          }
-        } else {
-          setAuthState({ user: null, profile: null });
-        }
-      } catch {
-        console.error('[useAuth] /api/me fallback also failed');
-        setAuthState({ user: null, profile: null });
-      }
+      console.error('[useAuth] getSession failed — treating as unauthenticated:', err);
+      setAuthState({ user: null, profile: null });
     } finally {
       setAuthState({ loading: false });
       appFullyInitialized = true;
