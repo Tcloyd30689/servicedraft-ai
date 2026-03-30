@@ -18,7 +18,7 @@ import TermsOfUse from '@/components/layout/TermsOfUse';
 import AccentColorPicker from '@/components/ui/AccentColorPicker';
 import { POSITION_OPTIONS } from '@/constants/positions';
 import { US_STATES } from '@/constants/states';
-import { withTimeout, clearExpiredAuthCookies } from '@/lib/utils';
+import { withTimeout } from '@/lib/utils';
 
 type Step = 1 | 2 | 3;
 
@@ -60,49 +60,8 @@ function SignupContent() {
     let active = true;
 
     const checkAuthStatus = async () => {
-      // Step 0: Clear expired auth cookies BEFORE the SDK touches them.
-      const cookiesCleared = clearExpiredAuthCookies();
-      if (cookiesCleared) {
-        const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
-        setStep(fallbackStep as Step);
-        if (active) setInitializing(false);
-        return;
-      }
-
-      // Step 1: Peek at cached session (instant, no network).
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
-        setStep(fallbackStep as Step);
-        if (active) setInitializing(false);
-        return;
-      }
-
-      // Step 2: Decode JWT and check expiry locally.
-      // Never call getUser() on the browser singleton — its internal
-      // auto-refresh hangs and locks the singleton, blocking all
-      // subsequent auth operations (including signInWithPassword).
-      try {
-        const payload = JSON.parse(atob(session.access_token.split('.')[1]));
-        if (payload.exp && payload.exp * 1000 < Date.now()) {
-          console.log('[signup] Access token expired — clearing stale session');
-          await supabase.auth.signOut({ scope: 'local' });
-          const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
-          setStep(fallbackStep as Step);
-          if (active) setInitializing(false);
-          return;
-        }
-      } catch {
-        // Can't decode JWT — treat as invalid, clear stale state
-        await supabase.auth.signOut({ scope: 'local' });
-        const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
-        setStep(fallbackStep as Step);
-        if (active) setInitializing(false);
-        return;
-      }
-
-      // Step 3: Token looks valid — verify via server-side /api/me.
-      // Uses a fresh server-side Supabase client (not the browser singleton).
+      // Check session status entirely server-side to avoid browser
+      // Supabase client singleton lock issues.
       try {
         const res = await withTimeout(fetch('/api/me', { credentials: 'include' }), 4000);
         if (!active) return;
@@ -110,10 +69,10 @@ function SignupContent() {
         if (res.ok) {
           const profile = await res.json();
 
-          // Pre-fill email from session
-          if (session.user?.email) setEmail(session.user.email);
-
           if (profile) {
+            // Pre-fill email from profile if available
+            if (profile.email) setEmail(profile.email);
+
             const needsProfile = !profile.username;
             const needsPayment = !needsProfile && (!profile.subscription_status || profile.subscription_status === 'trial');
 
@@ -126,17 +85,19 @@ function SignupContent() {
               return;
             }
           } else {
+            // Profile returned but empty — go to step 2
             setStep(urlStep === '3' ? 3 : 2);
           }
         } else if (res.status === 401) {
-          // Token invalid server-side — show appropriate step
+          // No valid session — show appropriate step based on URL
           const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
           setStep(fallbackStep as Step);
         } else {
+          // Server error — show step based on URL
           setStep(urlStep === '3' ? 3 : 2);
         }
       } catch {
-        console.warn('[signup] /api/me fetch failed or timed out');
+        console.warn('[signup] /api/me check failed or timed out');
         const fallbackStep = urlStep === '3' ? 3 : urlStep === '2' ? 2 : 1;
         setStep(fallbackStep as Step);
       }

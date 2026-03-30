@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { createClient } from '@/lib/supabase/client';
 import WaveBackground from '@/components/ui/WaveBackground';
 import LiquidCard from '@/components/ui/LiquidCard';
 import Logo from '@/components/ui/Logo';
@@ -13,7 +12,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { logActivity } from '@/lib/activityLogger';
-import { withTimeout, clearExpiredAuthCookies } from '@/lib/utils';
+import { withTimeout } from '@/lib/utils';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,58 +21,15 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  const supabase = createClient();
-
   // Redirect if already authenticated
   useEffect(() => {
     let active = true;
 
     const checkAuth = async () => {
-      // Step 0: Clear expired auth cookies BEFORE the SDK touches them.
-      // Prevents the auto-refresh daemon from entering an infinite retry loop
-      // on revoked refresh tokens (e.g., after server-side session cleanup).
-      const cookiesCleared = clearExpiredAuthCookies();
-      if (cookiesCleared) {
-        // Cookies were stale and have been nuked — no valid session exists.
-        // Show the login form immediately without touching the SDK.
-        if (active) setCheckingAuth(false);
-        return;
-      }
-
-      // Step 1: Peek at cached session (instant, no network call).
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        if (active) setCheckingAuth(false);
-        return;
-      }
-
-      // Step 2: Decode JWT and check expiry locally.
-      // If expired, show the form immediately — never call getUser() on the
-      // browser singleton because the SDK's internal auto-refresh hangs when
-      // the refresh token is also expired, AND it locks the singleton so
-      // subsequent signInWithPassword() calls also hang.
-      try {
-        const payload = JSON.parse(atob(session.access_token.split('.')[1]));
-        if (payload.exp && payload.exp * 1000 < Date.now()) {
-          console.log('[login] Access token expired — clearing stale session');
-          // Clear the stale session to release the singleton's auth mutex.
-          // Without this, the SDK's internal auto-refresh (triggered by
-          // getSession) permanently locks the mutex when the refresh token
-          // is also expired, causing signInWithPassword() to hang.
-          await supabase.auth.signOut({ scope: 'local' });
-          if (active) setCheckingAuth(false);
-          return;
-        }
-      } catch {
-        // Can't decode JWT — treat as invalid, clear stale state and show form
-        await supabase.auth.signOut({ scope: 'local' });
-        if (active) setCheckingAuth(false);
-        return;
-      }
-
-      // Step 3: Token looks valid — verify via server-side /api/me.
-      // This uses a fresh server-side Supabase client (not the browser singleton)
-      // so it can't lock up the browser client that signInWithPassword() needs.
+      // Check for an existing valid session entirely server-side.
+      // The browser Supabase client's auto-refresh daemon can lock the
+      // singleton mutex, blocking signInWithPassword(). By only using
+      // fetch('/api/me'), we never touch the browser client on mount.
       try {
         const res = await withTimeout(fetch('/api/me', { credentials: 'include' }), 4000);
         if (!active) return;
@@ -88,12 +44,11 @@ export default function LoginPage() {
           } else {
             router.replace('/main-menu');
           }
-          if (active) setCheckingAuth(false);
           return;
         }
-        // Non-OK response (401 = invalid token, 500 = server error) — show form
+        // Non-OK (401, 500) — no valid session, show login form
       } catch {
-        console.warn('[login] /api/me fetch failed or timed out');
+        console.warn('[login] /api/me check failed or timed out');
       }
 
       if (active) setCheckingAuth(false);
@@ -125,50 +80,36 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { data, error } = await Promise.race([
-        supabase.auth.signInWithPassword({ email, password }),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Sign-in timed out')), 8000)),
-      ]);
+      const res = await withTimeout(
+        fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email, password }),
+        }),
+        12000, // 12s timeout
+      );
 
-      if (error) {
-        toast.error(error.message);
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Sign-in failed');
         setLoading(false);
         return;
       }
 
-      // Check onboarding status before routing (server-side via /api/me)
-      if (data.user) {
-        try {
-          const res = await withTimeout(fetch('/api/me', { credentials: 'include' }), 4000);
-          if (res.ok) {
-            const profile = await res.json();
-
-            if (!profile || !profile.username) {
-              toast.success('Please complete your profile setup');
-              setLoading(false);
-              router.push('/signup?step=2');
-              return;
-            }
-
-            if (!profile.subscription_status || profile.subscription_status === 'trial') {
-              toast.success('Please complete your account setup');
-              setLoading(false);
-              router.push('/signup?step=3');
-              return;
-            }
-          }
-        } catch {
-          // /api/me failed — fall through to main-menu (session is valid, useAuth will re-validate)
-          console.warn('[login] Post-login profile check failed — proceeding to main-menu');
-        }
-
-        // Fire-and-forget — don't let logActivity block navigation
-        logActivity('login', undefined, data.user.id);
+      // Fire-and-forget activity log
+      if (data.userId) {
+        logActivity('login', undefined, data.userId);
       }
 
       toast.success('Signed in successfully');
       setLoading(false);
-      router.push('/main-menu');
+
+      // Use window.location.href for a full page navigation to pick up
+      // the new session cookies set by the server-side API route.
+      // router.push() does a client-side navigation that won't re-read cookies.
+      window.location.href = data.redirectTo || '/main-menu';
     } catch (err) {
       console.error('[login] Sign-in failed:', err);
       toast.error('Sign-in timed out. Please try again.');
