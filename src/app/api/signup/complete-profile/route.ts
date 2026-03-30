@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { password, firstName, lastName, location, position } = body;
+    const { password, firstName, lastName, location, position, accentColor } = body;
 
     // Validate required fields
     if (!password || password.length < 6) {
@@ -37,17 +37,30 @@ export async function POST(request: Request) {
     // Uses UPSERT instead of UPDATE because the handle_new_user trigger
     // on auth.users can silently fail, leaving no public.users row.
     const username = (user.email || '').split('@')[0];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const upsertData: Record<string, any> = {
+      id: user.id,
+      email: user.email || '',
+      username,
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      location: location || null,
+      position,
+    };
+
+    if (accentColor) {
+      upsertData.preferences = {
+        appearance: {
+          accentColor,
+          mode: 'dark',
+          backgroundAnimation: true,
+        },
+      };
+    }
+
     const { error: profileError } = await supabase
       .from('users')
-      .upsert({
-        id: user.id,
-        email: user.email || '',
-        username,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        location: location || null,
-        position,
-      }, { onConflict: 'id' });
+      .upsert(upsertData, { onConflict: 'id' });
 
     if (profileError) {
       console.error('[/api/signup/complete-profile] Profile upsert error:', profileError.message);

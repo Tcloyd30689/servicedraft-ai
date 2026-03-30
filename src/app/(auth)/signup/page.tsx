@@ -184,6 +184,7 @@ function SignupContent() {
             lastName: lastName.trim(),
             location: location || null,
             position,
+            accentColor: localStorage.getItem('sd-accent-color') || undefined,
           }),
         }),
         15000, // 15s timeout — generous because this does password update + profile save
