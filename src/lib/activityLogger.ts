@@ -1,44 +1,32 @@
-import { createClient } from '@/lib/supabase/client';
-
-interface LogData {
+/**
+ * Fire-and-forget activity logger.
+ * Routes through server-side /api/activity-log to avoid browser Supabase client.
+ * Failures are silently caught — logging must NEVER break user workflows.
+ */
+export function logActivity(action_type: string, data?: {
   story_type?: string;
   input_data?: object;
   output_preview?: string;
   metadata?: object;
-}
-
-/**
- * Fire-and-forget activity logger.
- * Failures are silently caught — logging must NEVER break user workflows.
- */
-export function logActivity(action_type: string, data?: LogData, userId?: string): void {
-  const supabase = createClient();
-
-  // Fire-and-forget: don't await in calling code
+}, userId?: string): void {
+  // Fire-and-forget: log via server-side API
   (async () => {
     try {
-      let uid = userId;
-      if (!uid) {
-        // Fallback: use getSession() (cache-only, no network call)
-        const { data: { session } } = await supabase.auth.getSession();
-        uid = session?.user?.id;
-      }
-      if (!uid) return;
-
-      const { error } = await supabase.from('activity_log').insert({
-        user_id: uid,
-        action_type,
-        story_type: data?.story_type ?? null,
-        input_data: data?.input_data ?? null,
-        output_preview: null,
-        metadata: data?.metadata ?? {},
+      await fetch('/api/activity-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          action_type,
+          story_type: data?.story_type,
+          input_data: data?.input_data,
+          output_preview: data?.output_preview,
+          metadata: data?.metadata,
+          user_id: userId,
+        }),
       });
-
-      if (error) {
-        console.error('Activity log insert error:', error.message);
-      }
-    } catch (err) {
-      console.error('Activity logger error:', err);
+    } catch {
+      // Silent — logging must never break user workflows
     }
   })();
 }
