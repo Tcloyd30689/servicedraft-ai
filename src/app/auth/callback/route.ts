@@ -31,7 +31,19 @@ export async function GET(request: Request) {
     console.error('Auth callback OTP verification failed:', error.message);
   }
 
-  // If both methods fail or no params, redirect to login with error hint
-  console.error('Auth callback: No valid code or token_hash found, or all exchange methods failed');
+  // Determine the best failure redirect based on what was attempted
+  if (code) {
+    // Had an auth code but exchangeCodeForSession failed.
+    // Most likely cause: cross-browser (code_verifier cookie missing from this browser).
+    console.error('Auth callback: Code exchange failed — redirecting to signup with cross-browser error');
+    return NextResponse.redirect(new URL('/signup?error=cross-browser', canonicalOrigin));
+  }
+  if (token_hash) {
+    // Had a token_hash but verifyOtp failed — expired or already used
+    console.error('Auth callback: Token verification failed — redirecting to signup with link-expired error');
+    return NextResponse.redirect(new URL('/signup?error=link-expired', canonicalOrigin));
+  }
+  // No recognizable params at all
+  console.error('Auth callback: No valid code or token_hash found');
   return NextResponse.redirect(new URL('/login', canonicalOrigin));
 }
