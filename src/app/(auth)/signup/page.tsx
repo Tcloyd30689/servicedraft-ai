@@ -199,8 +199,8 @@ function SignupContent() {
     e.preventDefault();
 
     const cleanCode = otpCode.replace(/\s/g, '');
-    if (cleanCode.length !== 6 || !/^\d{6}$/.test(cleanCode)) {
-      toast.error('Please enter the 6-digit code from your email');
+    if (!/^\d{6,8}$/.test(cleanCode)) {
+      toast.error('Please enter the verification code from your email');
       return;
     }
 
@@ -462,7 +462,7 @@ function SignupContent() {
               {emailSent && (
                 <div className="space-y-4">
                   <p className="text-[var(--text-secondary)] text-sm text-center">
-                    We sent a 6-digit verification code to{' '}
+                    We sent a verification code to{' '}
                     <span className="text-[var(--text-primary)] font-medium">{otpEmail}</span>.
                     Enter it below to continue.
                   </p>
@@ -473,24 +473,24 @@ function SignupContent() {
                         type="text"
                         inputMode="numeric"
                         autoComplete="one-time-code"
-                        maxLength={6}
-                        placeholder="000000"
+                        maxLength={8}
+                        placeholder="00000000"
                         value={otpCode}
                         onChange={(e) => {
                           const val = e.target.value.replace(/[^0-9]/g, '');
-                          if (val.length <= 6) setOtpCode(val);
+                          if (val.length <= 8) setOtpCode(val);
                         }}
                         onPaste={(e) => {
                           e.preventDefault();
-                          const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+                          const pasted = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 8);
                           setOtpCode(pasted);
                         }}
-                        className="w-full text-center text-2xl tracking-[0.5em] font-mono py-3 px-4 rounded-lg bg-[var(--bg-input)] border border-[var(--accent-border)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent transition-all"
+                        className="w-full text-center text-2xl tracking-[0.3em] font-mono py-3 px-4 rounded-lg bg-[var(--bg-input)] border border-[var(--accent-border)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent transition-all"
                         autoFocus
                       />
                     </div>
 
-                    <Button type="submit" size="fullWidth" disabled={otpCode.replace(/\s/g, '').length !== 6}>
+                    <Button type="submit" size="fullWidth" disabled={otpCode.replace(/\s/g, '').length < 6}>
                       VERIFY CODE
                     </Button>
                   </form>

@@ -29,11 +29,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Sanitize: strip whitespace, ensure 6 digits
+    // Sanitize: strip whitespace, ensure digits only (Supabase OTP length is configurable)
     const cleanToken = token.replace(/\s/g, '');
-    if (cleanToken.length !== 6 || !/^\d{6}$/.test(cleanToken)) {
+    if (!/^\d{6,8}$/.test(cleanToken)) {
       return NextResponse.json(
-        { error: 'Verification code must be 6 digits' },
+        { error: 'Verification code must be 6-8 digits' },
         { status: 400 }
       );
     }
