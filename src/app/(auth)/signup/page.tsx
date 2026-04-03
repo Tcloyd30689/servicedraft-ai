@@ -57,6 +57,7 @@ function SignupContent() {
   const [otpCode, setOtpCode] = useState('');
   const [otpEmail, setOtpEmail] = useState(''); // Preserves email for verification + resend
   const [resendCooldown, setResendCooldown] = useState(0); // Seconds remaining before resend allowed
+  const [codeExpiry, setCodeExpiry] = useState(0); // Seconds remaining before OTP code expires (20 min)
 
   const supabase = createClient();
 
@@ -155,6 +156,22 @@ function SignupContent() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
+  // OTP code expiration countdown timer (20 minutes)
+  useEffect(() => {
+    if (codeExpiry <= 0) return;
+    const timer = setInterval(() => {
+      setCodeExpiry((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [codeExpiry]);
+
+  // Format seconds as MM:SS
+  const formatExpiryTime = (seconds: number): string => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   // Detect current browser for the warning message
   const getBrowserName = (): string => {
     if (typeof navigator === 'undefined') return 'this browser';
@@ -190,6 +207,7 @@ function SignupContent() {
 
     setOtpEmail(email);
     setResendCooldown(60);
+    setCodeExpiry(1200);
     setLoading(false);
     setEmailSent(true);
   };
@@ -261,6 +279,7 @@ function SignupContent() {
         toast.success('New code sent! Check your email.');
         setOtpCode('');
         setResendCooldown(60);
+        setCodeExpiry(1200);
       }
     } catch {
       toast.error('Failed to resend. Please try again.');
@@ -490,10 +509,21 @@ function SignupContent() {
                       />
                     </div>
 
-                    <Button type="submit" size="fullWidth" disabled={otpCode.replace(/\s/g, '').length < 6}>
+                    <Button type="submit" size="fullWidth" disabled={otpCode.replace(/\s/g, '').length < 6 || codeExpiry === 0}>
                       VERIFY CODE
                     </Button>
                   </form>
+
+                  {/* Code expiration countdown */}
+                  {codeExpiry > 0 ? (
+                    <p className={`text-xs text-center ${codeExpiry <= 60 ? 'text-[var(--accent-primary)]' : 'text-[var(--text-muted)]'}`}>
+                      Code expires in {formatExpiryTime(codeExpiry)}
+                    </p>
+                  ) : (
+                    <p className="text-[var(--accent-primary)] text-xs text-center font-medium">
+                      Code expired — please request a new one
+                    </p>
+                  )}
 
                   <p className="text-[var(--text-muted)] text-xs text-center mt-2">
                     You can also click the link in the email if you&apos;re using {getBrowserName()}.
@@ -524,6 +554,7 @@ function SignupContent() {
                         setOtpCode('');
                         setOtpEmail('');
                         setResendCooldown(0);
+                        setCodeExpiry(0);
                       }}
                       className="text-[var(--text-muted)] text-xs hover:text-[var(--text-secondary)] underline transition-colors cursor-pointer"
                     >
