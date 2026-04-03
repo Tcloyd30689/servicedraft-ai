@@ -117,7 +117,7 @@ function SignupContent() {
         setTimeout(() => {
           if (errorParam === 'cross-browser') {
             toast.error(
-              'The sign-up link was opened in a different browser. Enter your email below and use the 6-digit code instead.',
+              'The sign-up link was opened in a different browser. Enter your email below and use the verification code instead.',
               { duration: 8000 }
             );
           } else if (errorParam === 'link-expired') {
@@ -172,18 +172,7 @@ function SignupContent() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Detect current browser for the warning message
-  const getBrowserName = (): string => {
-    if (typeof navigator === 'undefined') return 'this browser';
-    const ua = navigator.userAgent;
-    if (ua.includes('Edg')) return 'Edge';
-    if (ua.includes('Chrome')) return 'Chrome';
-    if (ua.includes('Firefox')) return 'Firefox';
-    if (ua.includes('Safari')) return 'Safari';
-    return 'this browser';
-  };
-
-  // Step 1: Request access — sends magic link email
+  // Step 1: Request access — sends OTP verification email
   const handleRequestAccess = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -525,28 +514,27 @@ function SignupContent() {
                     </p>
                   )}
 
-                  <p className="text-[var(--text-muted)] text-xs text-center mt-2">
-                    You can also click the link in the email if you&apos;re using {getBrowserName()}.
-                  </p>
-
                   <div className="flex flex-col items-center gap-2 pt-1">
-                    <p className="text-[var(--text-muted)] text-xs">
-                      Didn&apos;t receive it? Check your spam folder or{' '}
-                      {resendCooldown > 0 ? (
-                        <span className="text-[var(--text-muted)]">
-                          resend in {resendCooldown}s
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={handleResendCode}
-                          disabled={loading}
-                          className="text-[var(--accent-hover)] hover:text-[var(--accent-bright)] underline transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          resend code
-                        </button>
-                      )}
-                    </p>
+                    {/* Resend option — only visible after code expires */}
+                    {codeExpiry === 0 && (
+                      <p className="text-[var(--text-muted)] text-xs">
+                        Didn&apos;t receive it? Check your spam folder or{' '}
+                        {resendCooldown > 0 ? (
+                          <span className="text-[var(--text-muted)]">
+                            resend in {resendCooldown}s
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleResendCode}
+                            disabled={loading}
+                            className="text-[var(--accent-hover)] hover:text-[var(--accent-bright)] underline transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            resend code
+                          </button>
+                        )}
+                      </p>
+                    )}
                     <button
                       type="button"
                       onClick={() => {
