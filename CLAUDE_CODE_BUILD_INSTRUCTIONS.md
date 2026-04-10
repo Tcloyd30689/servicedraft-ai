@@ -4,9 +4,12 @@
 
 This is the master instruction set for Claude Code when working on the ServiceDraft.AI application. It contains the full technical specification for every system in the app, including exact file paths, code patterns, TypeScript interfaces, CSS variable references, database schemas, and implementation details.
 
-The initial build (Phases 0–10) is complete. All post-build improvement sprints through Stage 6 Sprint B are complete. The pre-deployment security audit is complete. The app is deployed and live at `servicedraft.ai`. This document now serves as the **architecture reference, coding standards guide, and sprint execution playbook** for ongoing maintenance, bug fixes, and new feature development.
+The app is **live in production at `servicedraft.ai`** and in active beta use. All build phases and post-build improvement sprints through the OTP signup migration are complete. This document serves as the **architecture reference, coding standards guide, safeguard playbook, and sprint execution manual** for ongoing maintenance, bug fixes, and new feature development.
 
-**IMPORTANT: Do NOT read `BUILD_PROGRESS_TRACKER.md` at the start of a session — it is a large file and wastes significant context window tokens. The sprint prompt you receive will contain all the context you need for the current task. Only WRITE to the tracker when your work is complete (see "When completing a task" below).**
+**CRITICAL — READ BEFORE ANY WORK:**
+1. This document contains **mandatory safeguards** in the sections titled `PROTECTED FILES — HARD STOPS`, `THE DOUBLE-CHECK PROTOCOL (STOP, ALERT, EXPLAIN, ASK)`, and `MANDATORY VERSION BUMP RULE`. You MUST read and follow these sections on every sprint without exception.
+2. Do NOT read `BUILD_PROGRESS_TRACKER.md` at the start of a session — it is a large file and wastes significant context window tokens. The sprint prompt you receive will contain all the context you need for the current task. Only WRITE to the tracker when your work is complete (see "When completing a task" below).
+3. The app is LIVE. Production changes carry real risk. When in doubt, STOP and ask Tyler before proceeding.
 
 ---
 
@@ -14,42 +17,219 @@ The initial build (Phases 0–10) is complete. All post-build improvement sprint
 
 1. **At the start of every session:**
    - Read the sprint prompt provided by the user — it contains everything you need to know about the current task
-   - Read the corresponding sections in THIS document for architecture rules, coding standards, and implementation details
+   - Read `PROTECTED FILES — HARD STOPS`, `THE DOUBLE-CHECK PROTOCOL`, and `MANDATORY VERSION BUMP RULE` sections of this document (non-negotiable, every session)
+   - Read any other sections of this document relevant to the current task
    - Read any referenced project knowledge files as needed
    - Do NOT read `BUILD_PROGRESS_TRACKER.md` — it is write-only during sprints to save tokens
 
-2. **When completing a task:**
+2. **Before making any change:**
+   - Check whether the change touches a file listed in `PROTECTED FILES — HARD STOPS`
+   - Check whether the change falls into any category listed in `THE DOUBLE-CHECK PROTOCOL`
+   - If either check triggers, follow the `STOP → ALERT → EXPLAIN → ASK` procedure and wait for Tyler's explicit `yes` before proceeding
+   - If the change touches 5 or more files across multiple subsystems, output a brief "blast radius summary" before starting (what files, what systems, what could break) — no approval required, but Tyler should see it
+
+3. **When completing a task:**
    - Implement the task as described
    - Test that it works (run `npm run dev`, check for errors, run `npm run build` for production verification)
-   - Update `BUILD_PROGRESS_TRACKER.md` — add a new sprint/task entry with `[x]` status and today's date
+   - **MANDATORY: bump the app version** per `MANDATORY VERSION BUMP RULE` — this happens on EVERY sprint without exception
+   - Update `BUILD_PROGRESS_TRACKER.md` — add a new sprint/task entry with `[x]` status, today's date, and the new version number
    - Update the "CURRENT STATUS" section at the top of the tracker
-   - Commit all changes to Git with a descriptive message
+   - Commit all changes to Git **locally only** with a descriptive message that includes the new version number
+   - **DO NOT push to GitHub.** Tyler pushes manually after local testing. The app is live — pushing untested code would deploy bugs to production.
 
-3. **When encountering a blocker:**
+4. **When encountering a blocker:**
    - Add a `⚠️ BLOCKED:` note in the tracker
-   - Explain to the user what's needed
+   - Explain to Tyler what's needed
    - Move to the next task that can be done independently (if any)
 
-4. **When a session is ending:**
-   - Make sure `BUILD_PROGRESS_TRACKER.md` is fully up to date
-   - Commit all changes to Git with a descriptive message
-   - Tell the user what was accomplished and what's next
+5. **When a session is ending:**
+   - Make sure `BUILD_PROGRESS_TRACKER.md` is fully up to date, including the new version number
+   - Confirm you have committed locally (NOT pushed)
+   - Tell Tyler what was accomplished, what version he is now at locally, and what to test
 
 ---
 
 ## PROJECT KNOWLEDGE FILES
 
-The following reference documents contain detailed specifications. Read them as needed:
+The following reference documents contain detailed specifications. Read them as needed. Note: versioned filenames (e.g. `_v1_3`, `_v2_1`) are being consolidated to clean names without version suffixes. The list below uses the target clean names; if you see versioned files in the repo, treat the highest-version file as canonical.
 
-| File | When to Reference |
-|------|-------------------|
-| `ServiceDraft_AI_Spec_v1_3.md` | Page layouts, database schema, feature requirements, workflow diagrams |
-| `ServiceDraft_AI_Project_Instructions_v1_3.md` | Tech stack, communication rules, quality standards |
-| `ServiceDraft_AI_Prompt_Logic_v1.md` | ALL AI prompts, dropdown logic, customization sliders, JSON response structures |
-| `ServiceDraft_AI_UI_Design_Spec_v1.md` | ALL visual design specs — colors, typography, components, CSS, Tailwind config |
+| File (target clean name) | When to Reference |
+|---|---|
+| `ServiceDraft_AI_Spec.md` | Page layouts, database schema, feature requirements, workflow diagrams |
+| `ServiceDraft_AI_Project_Instructions.md` | Tech stack, communication rules, quality standards |
+| `ServiceDraft_AI_Prompt_Logic.md` | ALL AI prompts, dropdown logic, customization sliders, JSON response structures |
+| `ServiceDraft_AI_UI_Design_Spec.md` | ALL visual design specs — colors, typography, components, CSS, Tailwind config |
 | `DEPLOYMENT_NOTES.md` | Environment variables, Supabase RLS policies, Stripe webhook setup, security measures |
 | `SERVIDRAFT_AI_LOGO_1_.PNG` | Logo asset file |
 | `ServiceDraft-Ai Vector Logo.png` | Vector logo used in NavBar and export documents |
+
+**Important:** If any spec file contradicts THIS document (`CLAUDE_CODE_BUILD_INSTRUCTIONS.md`) or the actual source code, THIS document and the source code win. The spec files are being rewritten in a future sprint to reflect the current production state. Until then, verify against the live codebase before trusting spec file claims.
+
+---
+
+## PROTECTED FILES — HARD STOPS
+
+The following files are **PROTECTED**. They control authentication, session management, theming, and core state. They have been the source of multiple past production incidents. **You may NOT modify any of these files without first invoking the DOUBLE-CHECK PROTOCOL (see next section) and receiving Tyler's explicit written `yes` in the same session.**
+
+This is not a soft guideline. If your sprint prompt asks you to edit one of these files without first triggering the protocol, STOP and ask Tyler to confirm.
+
+### Locked auth & session files
+- `src/hooks/useAuth.ts`
+- `src/middleware.ts`
+- `src/lib/supabase/client.ts` (browser Supabase client singleton)
+- `src/lib/supabase/server.ts`
+- `src/lib/supabase/middleware.ts`
+- `src/app/auth/callback/route.ts`
+- `src/app/api/auth/login/route.ts`
+- `src/app/api/auth/logout/route.ts`
+- `src/app/api/me/route.ts`
+- `src/app/api/signup/verify-otp/route.ts`
+- `src/app/api/signup/complete-profile/route.ts`
+- `src/app/api/signup/activate/route.ts`
+- `src/app/(auth)/signup/page.tsx`
+- `src/app/(auth)/login/page.tsx`
+
+### Locked core state & theming files
+- `src/components/ThemeProvider.tsx`
+- `src/stores/narrativeStore.ts`
+
+### Locked payment & webhook files
+- `src/app/api/stripe/route.ts`
+- `src/app/api/stripe/webhook/route.ts`
+- Any code path that writes to `users.subscription_status`
+
+### Why these are locked
+- **Auth/signup files:** The OTP signup flow took extensive debugging to get right. Past incidents included PKCE cross-browser failures, browser client mutex lockups, expired-cookie auto-refresh hangs, www vs non-www cookie scoping mismatches, and `handle_new_user` trigger silent failures. The current state works. Do not touch it.
+- **Core state files:** Concurrent `getUser()` calls on the browser Supabase singleton cause mutex blocks. `useAuth.ts` was explicitly refactored to bypass the browser client and fetch via `/api/me` to solve this. `ThemeProvider.tsx` has hydration-safety logic that is easy to break.
+- **Payment files:** Stripe webhook signature verification and access code logic gate all billing. A bug here could silently grant or revoke access.
+
+### Lessons these files embody
+Read the `CRITICAL LESSONS LEARNED` appendix before making ANY auth-adjacent change, even to files NOT on this list.
+
+---
+
+## THE DOUBLE-CHECK PROTOCOL (STOP, ALERT, EXPLAIN, ASK)
+
+**Purpose:** Before performing any change that could disrupt the live production app, you must pause and verify with Tyler that he actually wants the change. This protocol exists because the app is live at `servicedraft.ai` and certain categories of changes have historically caused production incidents.
+
+### When to trigger the protocol — HARD STOPS
+
+Invoke `STOP → ALERT → EXPLAIN → ASK` automatically if the current task falls into ANY of these categories:
+
+1. **Auth, sessions, signup, cookies, PKCE/OTP** — any edit to files in `PROTECTED FILES — HARD STOPS`, OR any change to session-cookie handling, OR any change to how auth state is fetched/refreshed
+2. **Destructive database migrations** — any migration that contains `DROP TABLE`, `DROP COLUMN`, `ALTER COLUMN ... TYPE`, `TRUNCATE`, or any statement that could lose existing data. Pure additive migrations (`CREATE TABLE`, `ADD COLUMN`, `CREATE INDEX`) do NOT trigger this.
+3. **RLS policy changes** — any `CREATE POLICY`, `DROP POLICY`, `ALTER POLICY`, or change to a policy's `USING` / `WITH CHECK` clause. RLS mistakes can leak data across users.
+4. **Stripe, payments, or access-code logic** — edits to the Stripe webhook, checkout session creation, access code bypass, or anything that writes `subscription_status`
+5. **Disabling existing safeguards** — removing a rate limit check, auth check, input validation, role guard (e.g. owner-only guard), or any other security control
+6. **File, route, or data deletion** — `git rm` of any existing route/component/utility, dropping a database table, or removing an API endpoint (could break in-flight users on the live app)
+7. **Changes to any file listed in `PROTECTED FILES — HARD STOPS`**
+
+### When to perform a "blast radius summary" — SOFT CHECK
+
+For any change that touches **5 or more files across multiple subsystems** (e.g. input + narrative + dashboard + API in one sprint), output a brief summary BEFORE starting work:
+- Which files will be touched
+- Which subsystems they belong to
+- What could break if the change has a bug
+- Confidence level (high/medium/low)
+
+No approval required for soft checks — just make the blast radius visible so Tyler can catch overreach before it happens.
+
+### The protocol — exact procedure
+
+When a hard-stop trigger fires, perform these steps IN ORDER and do not deviate:
+
+**Step 1 — STOP**
+Do not begin editing. Do not run any file modification tool. Do not write code. Halt immediately.
+
+**Step 2 — ALERT**
+Output a clearly-marked block using this exact format:
+
+```
+🛑 SAFEGUARD TRIGGERED — DOUBLE-CHECK REQUIRED
+
+Trigger category: [the category number and name from the list above]
+Files/operations affected: [specific file paths and line ranges, or migration SQL]
+```
+
+**Step 3 — EXPLAIN**
+In plain English (no jargon), explain:
+- What the change would do
+- What could go wrong if the change has a bug
+- The realistic worst-case outcome for production users
+- Whether there's a lower-risk alternative approach
+
+Example phrasing: *"This would modify `middleware.ts` to change how session cookies are refreshed. If the change has a bug, users could be logged out unexpectedly or sessions could fail to refresh, causing blank screens on protected pages. A lower-risk alternative would be to add the new logic in a separate API route without touching middleware.ts."*
+
+**Step 4 — ASK**
+End with this exact question:
+```
+Do you want me to proceed with this change? Please respond with "yes" or "no".
+```
+
+Then STOP and wait. Do not perform any file modifications until Tyler responds with an explicit `yes`. If Tyler responds with anything other than `yes` (including silence, questions, "maybe", "let me think"), you MUST NOT proceed. Ambiguous responses default to NO.
+
+### What counts as approval
+
+- Explicit `yes` in the current session → approved, proceed
+- `yes, but [modification]` → apply the modification, then proceed
+- Any other response → NOT approved, do not proceed
+- Approval granted for one change does NOT extend to other hard-stop changes in the same session. Each hard-stop trigger requires its own `STOP → ALERT → EXPLAIN → ASK` cycle.
+
+### What the protocol is NOT for
+
+Do not invoke the protocol for:
+- Cosmetic UI tweaks (colors, spacing, copy text, icon swaps)
+- Adding new pure-additive migrations (`CREATE TABLE`, `ADD COLUMN`)
+- Adding new API routes that don't touch auth or payments
+- Editing components under `src/components/ui/`, `src/components/dashboard/`, `src/components/input/`, `src/components/narrative/` (unless touching auth state)
+- Editing the build instructions file itself
+- Editing `BUILD_PROGRESS_TRACKER.md`
+
+Over-triggering is almost as bad as under-triggering — it slows down routine work and trains Tyler to ignore alerts. Use judgment.
+
+---
+
+## MANDATORY VERSION BUMP RULE
+
+**Every sprint MUST bump the app version before the final commit. No exceptions.**
+
+### Why this exists
+The app is live. Tyler needs to be able to verify at a glance whether the version running on `servicedraft.ai` matches the version that was supposedly deployed. Without an automatic bump, localhost and production can silently run the same version string, making it impossible to tell whether a deploy actually landed.
+
+### Single source of truth
+The version is defined in `src/lib/version.ts` as the exported constant `APP_VERSION`. This file is the ONLY place to change the runtime version string. The `version` field in `package.json` should be kept in sync (minus the `v` prefix and `-beta` suffix) for good hygiene, but the runtime code reads only from `version.ts`.
+
+The version is displayed in two places, both of which import from `version.ts`:
+- `src/components/layout/NavBar.tsx` — center section label
+- `src/app/api/admin/analytics/route.ts` — `systemHealth.appVersion` field, rendered in the Owner Dashboard "System Health" card on the Overview tab
+
+If either display drifts, something is wrong with the import — investigate immediately.
+
+### Bump policy
+- **Default (every sprint): PATCH bump.** Example: `v1.0.5-beta` → `v1.0.6-beta`.
+- **MINOR bump:** only when the sprint prompt explicitly says "minor bump" or "new feature release". Example: `v1.0.6-beta` → `v1.1.0-beta`.
+- **MAJOR bump:** only when the sprint prompt explicitly says "major bump". Example: `v1.1.0-beta` → `v2.0.0-beta`.
+
+When in doubt, do a patch bump. Never skip a bump.
+
+### The exact bump procedure
+At the end of every sprint, before committing:
+
+1. Open `src/lib/version.ts`
+2. Read the current `APP_VERSION` value
+3. Compute the new value per the bump policy above (default = increment patch)
+4. Replace the string literal in `version.ts`
+5. Open `package.json` and update the `version` field to match (strip the `v` prefix and the `-beta` suffix). Example: `v1.0.6-beta` in version.ts → `"1.0.6"` in package.json.
+6. Run `npm run build` one more time to make sure nothing broke
+7. Include the new version in the sprint's tracker entry
+8. Include the new version in the commit message. Example: `"fix: correct narrative save logic — v1.0.6-beta"`
+
+### Common mistakes to avoid
+- Forgetting to bump → the tracker and production both lie about what's deployed
+- Bumping `version.ts` but not `package.json` → inconsistency, confusing later
+- Adding `-beta` to `package.json` → npm semver tools may misbehave
+- Removing `-beta` from `version.ts` → premature, beta tag stays until full launch
+- Bumping in the middle of a sprint → always bump LAST, right before the final commit
 
 ---
 
@@ -59,8 +239,8 @@ Follow these at ALL times:
 
 ### Code Standards
 - **TypeScript** for all files (`.ts` and `.tsx`)
-- **"use client"** directive at the top of any component that uses React hooks, state, or browser APIs
-- **"use server"** is NOT needed — API routes in `app/api/` are server-side by default in Next.js App Router
+- **`"use client"`** directive at the top of any component that uses React hooks, state, or browser APIs
+- **`"use server"`** is NOT needed — API routes in `app/api/` are server-side by default in Next.js App Router
 - **Always export default** for page components
 - **Named exports** for reusable components and utility functions
 
@@ -85,15 +265,16 @@ Follow these at ALL times:
 
 ### State Management
 - **`narrativeStore.ts`** — module-level global state using React's `useSyncExternalStore` hook pattern
-- **`useAuth.ts`** — module-level singleton auth state with listener pattern (same approach as narrativeStore)
+- **`useAuth.ts`** — module-level singleton auth state with listener pattern. Fetches profile EXCLUSIVELY via `GET /api/me`. Does NOT use the browser Supabase client.
 - **`ThemeProvider.tsx`** — React context for accent color, dark/light mode, and background animation toggle
 - Do NOT use Redux, MobX, zustand, or other state libraries
 
 ### Data Access Pattern (CRITICAL)
 - **ALL Supabase data operations (SELECT, INSERT, UPDATE, DELETE) MUST go through server-side API routes** (`/api/*`)
-- The browser-side Supabase client (`src/lib/supabase/client.ts`) is ONLY used for auth state checking (e.g., `getUser()`) and activity logging (fire-and-forget inserts)
+- The browser-side Supabase client (`src/lib/supabase/client.ts`) is used ONLY for `signInWithOtp()` during signup Step 1. It is NOT used by `useAuth.ts`, NOT used for data queries, NOT used for session checks.
+- **`useAuth.ts` fetches the user profile exclusively via `GET /api/me`** — no browser Supabase client is involved in the auth hook. This was implemented to eliminate the browser client's internal auth mutex lock, which was causing production hangs and blank screens.
 - Server-side API routes authenticate via HTTP cookies using `createClient()` from `@/lib/supabase/server`
-- This pattern was established after discovering that browser-side Supabase data queries have unreliable auth state across Next.js route transitions, causing timeouts and lockups
+- This pattern is non-negotiable. If you find yourself wanting to call `supabase.from(...)` in a client component, STOP — that's wrong. Route it through an API route instead.
 
 ### Field ID Convention
 **CRITICAL:** Always use field IDs as defined in `src/constants/fieldConfig.ts`:
@@ -122,8 +303,8 @@ When accessing field values in the narrative store: `state.fieldValues['year']` 
 | **DOCX Export** | docx | 9.5+ | Server-side Word document generation |
 | **Icons** | Lucide React | 0.564+ | SVG icon library |
 | **Toasts** | react-hot-toast | 2.6+ | Notification system |
-| **Hosting** | Vercel | — | CI/CD + hosting |
-| **DNS/Domain** | Cloudflare | — | Domain registrar for servicedraft.ai |
+| **Hosting** | Vercel | — | CI/CD + hosting (Hobby plan currently — upgrade to Pro before charging customers) |
+| **DNS/Domain** | Cloudflare | — | Domain registrar for servicedraft.ai (proxy must be DISABLED / grey cloud) |
 
 ---
 
@@ -136,126 +317,144 @@ src/
 ├── app/
 │   ├── (auth)/
 │   │   ├── login/page.tsx
-│   │   └── signup/page.tsx
+│   │   └── signup/page.tsx        ← 3-step OTP-based signup (PROTECTED FILE)
 │   ├── (protected)/
 │   │   ├── layout.tsx              ← HeroArea + NavBar + ParticleNetwork + ErrorBoundary + session expiry
 │   │   ├── main-menu/page.tsx      ← Role-based dashboard buttons (Owner/Team/User)
 │   │   ├── input/page.tsx
 │   │   ├── narrative/page.tsx
 │   │   ├── dashboard/page.tsx      ← User Dashboard (profile, preferences, narrative history)
-│   │   ├── admin/page.tsx          ← Owner Dashboard — owner role required (5+ tabs)
+│   │   ├── admin/page.tsx          ← Owner Dashboard — owner role required (6 tabs)
 │   │   └── team-dashboard/page.tsx ← Team Dashboard — admin role required (team members, activity)
 │   ├── api/
+│   │   ├── activity-log/route.ts   ← Activity log fetch endpoint
 │   │   ├── admin/
 │   │   │   ├── route.ts            ← User management CRUD + team management (service role client)
-│   │   │   ├── analytics/route.ts  ← Dashboard metrics and chart data (service role client)
+│   │   │   ├── analytics/route.ts  ← Dashboard metrics, chart data, systemHealth.appVersion
 │   │   │   └── usage/route.ts      ← Gemini API token usage aggregated stats (service role client)
 │   │   ├── apply-edits/route.ts    ← Apply selected proofread edits to narrative
-│   │   ├── convert-recommendation/route.ts  ← Tense conversion (exists but unused by frontend)
+│   │   ├── auth/
+│   │   │   ├── login/route.ts      ← PROTECTED — server-side login
+│   │   │   └── logout/route.ts     ← PROTECTED — server-side logout
+│   │   ├── convert-recommendation/route.ts  ← Tense conversion
 │   │   ├── customize/route.ts      ← AI narrative customization
 │   │   ├── delete-account/route.ts ← Self-service account deletion (service role)
 │   │   ├── export-docx/route.ts    ← Word document generation
 │   │   ├── export-pdf/route.ts     ← PDF document generation
 │   │   ├── generate/route.ts       ← AI narrative generation (auth + rate limited + restriction check)
+│   │   ├── me/route.ts             ← PROTECTED — current user profile endpoint (used by useAuth)
 │   │   ├── narratives/
 │   │   │   ├── route.ts            ← GET saved narratives for authenticated user
 │   │   │   └── save/route.ts       ← POST save narrative (INSERT — not upsert)
+│   │   ├── narrative-tracker/route.ts ← Narrative interaction tracking
+│   │   ├── preferences/route.ts    ← User preferences GET/PUT
 │   │   ├── proofread/route.ts      ← AI audit (story-type-aware prompt selection)
 │   │   ├── saved-repairs/
 │   │   │   ├── route.ts            ← GET/POST repair templates
 │   │   │   └── [id]/route.ts       ← PUT/DELETE individual template (ownership verified)
 │   │   ├── send-email/route.ts     ← Email export via Resend (up to 10 recipients)
+│   │   ├── signup/
+│   │   │   ├── verify-otp/route.ts        ← PROTECTED — OTP code verification
+│   │   │   ├── complete-profile/route.ts  ← PROTECTED — password + profile creation
+│   │   │   └── activate/route.ts          ← PROTECTED — access code activation + team assignment
 │   │   ├── stripe/
-│   │   │   ├── route.ts            ← Checkout session creation + access code bypass
-│   │   │   └── webhook/route.ts    ← Stripe webhook handler (signature verification)
+│   │   │   ├── route.ts            ← PROTECTED — checkout session creation + access code bypass
+│   │   │   └── webhook/route.ts    ← PROTECTED — Stripe webhook handler (signature verification)
 │   │   ├── support/route.ts        ← Support ticket submission
-│   │   ├── teams/route.ts          ← Team CRUD operations (admin-accessible)
+│   │   ├── teams/                  ← Team CRUD operations
+│   │   │   ├── route.ts
+│   │   │   ├── members/route.ts
+│   │   │   └── activity/route.ts
 │   │   └── update-narrative/route.ts  ← Diagnostic→Repair Complete narrative update
-│   ├── auth/callback/route.ts      ← Supabase PKCE code exchange for email confirmation
+│   ├── auth/callback/route.ts      ← PROTECTED — Supabase code exchange / token verification fallback
 │   ├── layout.tsx                  ← Root layout: Orbitron + Inter fonts, ThemeProvider, ToastProvider, env validation
 │   ├── page.tsx                    ← Landing page (cinematic entrance, wave background)
 │   └── globals.css                 ← Tailwind v4 @theme config + :root CSS custom properties
 ├── components/
-│   ├── ThemeProvider.tsx            ← Accent color + dark/light mode + background animation context
+│   ├── ThemeProvider.tsx            ← PROTECTED — accent color + dark/light mode + background animation context
 │   ├── admin/
-│   │   ├── ActivityDetailModal.tsx  ← Shared modal for viewing full activity log entry details
-│   │   └── TokenCalculator.tsx     ← Gemini API token pricing calculator widget
+│   │   ├── ActivityDetailModal.tsx
+│   │   └── TokenCalculator.tsx
 │   ├── dashboard/
-│   │   ├── EditProfileModal.tsx     ← First/last name, location, position dropdown editor
-│   │   ├── NarrativeDetailModal.tsx ← Read-only saved narrative viewer + export + update-with-repair
-│   │   ├── NarrativeHistory.tsx     ← Saved narrative table with search, sort, filter, type badges
-│   │   ├── PreferencesPanel.tsx     ← Accent color picker + dark/light toggle + particle animation toggle
-│   │   ├── ProfileSection.tsx       ← Position-based icon + profile info display
-│   │   └── UpdateWithRepairModal.tsx ← Diagnostic→Repair update flow modal
+│   │   ├── AppearanceModal.tsx
+│   │   ├── EditProfileModal.tsx
+│   │   ├── NarrativeDetailModal.tsx
+│   │   ├── NarrativeHistory.tsx
+│   │   ├── PreferencesPanel.tsx
+│   │   ├── ProfileSection.tsx
+│   │   ├── SavedRepairsModal.tsx
+│   │   ├── ActivityDetailModal.tsx
+│   │   └── UpdateWithRepairModal.tsx
 │   ├── input/
-│   │   ├── ConditionalField.tsx     ← Field 6+ with dropdown (Include/Don't Include/Generate)
-│   │   ├── EditRepairModal.tsx      ← Edit saved repair template
-│   │   ├── MyRepairsPanel.tsx       ← Slide-out panel for repair templates
-│   │   ├── PreGenCustomization.tsx  ← Pre-generation output customization (Length/Tone/Detail)
-│   │   ├── SaveRepairModal.tsx      ← Save current form as repair template
-│   │   └── StoryTypeSelector.tsx    ← Diagnostic Only / Repair Complete toggle
+│   │   ├── ConditionalField.tsx
+│   │   ├── EditRepairModal.tsx
+│   │   ├── MyRepairsPanel.tsx
+│   │   ├── PreGenCustomization.tsx
+│   │   ├── SaveRepairModal.tsx
+│   │   └── StoryTypeSelector.tsx
 │   ├── layout/
-│   │   ├── FAQContent.tsx           ← 15 Q&A items covering all features
-│   │   ├── HeroArea.tsx             ← 100px reactive sine wave hero banner with oversized floating logo
-│   │   ├── NavBar.tsx               ← 64px sticky nav: MAIN MENU button, centered vector logo, theme toggle, UserPopup
-│   │   ├── SupportForm.tsx          ← Support ticket form component
-│   │   ├── TermsOfUse.tsx           ← 11-section Terms of Use content
-│   │   └── UserPopup.tsx            ← PositionIcon + T.Cloyd name format + dropdown (Dashboard, Owner/Team Dashboard, Logout)
+│   │   ├── FAQContent.tsx
+│   │   ├── HeroArea.tsx
+│   │   ├── NavBar.tsx               ← Imports APP_VERSION from src/lib/version.ts
+│   │   ├── SupportForm.tsx
+│   │   └── TermsOfUse.tsx
 │   ├── narrative/
-│   │   ├── CustomizationPanel.tsx   ← 3 segmented controls + custom instructions (max 50 chars)
-│   │   ├── EditStoryModal.tsx       ← Editable narrative with auto-sizing textareas
-│   │   ├── EmailExportModal.tsx     ← Email input + multi-recipient (up to 10) + Resend integration
-│   │   ├── NarrativeDisplay.tsx     ← Block/C/C/C format display with typing animation + proofread highlighting
-│   │   ├── ProofreadResults.tsx     ← Flagged issues + suggested edits with checkboxes + rating badge
-│   │   └── ShareExportModal.tsx     ← Copy/Print/PDF/DOCX/Email export hub
+│   │   ├── CustomizationPanel.tsx
+│   │   ├── EditStoryModal.tsx
+│   │   ├── EmailExportModal.tsx
+│   │   ├── NarrativeDisplay.tsx
+│   │   ├── ProofreadResults.tsx
+│   │   └── ShareExportModal.tsx
 │   └── ui/
-│       ├── AccentColorPicker.tsx    ← 9-swatch color picker (uses useTheme)
-│       ├── AutoTextarea.tsx         ← Auto-expanding textarea (resize:none + scrollHeight)
-│       ├── Button.tsx               ← motion.button with primary/secondary/ghost variants
-│       ├── CursorGlow.tsx           ← Cursor-following radial gradient underglow wrapper
-│       ├── ErrorBoundary.tsx        ← React error boundary for protected layout
-│       ├── Input.tsx                ← Themed text input with forwardRef
-│       ├── LiquidCard.tsx           ← Glassmorphism card with CursorGlow wrapper
-│       ├── LoadingSpinner.tsx       ← Branded spinner with contextual message prop
-│       ├── Logo.tsx                 ← Accent-colored logo with size variants (hydration-safe)
-│       ├── Modal.tsx                ← Portaled modal with scale animation + scroll + backdrop
-│       ├── PageTransition.tsx       ← Framer Motion fade+slide wrapper
-│       ├── ParticleNetwork.tsx      ← Full-page particle network canvas animation (protected pages)
-│       ├── PositionIcon.tsx         ← Position-based SVG icon (Wrench, Hammer, ScanLine, etc.)
-│       ├── Select.tsx               ← Themed select dropdown with ChevronDown icon
-│       ├── Textarea.tsx             ← Themed multiline textarea with forwardRef
-│       ├── ToastProvider.tsx        ← react-hot-toast with themed styling
-│       └── WaveBackground.tsx       ← Sine wave canvas animation (landing/auth pages)
+│       ├── AccentColorPicker.tsx
+│       ├── AutoTextarea.tsx
+│       ├── Button.tsx
+│       ├── CursorGlow.tsx
+│       ├── ErrorBoundary.tsx
+│       ├── Input.tsx
+│       ├── LiquidCard.tsx
+│       ├── LoadingSpinner.tsx
+│       ├── Logo.tsx
+│       ├── Modal.tsx
+│       ├── PageTransition.tsx
+│       ├── ParticleNetwork.tsx
+│       ├── PositionIcon.tsx
+│       ├── Select.tsx
+│       ├── Textarea.tsx
+│       ├── ToastProvider.tsx
+│       └── WaveBackground.tsx
 ├── constants/
-│   ├── fieldConfig.ts              ← Input field definitions for both story types + dropdown options
-│   ├── positions.ts                ← POSITION_OPTIONS: Technician, Foreman, Diagnostician, Advisor, Manager, Warranty Clerk
-│   └── prompts.ts                  ← ALL Gemini system prompts + LENGTH/TONE/DETAIL modifier constants
+│   ├── fieldConfig.ts
+│   ├── positions.ts
+│   ├── prompts.ts
+│   └── states.ts
 ├── hooks/
-│   ├── useActivityPulse.ts         ← Hero wave reactivity system (module-level shared amplitude)
-│   ├── useAuth.ts                  ← Shared auth state singleton (module-level, never torn down on navigation)
-│   ├── useSessionExpiry.ts         ← 8-hour auto-logout with 60-second check interval
-│   └── useTypingAnimation.ts       ← Character-by-character text display with skip() function
+│   ├── useActivityPulse.ts
+│   ├── useAuth.ts                   ← PROTECTED — fetches via /api/me, no browser Supabase client
+│   └── useTypingAnimation.ts
 ├── lib/
-│   ├── activityLogger.ts           ← Fire-and-forget activity log inserts (never blocks UI)
-│   ├── compileDataBlock.ts         ← Input fields + dropdown logic → compiled API prompt string
-│   ├── constants/themeColors.ts    ← 9 AccentColor definitions + buildCssVars() + perceivedBrightness()
-│   ├── env.ts                      ← Environment variable validation (required + optional)
-│   ├── exportUtils.ts              ← Shared ExportPayload interface + downloadExport() + buildPrintHtml() + buildEmailHtml()
-│   ├── gemini/client.ts            ← generateWithGemini() + parseJsonResponse<T>() — model: gemini-3-flash-preview
-│   ├── highlightUtils.ts           ← findHighlightRanges() for proofread snippet highlighting
-│   ├── rateLimit.ts                ← In-memory rate limiter (resets on server restart)
-│   ├── stripe/client.ts            ← Server-side Stripe client initialization
+│   ├── activityLogger.ts
+│   ├── compileDataBlock.ts
+│   ├── constants/themeColors.ts
+│   ├── env.ts
+│   ├── exportUtils.ts
+│   ├── gemini/client.ts
+│   ├── highlightUtils.ts
+│   ├── narrativeTracker.ts
+│   ├── rateLimit.ts
+│   ├── stripe/client.ts
 │   ├── supabase/
-│   │   ├── client.ts               ← Browser-side Supabase client (createBrowserClient)
-│   │   ├── middleware.ts            ← updateSession() — session refresh + route protection
-│   │   └── server.ts               ← Server-side Supabase client (createServerClient with cookie auth)
-│   ├── usageLogger.ts              ← Server-side Gemini API token usage logger (instruments all 6 AI routes)
-│   └── utils.ts                    ← cn() class merger + withTimeout() promise wrapper
-├── middleware.ts                    ← Next.js middleware → calls updateSession()
+│   │   ├── client.ts                ← PROTECTED — browser client with clearExpiredAuthCookies guard
+│   │   ├── middleware.ts            ← PROTECTED — updateSession() with 5s getUser timeout
+│   │   └── server.ts                ← PROTECTED — server client used by all API routes
+│   ├── usageLogger.ts
+│   ├── utils.ts                     ← cn() + withTimeout() + clearExpiredAuthCookies()
+│   └── version.ts                   ← SINGLE SOURCE OF TRUTH for APP_VERSION
+├── middleware.ts                    ← PROTECTED — www→non-www redirect + updateSession()
 ├── stores/
-│   └── narrativeStore.ts           ← Global narrative state (useSyncExternalStore pattern)
+│   └── narrativeStore.ts            ← PROTECTED — useSyncExternalStore pattern
 └── types/
-    └── database.ts                 ← TypeScript interfaces: UserProfile, UserPreferences, ActivityLog, Narrative, Team, etc.
+    └── database.ts
 ```
 
 ---
@@ -278,8 +477,8 @@ CREATE TABLE public.users (
   subscription_status VARCHAR DEFAULT 'trial', -- 'active', 'trial', 'expired', 'bypass'
   stripe_customer_id VARCHAR,
   is_restricted BOOLEAN DEFAULT false,
-  team_id UUID REFERENCES public.teams(id),  -- Team assignment (nullable — unassigned users)
-  preferences JSONB DEFAULT '{}'::jsonb,  -- Stores appearance + template prefs
+  team_id UUID REFERENCES public.teams(id),  -- Team assignment (nullable)
+  preferences JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -291,7 +490,7 @@ CREATE TABLE public.users (
 -- Admin policies also exist for owner-level operations via service role client
 ```
 
-**Role Hierarchy (3-tier system — restructured in Stage 5 Sprint 8):**
+**Role Hierarchy (3-tier system):**
 | Role | Label in UI | Access Level |
 |------|------------|--------------|
 | `owner` | Platform Owner | Full system access: Owner Dashboard, all admin actions, team management, user management, analytics, API usage tracking |
@@ -311,13 +510,13 @@ CREATE TABLE public.narratives (
   concern TEXT,
   cause TEXT,
   correction TEXT,
-  full_narrative TEXT,      -- block_narrative field
+  full_narrative TEXT,
   story_type VARCHAR NOT NULL CHECK (story_type IN ('diagnostic_only', 'repair_complete')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 -- NO unique constraint on (user_id, ro_number) — same RO# can have both diagnostic and repair entries
--- This is critical: diagnostic-only and repair-complete narratives sharing the same RO# MUST save as separate rows via plain INSERT — never upsert or overwrite
+-- CRITICAL: Diagnostic-only and repair-complete narratives sharing the same RO# MUST save as separate rows via plain INSERT — never upsert or overwrite
 ```
 
 ### Table: `public.activity_log` — User activity tracking
@@ -365,9 +564,9 @@ CREATE TABLE public.saved_repairs (
 CREATE TABLE public.teams (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
-  access_code TEXT NOT NULL,      -- Unique team access code for signup auto-assignment
+  access_code TEXT NOT NULL,
   description TEXT,
-  created_by UUID REFERENCES auth.users(id),  -- Owner who created the team
+  created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   is_active BOOLEAN DEFAULT true
 );
@@ -380,7 +579,7 @@ CREATE TABLE public.team_members (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   team_id UUID REFERENCES public.teams(id) NOT NULL,
   user_id UUID REFERENCES auth.users(id) NOT NULL,
-  added_by UUID REFERENCES auth.users(id),  -- Who added this member
+  added_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
   -- UNIQUE constraint on (team_id, user_id) prevents duplicate membership
 );
@@ -392,7 +591,7 @@ CREATE TABLE public.team_members (
 CREATE TABLE public.api_usage_log (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID,
-  action_type TEXT NOT NULL,         -- 'generate', 'customize', 'proofread', 'apply-edits', 'update-narrative', 'convert-recommendation'
+  action_type TEXT NOT NULL,
   prompt_tokens INTEGER DEFAULT 0,
   completion_tokens INTEGER DEFAULT 0,
   total_tokens INTEGER DEFAULT 0,
@@ -402,13 +601,9 @@ CREATE TABLE public.api_usage_log (
 );
 ```
 
-**Pricing rates (as of gemini-3-flash-preview):**
+**Pricing rates (gemini-3-flash-preview):**
 - Input: $0.50 per 1M tokens ($0.0000005 per token)
 - Output: $3.00 per 1M tokens ($0.000003 per token)
-
-### Legacy Table: `public.token_usage`
-
-This table was created before `api_usage_log` and may still have its default model_name set to `gemini-2.0-flash`. It is no longer actively used by the application — `api_usage_log` is the current token tracking table. Consider dropping this table during a future cleanup sprint.
 
 ### Migrations (in chronological order)
 
@@ -418,15 +613,16 @@ This table was created before `api_usage_log` and may still have its default mod
 4. `004_admin_role_and_activity_log.sql` — role, is_restricted, activity_log table, admin RLS, is_admin() helper
 5. `005_saved_repairs.sql` — saved_repairs table + RLS
 6. `006_drop_narrative_unique_constraint.sql` — drops unique(user_id, ro_number) for multi-entry support
-7. `fix_activity_log_user_fk_to_public_users` — Redirects activity_log FK from auth.users to public.users for PostgREST joins
-8. `create_token_usage_table` — Legacy token tracking table (superseded by api_usage_log)
-9. `create_groups_table` — Originally created group system tables
-10. `rename_groups_to_teams` — Renamed groups → teams across all tables/columns
-11. `009_api_usage_log.sql` — api_usage_log table with token tracking and cost estimation
+7. `007_create_groups_table.sql` — Originally created group system tables
+8. `008_rename_groups_to_teams.sql` — Renamed groups → teams across all tables/columns
+9. `009_api_usage_log.sql` — api_usage_log table with token tracking and cost estimation
 
-Additional manual SQL applied:
+Additional manual SQL applied via Supabase SQL Editor:
 - `ALTER TABLE public.users ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{}'::jsonb;`
 - `ALTER TABLE public.users ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES public.teams(id);`
+- FK redirect for `activity_log.user_id` from `auth.users` to `public.users`
+
+**Important:** Many migrations were applied via the Supabase SQL Editor directly, so `supabase_migrations.schema_migrations` is unreliable as a source of truth. Use the `supabase/migrations/*.sql` files plus this list as the canonical migration history.
 
 ---
 
@@ -435,9 +631,9 @@ Additional manual SQL applied:
 ```typescript
 export interface UserPreferences {
   appearance?: {
-    accentColor: string;        // Key from themeColors.ts (e.g., 'violet', 'blue')
+    accentColor: string;
     mode: 'dark' | 'light';
-    backgroundAnimation?: boolean;  // Particle network on/off — undefined treated as true
+    backgroundAnimation?: boolean;
   };
   templates?: {
     defaultFormat?: 'block' | 'ccc';
@@ -460,9 +656,9 @@ export interface UserProfile {
   profile_picture_url: string | null;
   subscription_status: 'active' | 'trial' | 'expired' | 'bypass';
   stripe_customer_id: string | null;
-  role: 'owner' | 'admin' | 'user';  // 3-tier hierarchy
+  role: 'owner' | 'admin' | 'user';
   is_restricted: boolean;
-  team_id: string | null;              // UUID of assigned team
+  team_id: string | null;
   preferences?: UserPreferences;
   created_at: string;
   updated_at: string;
@@ -530,19 +726,35 @@ export interface ApiUsageLog {
 
 ## SUPABASE CLIENT SETUP
 
-**Browser client** (`src/lib/supabase/client.ts`) — used ONLY for auth state and activity logging:
+ServiceDraft.AI uses three separate Supabase client configurations. **All three are PROTECTED FILES.**
+
+### 1. Browser client — `src/lib/supabase/client.ts`
+Used ONLY for `signInWithOtp()` during signup Step 1. Not used for data queries, not used for session checks, not used by `useAuth.ts`.
+
+**CRITICAL pattern:** Before `createBrowserClient()` is called, the file invokes `clearExpiredAuthCookies()` to strip stale/expired auth cookies from the browser. This exists because the SSR library's `_recoverAndRefresh()` reads cookies on init and acquires a 10-second mutex lock. If the cookies contain expired tokens, the auto-refresh loop blocks all subsequent auth calls (`getSession`, `signIn`, `signOut`), producing indefinite hangs.
+
 ```typescript
 import { createBrowserClient } from '@supabase/ssr';
+import { clearExpiredAuthCookies } from '@/lib/utils';
+
+let browserClient: ReturnType<typeof createBrowserClient> | null = null;
 
 export function createClient() {
-  return createBrowserClient(
+  if (browserClient) return browserClient;
+  clearExpiredAuthCookies();   // MUST run BEFORE createBrowserClient()
+  browserClient = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
+  return browserClient;
 }
 ```
 
-**Server client** (`src/lib/supabase/server.ts`) — used for ALL data operations in API routes:
+Do NOT remove the `clearExpiredAuthCookies()` call. Do NOT change the initialization order. Do NOT remove the singleton pattern.
+
+### 2. Server client — `src/lib/supabase/server.ts`
+Used in all server-side API routes. Reads auth state from HTTP-only session cookies via the SSR cookie adapter. This is the client used for ALL database operations.
+
 ```typescript
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -567,6 +779,16 @@ export async function createClient() {
   );
 }
 ```
+
+### 3. Middleware client — `src/lib/supabase/middleware.ts`
+Used exclusively by `src/middleware.ts` to refresh session cookies on incoming requests. The `updateSession()` function wraps `supabase.auth.getUser()` in a 5-second `Promise.race()` timeout. If `getUser()` hangs (historical cause of blank-screen incidents), the middleware proceeds without a user context rather than blocking the request. Protected routes will then redirect to `/login`, which is the correct fallback for stuck sessions.
+
+Do NOT remove the timeout. Do NOT increase the timeout above 5 seconds.
+
+The protected routes list maintained in middleware: `/main-menu`, `/input`, `/narrative`, `/dashboard`, `/admin`. (Team dashboard is gated client-side via role check in the page itself.)
+
+### 4. Service role client
+For operations that need to bypass RLS (admin user management, account deletion, etc.), routes import `createClient` from `@supabase/supabase-js` directly with `SUPABASE_SERVICE_ROLE_KEY`. Use this sparingly and ONLY in owner-role-gated routes. Never expose the service role key to the client.
 
 ---
 
@@ -600,13 +822,13 @@ export function parseJsonResponse<T>(rawText: string): T {
 }
 ```
 
-**Token usage instrumentation:** The `generateWithGemini` function also returns token usage metadata (`promptTokenCount`, `candidatesTokenCount`, `totalTokenCount`) which is captured by `src/lib/usageLogger.ts` and written to the `api_usage_log` table. All 6 AI-calling API routes (generate, customize, proofread, apply-edits, update-narrative, convert-recommendation) are instrumented.
+**Token usage instrumentation:** `generateWithGemini` returns token usage metadata (`promptTokenCount`, `candidatesTokenCount`, `totalTokenCount`) which is captured by `src/lib/usageLogger.ts` and written to the `api_usage_log` table. All 6 AI-calling API routes (generate, customize, proofread, apply-edits, update-narrative, convert-recommendation) are instrumented.
 
 ---
 
 ## GLOBAL STATE: NARRATIVE STORE (`src/stores/narrativeStore.ts`)
 
-Uses React's `useSyncExternalStore` for automatic listener cleanup on unmount (replaced broken useState pub/sub pattern that caused stale listeners and lockups):
+**PROTECTED FILE.** Uses React's `useSyncExternalStore` for automatic listener cleanup on unmount (replaced broken useState pub/sub pattern that caused stale listeners and lockups):
 
 ```typescript
 interface NarrativeState {
@@ -615,20 +837,20 @@ interface NarrativeState {
   dropdownSelections: Record<string, DropdownOption>;
   roNumber: string;
   compiledDataBlock: string;
-  narrative: NarrativeData | null;      // { block_narrative, concern, cause, correction }
+  narrative: NarrativeData | null;
   displayFormat: 'block' | 'ccc';      // default: 'ccc'
   lengthSlider: 'short' | 'standard' | 'detailed';
   toneSlider: 'warranty' | 'standard' | 'customer_friendly';
   detailSlider: 'concise' | 'standard' | 'additional';
   customInstructions: string;
-  generationId: number;                 // increments on new generation request
-  isSaved: boolean;                     // navigation guard — true initially (no narrative to protect)
-  savedNarrativeId: string | null;      // Supabase UUID for duplicate prevention
+  generationId: number;
+  isSaved: boolean;
+  savedNarrativeId: string | null;
 }
 ```
 
 **Key actions:**
-- `setStoryType(type)` — preserves shared fields (year, make, model, customer_concern, codes_present, diagnostics_performed, root_cause) when switching between diagnostic/repair
+- `setStoryType(type)` — preserves shared fields when switching between diagnostic/repair
 - `setNarrative(data)` — sets narrative and resets `isSaved: false`, `savedNarrativeId: null`
 - `clearForNewGeneration()` — resets narrative + customization + increments generationId
 - `markSaved(id)` — sets `isSaved: true` and `savedNarrativeId`
@@ -639,14 +861,27 @@ interface NarrativeState {
 
 ## GLOBAL STATE: AUTH HOOK (`src/hooks/useAuth.ts`)
 
-Module-level singleton pattern — same as narrativeStore. Auth subscription persists for the app lifetime and is NEVER torn down during route transitions.
+**PROTECTED FILE.** Module-level singleton auth state with a listener pattern. Does NOT use the browser Supabase client — it fetches the user profile exclusively via `GET /api/me`. This architectural choice eliminates the browser client's internal auth mutex as a source of production incidents.
 
-**Key exports:**
-- `user: User | null` — Supabase auth user
-- `profile: UserProfile | null` — Profile from users table (includes role, team_id, preferences)
-- `loading: boolean` — True until initial auth check completes
-- `signOut()` — Clears localStorage keys (sd-login-timestamp, sd-accent-color, sd-color-mode, sd-bg-animation), calls Supabase signOut, redirects to `/`
-- `refreshProfile()` — Re-fetches profile from users table, notifies all subscribers
+### Key invariants (DO NOT VIOLATE)
+- **No browser Supabase client.** `useAuth.ts` must never import from `@/lib/supabase/client`. If you find yourself wanting to call `supabase.auth.getUser()` in the hook, STOP — route it through `/api/me` instead.
+- **Module-level singleton.** Auth state lives in a module-scoped `authState` object and a `listeners` set. Multiple components calling `useAuth()` share the same state via the listener pattern. Do NOT convert this to React Context or Redux.
+- **Single initialization.** The `initializeAuth()` function uses an `initialized` flag to guarantee one-shot execution. Do not remove this flag.
+- **Retry on failure.** `fetchProfile()` wraps `/api/me` in a 500ms-delay retry. If the first call fails (transient network or cookie race during sign-in), the retry usually succeeds.
+- **Visibility-change re-validation.** On tab re-activation (`visibilitychange` → `visible`), if `authState.profile` is null, a refresh is attempted. Guarded by `isRefreshing` to prevent concurrent refresh pile-up.
+- **Sign-out pattern.** `signOut()` clears localStorage theme keys, calls `POST /api/auth/logout` with a 3-second race timeout, clears auth state, and hard-redirects to `/`. The hard redirect is intentional — it guarantees a fresh state on the next page load.
+
+### UserProfile shape
+Returned by `GET /api/me` and stored in `authState.profile`. Fields:
+- `id`, `email`, `username`, `first_name`, `last_name`, `location`, `position`
+- `profile_picture_url`
+- `subscription_status` — `'bypass'`, `'active'`, `'inactive'`, etc.
+- `role` — `'user' | 'admin' | 'owner'`
+- `is_restricted` — if true, generation is blocked
+- `team_id` — nullable team membership reference
+
+### Why this matters
+This hook is on the `PROTECTED FILES — HARD STOPS` list. Any change to `useAuth.ts` requires the DOUBLE-CHECK PROTOCOL.
 
 ---
 
@@ -676,8 +911,8 @@ export interface FieldConfig {
   id: string;
   label: string;
   fieldNumber: number;
-  required: boolean;       // true = always required, no dropdown
-  hasDropdown: boolean;     // true = conditional field with dropdown
+  required: boolean;
+  hasDropdown: boolean;
   placeholder: string;
 }
 ```
@@ -716,7 +951,7 @@ export function compileDataBlock(
 
 ### Pre-Generation Customization
 
-When non-standard settings are selected on the Input Page via `PreGenCustomization.tsx`, the compiled data block gets an appended section using the same modifier constants from `src/constants/prompts.ts`:
+When non-standard settings are selected via `PreGenCustomization.tsx`, the compiled data block gets an appended section:
 
 ```
 --- OUTPUT STYLE PREFERENCES ---
@@ -732,8 +967,6 @@ Settings persist in localStorage (`sd-pregen-customization`) between sessions.
 ## NARRATIVE PAGE — KEY IMPLEMENTATION DETAILS
 
 ### Customization Panel Slider Logic
-
-Ref: `ServiceDraft_AI_Prompt_Logic_v1.md` Section 7 for exact slider modifier text.
 
 Each slider has 3 positions. When at center ("No Change"), no modifier is added. When at either extreme, the exact modifier text from `src/constants/prompts.ts` is appended to the customization block.
 
@@ -841,32 +1074,32 @@ logActivity('generate', { storyType, vehicleInfo: `${year} ${make} ${model}` });
 
 **Logged actions:** generate, regenerate, save, export_copy, export_print, export_pdf, export_docx, login, customize, proofread
 
-**Enhanced metadata (Stage 6 Sprint B):** generate, regenerate, customize, and save actions now include metadata with: narrative preview (first 500 chars), vehicle year/make/model, RO number, and story type. This data is displayed in the `ActivityDetailModal` component.
+**Enhanced metadata:** generate, regenerate, customize, and save actions include metadata with: narrative preview (first 500 chars), vehicle year/make/model, RO number, and story type. This data is displayed in the `ActivityDetailModal` component.
 
 ---
 
-## API USAGE TRACKING SYSTEM (Stage 6 Sprint B)
+## API USAGE TRACKING SYSTEM
 
 ### Architecture
 
 ```
-src/lib/usageLogger.ts            → logApiUsage() function — server-side only
-src/lib/gemini/client.ts           → Returns token usage metadata from Gemini responses
-src/app/api/admin/usage/route.ts   → Aggregated usage stats endpoint
+src/lib/usageLogger.ts             → logApiUsage() function — server-side only
+src/lib/gemini/client.ts            → Returns token usage metadata from Gemini responses
+src/app/api/admin/usage/route.ts    → Aggregated usage stats endpoint
 src/components/admin/TokenCalculator.tsx → Interactive pricing calculator widget
 ```
 
 ### How It Works
 
-1. **`generateWithGemini()`** returns both the response text and token usage metadata (`promptTokenCount`, `candidatesTokenCount`, `totalTokenCount`) from the Gemini API response
-2. **`logApiUsage()`** (`src/lib/usageLogger.ts`) is called by each instrumented API route after a successful Gemini call. It calculates `estimated_cost_usd` using the current pricing rates and inserts a row into `api_usage_log`
-3. **All 6 AI routes are instrumented:** generate, customize, proofread, apply-edits, update-narrative, convert-recommendation
+1. `generateWithGemini()` returns both the response text and token usage metadata (`promptTokenCount`, `candidatesTokenCount`, `totalTokenCount`) from the Gemini API response
+2. `logApiUsage()` is called by each instrumented API route after a successful Gemini call. It calculates `estimated_cost_usd` using the current pricing rates and inserts a row into `api_usage_log`
+3. All 6 AI routes are instrumented: generate, customize, proofread, apply-edits, update-narrative, convert-recommendation
 
 ### Usage Logger (`src/lib/usageLogger.ts`)
 
 ```typescript
 const INPUT_COST_PER_TOKEN = 0.0000005;   // $0.50 / 1M tokens
-const OUTPUT_COST_PER_TOKEN = 0.000003;    // $3.00 / 1M tokens
+const OUTPUT_COST_PER_TOKEN = 0.000003;   // $3.00 / 1M tokens
 
 export async function logApiUsage(params: {
   userId: string;
@@ -893,7 +1126,7 @@ Interactive widget in the Owner Dashboard that lets the owner estimate Gemini AP
 
 ---
 
-## TEAM MANAGEMENT SYSTEM (Stage 5 Sprints 9-10 + Stage 6)
+## TEAM MANAGEMENT SYSTEM
 
 ### Overview
 
@@ -904,19 +1137,21 @@ Teams are organizational groups of users managed by the platform owner. Each tea
 ```
 Database:     public.teams + public.team_members + users.team_id
 API:          src/app/api/teams/route.ts (team CRUD for admin-level users)
-              src/app/api/admin/route.ts (owner-level team operations: list_teams, assign_user, create_team)
+              src/app/api/teams/members/route.ts (team member operations)
+              src/app/api/teams/activity/route.ts (team activity log)
+              src/app/api/admin/route.ts (owner-level: list_teams, assign_user, create_team)
 Pages:        src/app/(protected)/team-dashboard/page.tsx
-Signup:       src/app/(auth)/signup/page.tsx (team auto-assignment via access code)
+Signup:       src/app/api/signup/activate/route.ts (team auto-assignment via teamId)
 ```
 
 ### Signup Team Auto-Assignment Flow
 
-1. User enters an access code during signup (Step 2)
+1. User enters an access code during signup Step 3 (activation)
 2. The `/api/stripe/route.ts` access code validation checks:
    - First: Does the code match the global `ACCESS_CODE` env var? → bypass subscription
    - Second: Does the code match any `teams.access_code`? → bypass subscription AND auto-assign to that team
-3. If team match found: sets `team_id` on the user record and creates a `team_members` entry
-4. User proceeds to Step 3 (profile creation) with team assignment already in place
+3. If team match found: `/api/signup/activate` sets `team_id` on the user record
+4. User is fully activated with team assignment in place
 
 ### Team API Routes (`/api/teams`)
 
@@ -928,8 +1163,6 @@ Signup:       src/app/(auth)/signup/page.tsx (team auto-assignment via access co
 | Delete team | DELETE | owner | Soft-deletes team (is_active = false) |
 
 ### Owner Dashboard Team Actions (`POST /api/admin`)
-
-These team actions are available to owner-role users through the admin API:
 
 | Action | Params | Description |
 |--------|--------|-------------|
@@ -994,7 +1227,7 @@ Read from `ACCESS_CODE` environment variable — no hardcoded defaults. Used in 
 
 ### Overview
 
-The entire app uses CSS custom properties for all accent colors, backgrounds, text, borders, shadows, and glow effects. The theme is controlled by `ThemeProvider` (`src/components/ThemeProvider.tsx`) which applies CSS variables to `document.documentElement` at runtime. Changing the accent color updates every component instantly.
+The entire app uses CSS custom properties for all accent colors, backgrounds, text, borders, shadows, and glow effects. The theme is controlled by `ThemeProvider` (`src/components/ThemeProvider.tsx` — **PROTECTED FILE**) which applies CSS variables to `document.documentElement` at runtime. Changing the accent color updates every component instantly.
 
 ### Architecture
 
@@ -1033,8 +1266,8 @@ public/logo-{color}.PNG             → 9 accent-colored logo files
 | Green | `green` | `#84cc16` | — |
 | Blue | `blue` | `#2563eb` | — |
 | Pink | `pink` | `#d946ef` | — |
-| White | `white` | `#e2e8f0` | Forces dark mode |
-| Black | `black` | `#1e293b` | Forces light mode |
+| Noir | `white` | `#e2e8f0` | Forces dark mode |
+| White | `black` | `#1e293b` | Forces light mode |
 
 ### CSS Variable Reference
 
@@ -1077,18 +1310,15 @@ import { useTheme } from '@/components/ThemeProvider';
 
 function MyComponent() {
   const { accent, setAccentColor, colorMode, toggleColorMode, backgroundAnimation, setBackgroundAnimation } = useTheme();
-
   // accent.logoFile → '/logo-violet.PNG'
   // accent.key → 'violet'
   // accent.name → 'Violet'
-  // accent.isLightMode → false
-  // accent.isDarkMode → false
 }
 ```
 
 ### ThemeProvider Internals
 
-**`applyTheme(accent, mode)` — called on mount and whenever accent or colorMode changes:**
+`applyTheme(accent, mode)` — called on mount and whenever accent or colorMode changes:
 1. Calls `buildCssVars(accent)` to generate all CSS variable values
 2. Loops through returned `Record<string, string>` and sets each via `root.style.setProperty(key, value)`
 3. Sets `color-scheme` property to `'dark'` or `'light'` (controls browser form control rendering)
@@ -1097,11 +1327,9 @@ function MyComponent() {
 6. Luminance check: `perceivedBrightness()` on `accent.hover` determines `--btn-text-on-accent` (black text if brightness > 180, white otherwise)
 7. Sets `data-mode` attribute on `<html>` element for CSS selector targeting
 
-**`--body-bg` resolution strategy:**
-The page background gradient is set as a **fully resolved string** in `buildCssVars()`, NOT as CSS `var()` composition. This is because CSS `var()` composition in `:root` is unreliable when source variables are set as inline styles by JavaScript.
+`--body-bg` resolution strategy: The page background gradient is set as a **fully resolved string** in `buildCssVars()`, NOT as CSS `var()` composition. CSS `var()` composition in `:root` is unreliable when source variables are set as inline styles by JavaScript.
 
-**`--wave-color` format:**
-Bare RGB components (e.g., `195, 171, 226`) rather than `rgb()` or hex — allows canvas code to interpolate opacity per-wave using `rgba(${waveRgb}, ${wave.opacity})`.
+`--wave-color` format: Bare RGB components (e.g., `195, 171, 226`) rather than `rgb()` or hex — allows canvas code to interpolate opacity per-wave using `rgba(${waveRgb}, ${wave.opacity})`.
 
 ### Background Animation and CSS Variables
 
@@ -1110,16 +1338,16 @@ Both `ParticleNetwork` (protected pages) and `WaveBackground` (landing/auth page
 ```tsx
 const root = document.documentElement;
 const waveRgb =
-  root.style.getPropertyValue('--wave-color').trim() ||           // 1. Inline style (set by ThemeProvider)
-  getComputedStyle(root).getPropertyValue('--wave-color').trim() || // 2. Computed style fallback
-  '195, 171, 226';                                                  // 3. Hardcoded fallback (Violet)
+  root.style.getPropertyValue('--wave-color').trim() ||
+  getComputedStyle(root).getPropertyValue('--wave-color').trim() ||
+  '195, 171, 226';
 ```
 
 ParticleNetwork re-reads every 2 seconds via `setInterval`. WaveBackground reads every frame.
 
 ### Form Control Styling
 
-Two layers ensure dark-themed form controls:
+Two layers ensure correctly themed form controls:
 1. `color-scheme: dark` in `:root` (ThemeProvider dynamically updates to `'light'` when needed)
 2. Explicit CSS overrides in `globals.css`: `input, textarea, select { background-color: var(--bg-input); color: var(--text-primary); }`
 
@@ -1156,41 +1384,34 @@ const springTransition = { type: 'spring', stiffness: 400, damping: 25 };
 
 **Rules:**
 - Cards and containers do NOT scale on hover — they use the CursorGlow underglow effect
-- Only buttons and small interactive controls use scale hover
-- Disabled buttons: pass `undefined` for whileHover/whileTap (no animation when disabled)
-- Button uses `motion.button` with interface extending `Omit<ButtonHTMLAttributes, 'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart'>` to avoid Framer Motion type conflicts
+- Buttons and small interactive elements use scale + glow
+- Always use the spring transition config above for consistency
 
-### Using Framer Motion boxShadow with CSS Variables
+### Using Framer Motion `boxShadow` with CSS Variables
+
+When animating boxShadow via Framer Motion, the CSS variable must be wrapped in the animation prop directly:
 
 ```tsx
-<motion.div
-  whileHover={{ scale: 1.02, boxShadow: 'var(--shadow-glow-accent)' }}
-  whileTap={{ scale: 0.98 }}
-  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
->
+whileHover={{ boxShadow: 'var(--shadow-glow-sm)' }}
 ```
+
+Do NOT compose it inside a style object — Framer Motion can't tween an unresolved `var()` reference.
 
 ### Cursor Underglow Effect (`src/components/ui/CursorGlow.tsx`)
 
-```tsx
-<CursorGlow radius={200} opacity={0.15} enabled={true}>
-  <div>Card content here</div>
-</CursorGlow>
-```
-
-Props: `radius` (default 200px), `opacity` (default 0.15), `enabled` (default true), `className`
-
-How it works: `onMouseMove` tracks cursor → positioned overlay with `radial-gradient(circle ${radius}px at ${x}px ${y}px, var(--accent-primary), transparent)` → fades in/out via CSS transition → `pointer-events: none` on overlay → `borderRadius: inherit` for rounded corners.
-
-LiquidCard wraps its content in CursorGlow automatically (controlled by `glow` prop, default true).
+A wrapper component that adds a cursor-following radial gradient underglow to any child element. Used on `LiquidCard` and any container that should react to hover without scaling. Implementation: tracks `mousemove` events, sets a CSS custom property `--mouse-x` and `--mouse-y` on the element, applies a `radial-gradient(at var(--mouse-x) var(--mouse-y), var(--accent-30), transparent 80%)` background.
 
 ### Page Transitions
 
-Every protected page: `<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: 'easeOut' }}>`
+All protected pages wrap their root content in `PageTransition.tsx`, which provides a fade + slide entrance:
 
-Landing page: cinematic stagger — logo (scale 0.8→1 over 1s), subtitle (0.6s delay), buttons (1.1s delay).
-
-Landing→Login: fade-out (350ms) → fade-in (400ms) crossfade.
+```tsx
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.3, ease: 'easeOut' }}
+>
+```
 
 ---
 
@@ -1198,47 +1419,38 @@ Landing→Login: fade-out (350ms) → fade-in (400ms) crossfade.
 
 ### Overview
 
-All protected pages follow this top-to-bottom fixed header layout:
+All protected pages share a consistent layout managed by `src/app/(protected)/layout.tsx`:
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  HERO AREA (100px, fixed, z-90) — reactive waves    │
-│  + oversized floating logo (z-110, 409px tall,      │
-│    pointer-events-none)                              │
-├─────────────────────────────────────────────────────┤
-│  NAV BAR (64px, fixed, z-100) — MAIN MENU button,  │
-│  centered vector logo (theme-aware filter),          │
-│  theme toggle, UserPopup                             │
-├─────────────────────────────────────────────────────┤
-│                                                     │
-│  PAGE CONTENT (scrollable, paddingTop: 164px)       │
-│  ParticleNetwork at z-10 behind content             │
-│                                                     │
-└─────────────────────────────────────────────────────┘
+┌────────────────────────────────────┐
+│  HeroArea (100px reactive wave)    │  ← Sticky top
+├────────────────────────────────────┤
+│  NavBar (64px sticky)              │  ← APP_VERSION displayed here
+├────────────────────────────────────┤
+│                                    │
+│  Page content                      │  ← PageTransition wrapper
+│  (with ParticleNetwork bg)         │
+│                                    │
+└────────────────────────────────────┘
 ```
 
 ### Protected Layout (`src/app/(protected)/layout.tsx`)
 
-```tsx
-<>
-  {backgroundAnimation && <ParticleNetwork />}  {/* z-10, full-page, toggleable */}
-  <HeroArea />                                    {/* fixed top-0, z-90 */}
-  <NavBar />                                      {/* fixed top-100px, z-100 */}
-  <main className="relative z-30 min-h-[calc(100vh-164px)]" style={{ paddingTop: '164px' }}>
-    <ErrorBoundary>{children}</ErrorBoundary>
-  </main>
-</>
-```
+Wraps all `(protected)` routes with:
+- `ErrorBoundary` — React error boundary catches render errors
+- `HeroArea` — 100px reactive wave hero banner with floating logo
+- `NavBar` — 64px sticky navigation
+- `ParticleNetwork` — Full-page particle network canvas animation (toggleable in preferences)
+- Session expiry watcher — 8-hour auto-logout with 60-second check interval
 
 ### HeroArea Reactive Animation (`src/components/layout/HeroArea.tsx`)
 
-5-layer sine wave animation responding to `useActivityPulse`:
+The hero wave reacts to user activity through the `useActivityPulse` hook system. When activity is dispatched, the wave amplitude pulses up and decays over ~1.5 seconds.
 
-| Activity | Spike Intensity |
-|----------|----------------|
-| Typing in any form field | 0.35 |
-| Button click | 0.65 |
-| Generic click | 0.15 |
+Activity intensity values:
+
+| Action | Intensity (0–1) |
+|--------|----------------|
 | Generate/Regenerate narrative | 0.8 |
 | Customize | 0.7 |
 | Proofread | 0.6 |
@@ -1257,7 +1469,7 @@ dispatchActivity(0.8); // intensity 0–1
 - **CENTER**: `ServiceDraft-Ai Vector Logo.png` centered absolutely with CSS filter: `brightness(0) invert(1)` for dark mode, `brightness(0)` for light mode
 - **RIGHT**: Color mode toggle (Sun/Moon icons) + UserPopup trigger + mobile hamburger
 
-NavBar also displays centered "v1.0.0-beta" version label (accent-bright color, hidden on mobile).
+NavBar also displays the centered `APP_VERSION` label imported from `src/lib/version.ts` (accent-bright color, hidden on mobile). This is one of the two display points governed by the `MANDATORY VERSION BUMP RULE`.
 
 ### UserPopup Trigger
 
@@ -1285,8 +1497,8 @@ User preferences are stored as a JSONB column (`preferences`) on the `users` tab
 
 ### Auth-Aware Theme Flow
 
-- **Not logged in:** ThemeProvider resets to purple dark defaults
-- **SIGNED_OUT event:** Resets to purple dark + clears localStorage
+- **Not logged in:** ThemeProvider resets to violet dark defaults
+- **SIGNED_OUT event:** Resets to violet dark + clears localStorage
 - **SIGNED_IN event:** Loads user preferences from Supabase
 
 ### Merge Pattern
@@ -1312,16 +1524,16 @@ This ensures independent features (appearance, templates) never overwrite each o
 
 - **Page:** `src/app/(protected)/admin/page.tsx` — owner-only page with 6 tabs
 - **API:** `src/app/api/admin/route.ts` — POST endpoint for user management + team management actions
-- **Analytics API:** `src/app/api/admin/analytics/route.ts` — GET endpoint with `?range=` param (7/30/90/all)
+- **Analytics API:** `src/app/api/admin/analytics/route.ts` — GET endpoint with `?range=` param. Returns `systemHealth.appVersion` from `src/lib/version.ts`
 - **Usage API:** `src/app/api/admin/usage/route.ts` — GET endpoint for Gemini token usage stats
 - **Access:** All routes verify `role = 'owner'` on the user's profile. Non-owners are redirected.
 
 ### Owner Dashboard Tabs
 
-1. **Overview** — 8 metric cards (total users, new this week/month, active subscriptions, total narratives, narratives this week/today, total generations)
+1. **Overview** — 8 metric cards + **System Health card displaying APP_VERSION** (this is the second of the two governed version display points)
 2. **Activity Log** — Paginated table of all user activity with search, action filter, sort. Clickable rows open `ActivityDetailModal` with full metadata display
 3. **User Management** — Sortable user table with search, inline actions (reset password, restrict, change subscription, promote/demote, delete). Includes Team column with assignment. CREATE TEAM button.
-4. **Analytics** — Recharts-powered charts (LineChart for generation trends, BarChart for activity by type, PieChart for story types, AreaChart for usage over time). Time range selector (7d/30d/90d/all). System health indicators.
+4. **Analytics** — Recharts-powered charts (LineChart for generation trends, BarChart for activity by type, PieChart for story types, AreaChart for usage over time). Time range selector (7d/30d/90d/all)
 5. **API Usage** — Live Gemini token usage tracking. Summary cards (total tokens, total cost, average per call). Token/cost charts by day. Action breakdown. Top users leaderboard.
 6. **Settings** — Token Calculator widget for estimating API costs. Current access code display.
 
@@ -1339,12 +1551,12 @@ This ensures independent features (appearance, templates) never overwrite each o
 | `demote_to_user` | `userId` | Sets role to 'user' |
 | `get_access_code` | — | Returns current ACCESS_CODE from env |
 | `list_teams` | — | Returns all active teams with member counts |
-| `assign_user` | `userId`, `teamId` | Assigns user to team (updates team_id + team_members) |
+| `assign_user` | `userId`, `teamId` | Assigns user to team |
 | `create_team` | `name` | Creates team with auto-generated access code |
 
 ### Analytics API Returns
 
-`totalUsers`, `newUsersWeek`, `newUsersMonth`, `activeSubscriptions`, `totalNarratives`, `narrativesWeek`, `narrativesToday`, `totalGenerations`, `totalExports`, `totalProofreads`, `totalCustomizations`, `totalSavedTemplates`, `activityByType`, `activityByDay`, `dailyNarratives`, `topUsers` (top 10), `storyTypes`, `subscriptionBreakdown`, `usageOverTime`, `actionTypes`, `systemHealth` (DB row counts, last activity, app version)
+`totalUsers`, `newUsersWeek`, `newUsersMonth`, `activeSubscriptions`, `totalNarratives`, `narrativesWeek`, `narrativesToday`, `totalGenerations`, `totalExports`, `totalProofreads`, `totalCustomizations`, `totalSavedTemplates`, `activityByType`, `activityByDay`, `dailyNarratives`, `topUsers`, `storyTypes`, `subscriptionBreakdown`, `usageOverTime`, `actionTypes`, `systemHealth` (DB row counts, last activity, **`appVersion` imported from `@/lib/version`**)
 
 ### Protected User
 
@@ -1352,9 +1564,9 @@ This ensures independent features (appearance, templates) never overwrite each o
 
 ### Key Patterns
 
-- Service role client (`SUPABASE_SERVICE_ROLE_KEY`) used for admin operations bypassing RLS
+- Service role client used for admin operations bypassing RLS
 - Admin verification via session client — checks user's own auth, then reads role from `users` table
-- Analytics charts built with `recharts` (LineChart, BarChart, PieChart, AreaChart)
+- Analytics charts built with `recharts`
 - Tab transitions use AnimatePresence with slide/fade variants
 - Auto-refresh uses `setInterval(fetchAnalytics, 60000)` with cleanup on tab switch
 - Table UI: email column truncation (max-w-[180px] with tooltip), center-aligned headers/cells, glowing accent-colored row hover effects
@@ -1362,10 +1574,9 @@ This ensures independent features (appearance, templates) never overwrite each o
 ### Activity Detail Modal (`src/components/admin/ActivityDetailModal.tsx`)
 
 Shared modal component used by BOTH Owner Dashboard and Team Dashboard activity log tabs:
-
 - Framer Motion animations (fade backdrop + scale modal)
-- Content sections: action type badge (color-coded), timestamp (MM/DD/YYYY HH:MM AM/PM), user info (name + email), vehicle info, RO number, story type badge, narrative text in scrollable container, input data, and collapsible "View Raw Data" JSON section
-- Gracefully handles entries with minimal metadata (e.g., login events show only action badge, timestamp, and user info)
+- Content sections: action type badge (color-coded), timestamp, user info, vehicle info, RO number, story type badge, narrative text in scrollable container, input data, collapsible "View Raw Data" JSON section
+- Gracefully handles entries with minimal metadata
 - Close on X button, backdrop click, and Escape key
 
 ---
@@ -1375,8 +1586,8 @@ Shared modal component used by BOTH Owner Dashboard and Team Dashboard activity 
 ### API Routes
 
 - `GET /api/saved-repairs` — Fetch all templates for authenticated user (ordered by updated_at desc)
-- `POST /api/saved-repairs` — Create new template (validates template_name + story_type)
-- `PUT /api/saved-repairs/[id]` — Update template (ownership verified, allowlist of updatable fields)
+- `POST /api/saved-repairs` — Create new template
+- `PUT /api/saved-repairs/[id]` — Update template (ownership verified)
 - `DELETE /api/saved-repairs/[id]` — Delete template (ownership verified)
 
 ### What Gets Saved
@@ -1400,7 +1611,7 @@ When user clicks "Load" on a template card:
 
 ### UI Components
 
-- `MyRepairsPanel.tsx` — slide-out panel from right side (positioned at `top: 164px` below hero+nav), portaled to document.body
+- `MyRepairsPanel.tsx` — slide-out panel from right side, portaled to document.body
 - `SaveRepairModal.tsx` — modal with template name input + summary preview
 - `EditRepairModal.tsx` — modal for editing saved template fields
 
@@ -1442,7 +1653,7 @@ Size variants: `small` (nav bar), `medium` (default), `large` (dashboard profile
 | Variable | Description |
 |----------|-------------|
 | `ACCESS_CODE` | Beta access code for signup bypass (e.g., WHISLER-BETA-2026) |
-| `NEXT_PUBLIC_APP_URL` | Public app URL for Stripe redirects (https://servicedraft.ai) |
+| `NEXT_PUBLIC_APP_URL` | **MUST be `https://servicedraft.ai`** (non-www, used for canonical redirects in auth callback) |
 | `RESEND_API_KEY` | Resend email service API key |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret |
 | `STRIPE_PRICE_ID` | Stripe subscription price ID |
@@ -1538,56 +1749,123 @@ logActivity('generate', { storyType, vehicleInfo: `${year} ${make} ${model}` });
 
 ## APPENDIX: CRITICAL LESSONS LEARNED
 
-Reference these before making changes in these areas:
+These are hard-won lessons from actual production incidents. Read before touching auth, the browser Supabase client, middleware, or the signup flow. Every lesson here exists because something broke in production.
 
-1. **Supabase PostgREST joins require FKs on `public` schema tables.** If a query returns "Could not find a relationship in the schema cache," the FK likely points to `auth.users` instead of `public.users`. Fix: drop FK, recreate pointing to `public.users`, then run `NOTIFY pgrst, 'reload schema'`.
+### Auth & Supabase client
+1. **The browser Supabase client's internal auth mutex is a recurring incident source.** Concurrent `getUser()` calls cause the 10-second mutex lock to block, producing indefinite hangs and blank screens. `useAuth.ts` was explicitly refactored to bypass the browser client entirely and fetch via `GET /api/me` to eliminate this class of bug. Never re-introduce browser-client auth calls in `useAuth.ts`.
+2. **Expired auth cookies deadlock the SDK on init.** `createBrowserClient()` → `_initialize()` → `_recoverAndRefresh()` reads cookies at construction and attempts token refresh. If the tokens are expired, the refresh loop blocks further auth calls. The fix: `clearExpiredAuthCookies()` must run BEFORE `createBrowserClient()` in `src/lib/supabase/client.ts`. Do not reorder.
+3. **`getSession()` is safe; `getUser()` is not.** `getSession()` reads from local cache; `getUser()` makes a network call that can hang. Always wrap `getUser()` in a timeout (`Promise.race` with a 5-second reject) when called in middleware or critical paths.
+4. **PKCE is browser-scoped.** The `code_verifier` cookie does not cross browser boundaries, making cross-browser magic-link verification impossible. The OTP flow exists specifically to solve this — do not revert.
+5. **`verifyOtp` type must be `'signup'` for new users.** Supabase stores OTP tokens from `signInWithOtp()` on new accounts as `confirmation` type. The `verifyOtp` call must use `type: 'signup'` — `type: 'email'` will fail with "token has expired or is invalid".
+6. **www vs non-www breaks cookie scope.** Session cookies bound to the apex domain are invisible on the www subdomain. The 308 redirect in `middleware.ts` forces all traffic to non-www BEFORE auth runs.
+7. **Canonical domain in env vars matters.** `NEXT_PUBLIC_APP_URL` must be set to `https://servicedraft.ai` (non-www). The auth callback route uses this for all success/failure redirects to ensure cookies are visible.
+8. **`handle_new_user` trigger needs defensive guards.** The Postgres trigger must have `SET search_path = public`, `ON CONFLICT DO NOTHING`, and an exception handler. Silent failures leave no `public.users` row. Both `/api/signup/complete-profile` and `/api/signup/activate` use UPSERT as a safety net in case the trigger failed.
+9. **`useAuth` and `narrativeStore` are module-level singletons.** They persist across route transitions and should NEVER be torn down during navigation. Only a full page reload or explicit sign-out resets them. Tearing down the auth subscription on unmount causes AbortError and login lockups.
+10. **`useSyncExternalStore` must be used for the narrative store.** The original `useState(() => subscribe())` pattern never cleaned up listeners on unmount — every page navigation added a permanent listener to the global Set, causing stale re-renders and state corruption.
+11. **SUPABASE_SERVICE_ROLE_KEY copy errors:** Accidentally prepending surrounding UI text (e.g., "you") to the key value is a known failure mode — always verify the raw key value with `.trim()` and `auth` options in the service client initialization.
 
-2. **All Supabase data operations belong in server-side API routes.** The browser Supabase client has unreliable auth state across Next.js route transitions, causing timeouts and save lockups.
+### Database & Supabase
+12. **PostgREST relational joins require FKs to `public` schema tables, not `auth.users`.** If a join fails with "could not find relationship", check that the foreign key references `public.users`, not `auth.users`. Fix: drop FK, recreate pointing to `public.users`, then run `NOTIFY pgrst, 'reload schema'`.
+13. **After schema changes, run `NOTIFY pgrst, 'reload schema'`** to flush the PostgREST cache. Otherwise, new columns are invisible to the API.
+14. **RLS policies do not follow table renames.** When renaming a table, explicitly drop and recreate policies.
+15. **`supabase_migrations.schema_migrations` is unreliable for this project's history.** Most migrations were applied via SQL Editor directly, so the migrations table does not reflect the full change log. Use the `supabase/migrations/*.sql` files plus the migration list in this doc as the source of truth.
+16. **`apply_migration` is for DDL, `execute_sql` is for DML.** Don't swap them.
+17. **Auth settings (email confirmation toggle, etc.) cannot be changed via SQL.** They must be changed in the Supabase Dashboard UI.
+18. **Team-related database columns (e.g., `team_id`) must exist before code referencing them is deployed.** Run migrations in Supabase SQL Editor before deploying code that queries new columns. Console errors like "column users.team_id does not exist" mean the migration hasn't been applied to the live database.
 
-3. **Diagnostic Only and Repair Complete narratives sharing the same RO# must save as separate database rows** via plain INSERT — never upsert or overwrite across story types.
+### Narratives & AI
+19. **Diagnostic Only and Repair Complete narratives sharing the same RO# must save as separate database rows** via plain INSERT — never upsert or overwrite across story types.
+20. **AI prompts MUST explicitly require preservation of exact technical details** — terminal numbers, connector IDs, circuit numbers, measurement values. This is critical for GM warranty audit compliance. Generic paraphrasing breaks audit acceptance.
+21. **`usageMetadata` path:** via the older `@google/generative-ai` SDK, token usage is at `result.response.usageMetadata`. Do not assume newer SDK paths.
 
-4. **Stale `.next` cache can serve old code after fixes are committed.** When behavior doesn't match committed code, delete `.next` with `rmdir /s /q .next` (Windows) or `rm -rf .next` before further debugging.
+### Frontend & Build
+22. **Stale `.next` cache can serve old code after fixes are committed.** When behavior doesn't match committed code, delete `.next` with `rmdir /s /q .next` (Windows) or `rm -rf .next` before further debugging.
+23. **React hydration mismatches** from ThemeProvider: Components that read accent color from context should render with default Violet values during SSR and swap to real values after mount using a `mounted` state guard pattern.
+24. **Tailwind v4 uses CSS-first configuration** via `@theme` blocks in `globals.css`. There is no `tailwind.config.ts` file.
+25. **`--body-bg` must be a fully resolved gradient string**, not CSS `var()` composition, because CSS `var()` in `:root` is unreliable when source vars are set as inline styles by JavaScript.
+26. **The 3-tier role system (owner/admin/user) replaced the original 2-tier system.** All access gates, API routes, badges, promote/demote logic, and conditional UI rendering must check for the correct role string. Never assume only 'admin' and 'user' exist.
 
-5. **The `useAuth` hook and `narrativeStore` are module-level singletons.** They persist across route transitions and should NEVER be torn down during navigation. Only a full page reload or explicit sign-out resets them. Tearing down the auth subscription on unmount causes AbortError and login lockups.
-
-6. **`useSyncExternalStore` must be used for the narrative store.** The original `useState(() => subscribe())` pattern never cleaned up listeners on unmount — every page navigation added a permanent listener to the global Set, causing stale re-renders and state corruption.
-
-7. **SUPABASE_SERVICE_ROLE_KEY copy errors:** Accidentally prepending surrounding UI text (e.g., "you") to the key value is a known failure mode — always verify the raw key value with `.trim()` and `auth` options in the service client initialization.
-
-8. **Cloudflare proxy must be disabled (grey cloud/DNS-only) when pointing to Vercel.** Orange cloud (proxy enabled) breaks Vercel's domain verification and SSL.
-
-9. **Documentation updates must happen before git commits**, not after. Every sprint should explicitly update `BUILD_PROGRESS_TRACKER.md` before the commit step.
-
-10. **React hydration mismatches** from ThemeProvider: Components that read accent color from context should render with default Violet values during SSR and swap to real values after mount using a `mounted` state guard pattern.
-
-11. **Tailwind v4 uses CSS-first configuration** via `@theme` blocks in `globals.css`. There is no `tailwind.config.ts` file.
-
-12. **`--body-bg` must be a fully resolved gradient string**, not CSS `var()` composition, because CSS `var()` in `:root` is unreliable when source vars are set as inline styles by JavaScript.
-
-13. **Team-related database columns (e.g., `team_id`) must exist before code referencing them is deployed.** Run migrations in Supabase SQL Editor before deploying code that queries new columns. Console errors like "column users.team_id does not exist" mean the migration hasn't been applied to the live database.
-
-14. **The 3-tier role system (owner/admin/user) replaced the original 2-tier system.** All access gates, API routes, badges, promote/demote logic, and conditional UI rendering must check for the correct role string. Never assume only 'admin' and 'user' exist.
+### Production safety
+27. **The app is live. Local commits do not push automatically.** Every sprint ends with a local commit only. Tyler pushes manually after localhost testing. If you ever push to GitHub without explicit permission, you have caused a deployment.
+28. **Never disable a safeguard without explicit permission.** Rate limits, auth checks, role guards, and validation exist because something happened that required them. If removing one seems to "simplify" the code, you are probably about to recreate a past bug.
+29. **Version bumping is mandatory.** Every sprint bumps `src/lib/version.ts`. Skipping a bump makes it impossible to tell localhost from production.
+30. **Cloudflare proxy must be disabled (grey cloud/DNS-only) when pointing to Vercel.** Orange cloud (proxy enabled) breaks Vercel's domain verification and SSL.
+31. **Documentation updates must happen before git commits**, not after. Every sprint should explicitly update `BUILD_PROGRESS_TRACKER.md` before the commit step.
 
 ---
 
 ## APPENDIX: SIGNUP FLOW DETAILS
 
-### Step 1 — Email & Password
-Standard Supabase email/password signup. Email confirmation is currently **disabled** for beta testing (toggle in Supabase Dashboard: Auth > Providers > Email > "Confirm email" OFF). Must be re-enabled for production launch.
+The signup flow is a 3-step OTP-based onboarding. It was migrated from a magic-link/PKCE flow after PKCE's browser-scoped `code_verifier` cookie caused cross-browser verification failures. The current flow has ZERO browser dependency on the verification device — the user can receive the email on one device/browser and enter the code on another.
 
-### Step 2 — Access Code & Payment
-- User enters an access code
-- Code is validated against: (1) global `ACCESS_CODE` env var, (2) team-specific `teams.access_code` values
-- If global match: subscription set to `'bypass'`, no team assignment
-- If team match: subscription set to `'bypass'` AND user auto-assigned to that team (team_id set, team_members row created)
-- If no match: redirects to Stripe checkout for subscription payment
+### Step 1 — Email verification via OTP
 
-### Step 3 — Profile Creation
-- First Name (required), Last Name (required)
-- Location — US state dropdown (all 50 states)
-- Position — dropdown: Technician, Foreman, Diagnostician, Advisor, Manager, Warranty Clerk
-- Username (required, must be unique)
-- AccentColorPicker — 9-swatch color picker for initial theme preference
+**Frontend (`src/app/(auth)/signup/page.tsx`):**
+- User enters email and confirm-email
+- Client calls `supabase.auth.signInWithOtp({ email })` via the browser client (the only place the browser client is used)
+- Supabase sends an email containing a 6-digit code (and optionally a magic link as fallback)
+- UI transitions to "enter your code" view
+
+**Backend verification (`src/app/api/signup/verify-otp/route.ts`):**
+- User enters the 6-digit code on the signup page
+- Client POSTs `{ email, token }` to `/api/signup/verify-otp`
+- Server calls `supabase.auth.verifyOtp({ email, token, type: 'signup' })`
+- **CRITICAL: the type is `'signup'`, NOT `'email'`.** Supabase stores OTP tokens for new users as `confirmation` type. Using `'signup'` in `verifyOtp` matches that token type. Using `'email'` fails with `"token has expired or is invalid"`. This is a documented lesson — see CRITICAL LESSONS LEARNED #5.
+- On success, the SSR library sets session cookies via the `setAll()` callback in `src/lib/supabase/server.ts`
+- Route returns `{ success: true, userId }`
+
+**Supabase Dashboard requirement:** The "Magic Link" email template MUST include `{{ .Token }}` in its body to display the 6-digit code. If the template only includes `{{ .ConfirmationURL }}`, users will not see a code and the flow breaks. This is a dashboard-only setting — it cannot be managed in code.
+
+### Step 2 — Password & profile (combined)
+
+**Frontend:**
+- User enters password, first name, last name, location, position, optional accent color preference
+- Client POSTs all fields to `/api/signup/complete-profile`
+
+**Backend (`src/app/api/signup/complete-profile/route.ts`):**
+- Verifies user is authenticated (session from Step 1 must exist)
+- Validates password length ≥ 6, first/last name non-empty, position set
+- Calls `supabase.auth.updateUser({ password })` to set the password
+- Upserts a row into `public.users` with `id`, `email`, `username` (derived from email), `first_name`, `last_name`, `location`, `position`, and optional `preferences.appearance`
+- **Uses UPSERT, not UPDATE.** The `handle_new_user` Postgres trigger on `auth.users` can silently fail, leaving no `public.users` row. Upsert handles both the trigger-succeeded and trigger-failed cases.
+
+### Step 3 — Access code activation
+
+**Frontend:**
+- User enters an access code (e.g. `WHISLER-BETA-2026`) OR is redirected to Stripe checkout (future)
+- Client POSTs `{ teamId }` to `/api/signup/activate` after successful access code validation
+
+**Backend (`src/app/api/signup/activate/route.ts`):**
+- Verifies user is authenticated
+- Upserts `public.users` row with `subscription_status: 'bypass'` and optional `team_id`
+- Again, uses UPSERT as a safety net in case the trigger silently failed and no row exists
+
+### Auth callback fallback — `src/app/auth/callback/route.ts`
+
+The callback route still exists as a fallback for users who click the magic link in the email instead of entering the code. It handles two paths:
+- `?code=...` — PKCE flow, calls `exchangeCodeForSession()`. If it fails (cross-browser), redirects to `/signup?error=cross-browser`.
+- `?token_hash=...&type=...` — token-hash flow, calls `verifyOtp({ token_hash, type })`. If it fails (expired/used), redirects to `/signup?error=link-expired`.
+
+Both success paths redirect to `/signup?step=2`. Both use the canonical non-www domain from `NEXT_PUBLIC_APP_URL` to match cookie scope.
+
+### www → non-www middleware redirect
+
+`src/middleware.ts` forces all `www.servicedraft.ai` requests to `servicedraft.ai` via a 308 redirect BEFORE any auth processing runs. This exists because session cookies are scoped to the non-www domain; without the redirect, a user who lands on the www subdomain would never see their session cookies and would appear permanently logged out.
+
+Do NOT remove the www redirect. Do NOT change its order (it must run before `updateSession()`).
+
+### What NOT to do (hard rules)
+- Do NOT re-introduce a pure magic-link flow that depends on PKCE code_verifier cookies
+- Do NOT change `type: 'signup'` to `type: 'email'` in `/api/signup/verify-otp`
+- Do NOT remove the UPSERT safety net in complete-profile or activate
+- Do NOT remove the www → non-www redirect
+- Do NOT remove the `clearExpiredAuthCookies()` call in the browser client
+- Do NOT remove the 5-second `getUser()` timeout in middleware
+- Do NOT change `useAuth.ts` to use the browser Supabase client
+
+All of the above are on the `PROTECTED FILES — HARD STOPS` list and changes require the DOUBLE-CHECK PROTOCOL.
+
+**⚠️ Production reminder:** Supabase email confirmation is currently **disabled** for beta testing convenience (Auth → Providers → Email → "Confirm email" toggle). Before full production launch, this must be re-enabled at the Supabase Dashboard.
 
 ---
 
@@ -1604,14 +1882,15 @@ Modals use a solid dark background so text is fully readable without background 
 
 After completing each task, update `BUILD_PROGRESS_TRACKER.md`:
 
-1. Add a new sprint/task section with `[x]` status and today's date
+1. Add a new sprint/task section with `[x]` status, today's date, **and the new version number**
 2. Add relevant notes and details
 3. Update the "CURRENT STATUS" section at the top:
    - `**Last Updated:**` — today's date
+   - `**Current Version:**` — the new version after this sprint's bump
    - `**Current Phase:**` — current phase/sprint name
    - `**Next Task:**` — the next thing to work on
 4. Update summary counts if applicable
-5. Commit with descriptive message
+5. Commit LOCALLY (not pushed) with a descriptive message that includes the new version
 
 ---
 
