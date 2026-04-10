@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { createClient } from '@supabase/supabase-js';
+import { APP_VERSION } from '@/lib/version';
 
 function createServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -260,7 +261,7 @@ export async function GET(request: NextRequest) {
         saved_repairs: savedTemplatesRes.count ?? 0,
       },
       lastActivityTimestamp,
-      appVersion: 'v1.0.2-beta',
+      appVersion: APP_VERSION,
     };
 
     return NextResponse.json({

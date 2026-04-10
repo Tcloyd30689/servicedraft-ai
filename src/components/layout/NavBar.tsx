@@ -8,6 +8,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { useAuth } from '@/hooks/useAuth';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import { cn } from '@/lib/utils';
+import { APP_VERSION } from '@/lib/version';
 
 export default function NavBar() {
   const pathname = usePathname();
@@ -55,7 +56,7 @@ export default function NavBar() {
       {/* CENTER SECTION: App version label */}
       <div className="hidden md:block absolute left-1/2 -translate-x-1/2">
         <span className="text-sm font-medium text-[var(--accent-bright)]">
-          v1.0.3-beta
+          {APP_VERSION}
         </span>
       </div>
 
