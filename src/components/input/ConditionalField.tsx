@@ -73,6 +73,7 @@ export default function ConditionalField({
         <textarea
           ref={textareaRef}
           rows={2}
+          spellCheck={true}
           value={value}
           onChange={(e) => {
             onValueChange(e.target.value);
