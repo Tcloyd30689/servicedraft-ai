@@ -16,7 +16,7 @@ export interface GeminiResponse {
 export async function generateWithGemini(
   systemPrompt: string,
   userPrompt: string,
-  maxOutputTokens: number = 8192,
+  maxOutputTokens: number = 30000,
 ): Promise<GeminiResponse> {
   const model = genAI.getGenerativeModel({
     model: 'gemini-3-flash-preview',

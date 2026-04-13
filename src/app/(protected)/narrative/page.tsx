@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw } from 'lucide-react';
+import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw, AlertTriangle } from 'lucide-react';
 import { logActivity } from '@/lib/activityLogger';
 import { createTrackerEntry, updateTrackerAction } from '@/lib/narrativeTracker';
 import { findHighlightRanges, type HighlightRange } from '@/lib/highlightUtils';
@@ -64,6 +64,9 @@ export default function NarrativePage() {
   const [highlightActive, setHighlightActive] = useState(false);
   const [issueDescriptions, setIssueDescriptions] = useState<string[]>([]);
 
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -79,6 +82,7 @@ export default function NarrativePage() {
 
     setIsGenerating(true);
     setProofreadData(null);
+    setGenerationError(null);
     dispatchActivity(0.8);
     try {
       const res = await fetch('/api/generate', {
@@ -102,6 +106,7 @@ export default function NarrativePage() {
       const data: NarrativeData = await res.json();
       setNarrative(data);
       setAnimateNarrative(true);
+      setRetryCount(0);
 
       // Create tracker entry — awaited because we need the ID back
       const trackerId = await createTrackerEntry({
@@ -125,6 +130,8 @@ export default function NarrativePage() {
 
       logActivity('generate', { story_type: state.storyType || undefined });
     } catch {
+      setGenerationError('Failed to generate narrative. Please try again.');
+      setRetryCount(prev => prev + 1);
       toast.error('Failed to generate narrative. Please try again.');
     } finally {
       setIsGenerating(false);
@@ -201,6 +208,7 @@ export default function NarrativePage() {
   const handleRegenerate = async () => {
     setIsRegenerating(true);
     setProofreadData(null);
+    setGenerationError(null);
     clearHighlights();
     dispatchActivity(0.8);
     try {
@@ -225,6 +233,7 @@ export default function NarrativePage() {
       const data: NarrativeData = await res.json();
       setNarrative(data);
       setAnimateNarrative(true);
+      setRetryCount(0);
       resetCustomization();
 
       // Fire-and-forget tracker update
@@ -246,6 +255,8 @@ export default function NarrativePage() {
       logActivity('regenerate', { story_type: state.storyType || undefined });
       toast.success('Story regenerated');
     } catch {
+      setGenerationError('Failed to regenerate narrative. Please try again.');
+      setRetryCount(prev => prev + 1);
       toast.error('Failed to regenerate. Please try again.');
     } finally {
       setIsRegenerating(false);
@@ -527,6 +538,48 @@ export default function NarrativePage() {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
         <LoadingSpinner size="xlarge" message="GENERATING NARRATIVE..." />
+      </div>
+    );
+  }
+
+  // Generation failed — show retry UI
+  if (!state.narrative && generationError && !isGenerating) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-64px)] px-4">
+        <LiquidCard size="compact">
+          <div className="flex flex-col items-center text-center py-6 px-4 max-w-md mx-auto">
+            <AlertTriangle size={40} className="text-[var(--accent-hover)] mb-4" />
+            <p className="text-[var(--text-primary)] font-semibold text-sm mb-2">
+              GENERATION FAILED
+            </p>
+            <p className="text-[var(--text-secondary)] text-sm mb-6">
+              {generationError}
+            </p>
+            {retryCount < 3 ? (
+              <Button
+                variant="primary"
+                size="medium"
+                onClick={() => generateNarrative()}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw size={16} />
+                RETRY GENERATION
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="medium"
+                onClick={() => {
+                  setGenerationError(null);
+                  router.push('/input');
+                }}
+                className="flex items-center gap-2"
+              >
+                RETURN TO INPUT
+              </Button>
+            )}
+          </div>
+        </LiquidCard>
       </div>
     );
   }
