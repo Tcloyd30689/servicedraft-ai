@@ -25,6 +25,7 @@ const variantClasses: Record<ButtonVariant, string> = {
     'hover:bg-[var(--accent-10)]',
     'active:bg-[var(--accent-20)]',
     'disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none',
+    '[html[data-mode=light]_&]:bg-[var(--accent-vivid)] [html[data-mode=light]_&]:text-black [html[data-mode=light]_&]:hover:bg-[var(--accent-primary)]',
   ].join(' '),
   ghost: [
     'bg-transparent text-[var(--accent-vivid)]',

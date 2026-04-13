@@ -6,6 +6,12 @@ import { useTheme } from '@/components/ThemeProvider';
 export default function AccentColorPicker() {
   const { accent, setAccentColor, accentColors } = useTheme();
 
+  // Swatch display color: Noir/White accents use hex values opposite to their name
+  // (Noir's accent hex is light, White's accent hex is dark), so override the
+  // picker circle color so it visually matches the display name.
+  const swatchColor = (c: typeof accentColors[number]) =>
+    c.key === 'white' ? '#1a1a2e' : c.key === 'black' ? '#f0f0f5' : c.hex;
+
   return (
     <div>
       <div className="flex flex-wrap gap-3 justify-center">
@@ -23,7 +29,7 @@ export default function AccentColorPicker() {
                 width: 36,
                 height: 36,
                 borderRadius: '50%',
-                backgroundColor: color.hex,
+                backgroundColor: swatchColor(color),
                 border: isSelected
                   ? '3px solid var(--text-primary)'
                   : '2px solid transparent',

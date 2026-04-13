@@ -37,7 +37,7 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
   const vars = buildCssVars(accent);
   const root = document.documentElement;
 
-  // Determine effective mode: Black forces light, White forces dark, otherwise user choice
+  // Determine effective mode: White forces light, Noir forces dark, otherwise user choice
   const effectiveMode = accent.isLightMode ? 'light' : accent.isDarkMode ? 'dark' : mode;
 
   for (const [key, value] of Object.entries(vars)) {
@@ -50,7 +50,7 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
 
   const [r, g, b] = accent.rgb;
 
-  // Override backgrounds if user explicitly toggled to light mode (non-Black accent).
+  // Override backgrounds if user explicitly toggled to light mode (non-White accent).
   // Only page-level surfaces change — card/modal internals keep their accent-tinted glass styling.
   if (effectiveMode === 'light' && !accent.isLightMode) {
     // Page background → accent color (80/20 blend with neutral, darkened for bright accents)
@@ -85,7 +85,7 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
     // untouched — cards and their contents keep their tinted glass look from dark mode.
   }
 
-  // Mode-adaptive variables — apply to ALL light modes (Black native + user-toggled)
+  // Mode-adaptive variables — apply to ALL light modes (White native + user-toggled)
   if (effectiveMode === 'light') {
     // Dark frosted glass card bg — cards need contrast against colored page background
     root.style.setProperty('--bg-card', 'rgba(15, 15, 25, 0.75)');
@@ -104,7 +104,7 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
     root.style.setProperty('--accent-vivid', accent.hover);
   }
 
-  // --- Luminance-based overrides for extreme accent colors (White, Black, etc.) ---
+  // --- Luminance-based overrides for extreme accent colors (Noir, White, etc.) ---
 
   // Button text: ensure contrast on accent-hover backgrounds (used by primary buttons)
   const hoverBrightness = perceivedBrightness(accent.hover);
@@ -120,7 +120,7 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
     }
   }
 
-  // Dark mode: if accent.hover is very light (e.g. White accent), darken secondary/ghost text
+  // Dark mode: if accent.hover is very light (e.g. Noir accent), darken secondary/ghost text
   if (effectiveMode === 'dark' && hoverBrightness > 200) {
     root.style.setProperty('--accent-vivid', accent.border);
   }
@@ -259,19 +259,19 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
 
     let resolvedMode = modeRef.current;
 
-    // If selecting Black, auto-switch to light mode
+    // If selecting White, auto-switch to light mode
     if (newAccent.isLightMode) {
       resolvedMode = 'light';
       setColorMode('light');
       localStorage.setItem(MODE_STORAGE_KEY, 'light');
     }
-    // If selecting White, auto-switch to dark mode
+    // If selecting Noir, auto-switch to dark mode
     if (newAccent.isDarkMode) {
       resolvedMode = 'dark';
       setColorMode('dark');
       localStorage.setItem(MODE_STORAGE_KEY, 'dark');
     }
-    // If switching away from Black while in light mode forced by Black, revert to dark
+    // If switching away from White while in light mode forced by White, revert to dark
     if (!newAccent.isLightMode && accentRef.current.isLightMode) {
       resolvedMode = 'dark';
       setColorMode('dark');

@@ -155,3 +155,18 @@ input::placeholder,
 textarea::placeholder {
   color: var(--text-muted);
 }
+
+/* Light mode: force dark text on form controls for readable contrast.
+   When color-scheme is "light", browsers may apply white backgrounds to
+   inputs/selects while --text-primary remains near-white, causing
+   invisible text. This override ensures dark text in all light configs. */
+html[data-mode="light"] input,
+html[data-mode="light"] textarea,
+html[data-mode="light"] select,
+html[data-mode="light"] select option {
+  color: #1a1a2e;
+}
+html[data-mode="light"] input::placeholder,
+html[data-mode="light"] textarea::placeholder {
+  color: #6b7280;
+}

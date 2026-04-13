@@ -157,7 +157,7 @@ export const ACCENT_COLORS: AccentColor[] = [
     bgElevated: '#2e0a2e',
   },
   {
-    name: 'White',
+    name: 'Noir',
     key: 'white',
     hex: '#e2e8f0',
     rgb: [226, 232, 240],
@@ -176,7 +176,7 @@ export const ACCENT_COLORS: AccentColor[] = [
     bgElevated: '#1a1d21',
   },
   {
-    name: 'Black',
+    name: 'White',
     key: 'black',
     hex: '#1e293b',
     rgb: [30, 41, 59],
