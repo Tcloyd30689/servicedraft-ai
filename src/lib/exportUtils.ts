@@ -1,5 +1,5 @@
 /**
- * Shared export utilities for PDF, DOCX, Print, and Email document generation.
+ * Shared export utilities for PDF, DOCX, and Email document generation.
  * Used by ShareExportModal (narrative page), NarrativeDetailModal (dashboard),
  * and the send-email API route.
  */
@@ -65,97 +65,6 @@ function escapeHtml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-}
-
-/**
- * Builds formatted HTML for print output that visually matches the PDF export.
- * Used by print handlers in ShareExportModal and NarrativeDetailModal.
- *
- * Layout matches the PDF exactly:
- * - Two-column header: Vehicle Information (left) + R.O.# (right)
- * - "REPAIR NARRATIVE" centered title (18pt bold underlined)
- * - C/C/C sections (13pt bold italic underlined headers, 11pt body)
- * - Or block format (11pt body paragraph)
- * - Footer logo bottom-right
- */
-export function buildPrintHtml(payload: ExportPayload): string {
-  const { narrative, displayFormat, vehicleInfo } = payload;
-
-  const narrativeHtml = displayFormat === 'block'
-    ? `<p style="margin:0;font-size:11pt;line-height:1.5;color:#000;">${escapeHtml(narrative.block_narrative)}</p>`
-    : `
-      <div style="margin-bottom:20px;">
-        <p style="margin:0 0 4px 0;font-size:13pt;font-weight:bold;font-style:italic;text-decoration:underline;color:#000;font-family:Arial,Helvetica,sans-serif;">CONCERN:</p>
-        <p style="margin:0;font-size:11pt;line-height:1.5;color:#000;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(narrative.concern)}</p>
-      </div>
-      <div style="margin-bottom:20px;">
-        <p style="margin:0 0 4px 0;font-size:13pt;font-weight:bold;font-style:italic;text-decoration:underline;color:#000;font-family:Arial,Helvetica,sans-serif;">CAUSE:</p>
-        <p style="margin:0;font-size:11pt;line-height:1.5;color:#000;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(narrative.cause)}</p>
-      </div>
-      <div>
-        <p style="margin:0 0 4px 0;font-size:13pt;font-weight:bold;font-style:italic;text-decoration:underline;color:#000;font-family:Arial,Helvetica,sans-serif;">CORRECTION:</p>
-        <p style="margin:0;font-size:11pt;line-height:1.5;color:#000;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(narrative.correction)}</p>
-      </div>`;
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <title>Repair Narrative</title>
-  <style>
-    @page {
-      size: letter;
-      margin: 13mm;
-    }
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      margin: 0;
-      padding: 10mm 13mm 13mm 13mm;
-      color: #000;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    .footer-logo {
-      position: fixed;
-      bottom: 3mm;
-      right: 13mm;
-    }
-    .footer-logo img {
-      width: 25mm;
-      height: auto;
-    }
-  </style>
-</head>
-<body>
-  <!-- Two-column header -->
-  <table style="width:100%;border-collapse:collapse;margin-bottom:0;">
-    <tr>
-      <td style="vertical-align:top;width:60%;">
-        <p style="margin:0 0 5px 0;font-size:11pt;font-weight:bold;text-decoration:underline;color:#000;font-family:Arial,Helvetica,sans-serif;">Vehicle Information:</p>
-        ${vehicleInfo.year ? `<p style="margin:0 0 3px 3mm;font-size:11pt;color:#000;font-family:Arial,Helvetica,sans-serif;"><strong>YEAR:</strong> ${escapeHtml(vehicleInfo.year)}</p>` : ''}
-        ${vehicleInfo.make ? `<p style="margin:0 0 3px 3mm;font-size:11pt;color:#000;font-family:Arial,Helvetica,sans-serif;"><strong>MAKE:</strong> ${escapeHtml(vehicleInfo.make)}</p>` : ''}
-        ${vehicleInfo.model ? `<p style="margin:0 0 3px 3mm;font-size:11pt;color:#000;font-family:Arial,Helvetica,sans-serif;"><strong>MODEL:</strong> ${escapeHtml(vehicleInfo.model)}</p>` : ''}
-      </td>
-      <td style="vertical-align:top;width:40%;text-align:right;">
-        <p style="margin:0 0 5px 0;font-size:11pt;font-weight:bold;text-decoration:underline;color:#000;font-family:Arial,Helvetica,sans-serif;">Repair Order #:</p>
-        ${vehicleInfo.roNumber ? `<p style="margin:0;font-size:20pt;font-weight:bold;color:#000;font-family:Arial,Helvetica,sans-serif;">${escapeHtml(vehicleInfo.roNumber)}</p>` : ''}
-      </td>
-    </tr>
-  </table>
-
-  <!-- Title -->
-  <p style="margin:24px 0 20px 0;font-size:18pt;font-weight:bold;text-decoration:underline;text-align:center;color:#000;font-family:Arial,Helvetica,sans-serif;">
-    REPAIR NARRATIVE
-  </p>
-
-  <!-- Narrative body -->
-  ${narrativeHtml}
-
-  <!-- Footer logo -->
-  <div class="footer-logo">
-    <img src="https://servicedraft.ai/ServiceDraft-Ai%20Vector%20Logo.png" alt="ServiceDraft.AI" onerror="this.style.display='none'" />
-  </div>
-</body>
-</html>`;
 }
 
 /**

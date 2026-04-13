@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Copy, Printer, FileDown, FileText, Mail } from 'lucide-react';
+import { Copy, ExternalLink, FileText, Mail } from 'lucide-react';
 import { logActivity } from '@/lib/activityLogger';
 import { updateTrackerAction } from '@/lib/narrativeTracker';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
-import { downloadExport, buildPrintHtml } from '@/lib/exportUtils';
+import { downloadExport } from '@/lib/exportUtils';
 import type { ExportPayload } from '@/lib/exportUtils';
 import EmailExportModal from '@/components/narrative/EmailExportModal';
 import type { NarrativeData } from '@/stores/narrativeStore';
@@ -33,7 +33,7 @@ export default function ShareExportModal({
   senderName,
   onBeforeExport,
 }: ShareExportModalProps) {
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isOpeningPdf, setIsOpeningPdf] = useState(false);
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
 
@@ -74,53 +74,38 @@ export default function ShareExportModal({
     }
   };
 
-  const handlePrint = async () => {
-    await onBeforeExport?.();
-
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.left = '-9999px';
-    iframe.style.top = '-9999px';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) {
-      toast.error('Failed to prepare print content');
-      document.body.removeChild(iframe);
-      return;
-    }
-
-    doc.open();
-    doc.write(buildPrintHtml(buildPayload()));
-    doc.close();
-
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-    }, 1000);
-
-    if (trackerId) updateTrackerAction(trackerId, 'export_print');
-    logActivity('export_print');
-    onClose();
-  };
-
-  const handleDownloadPdf = async () => {
-    setIsGeneratingPdf(true);
+  const handleOpenPdf = async () => {
+    setIsOpeningPdf(true);
     try {
       await onBeforeExport?.();
-      await downloadExport('pdf', buildPayload());
-      if (trackerId) updateTrackerAction(trackerId, 'export_pdf');
-      logActivity('export_pdf');
-      toast.success('PDF downloaded');
+
+      const res = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildPayload()),
+      });
+
+      if (!res.ok) throw new Error('PDF generation failed');
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const tab = window.open(url, '_blank');
+
+      if (!tab) {
+        toast.error('Pop-up blocked — please allow pop-ups for this site');
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+      if (trackerId) updateTrackerAction(trackerId, 'export_print');
+      logActivity('export_print');
       onClose();
     } catch {
       toast.error('Failed to generate PDF');
     } finally {
-      setIsGeneratingPdf(false);
+      setIsOpeningPdf(false);
     }
   };
 
@@ -145,7 +130,7 @@ export default function ShareExportModal({
     setShowEmailModal(true);
   };
 
-  const isExporting = isGeneratingPdf || isGeneratingDocx;
+  const isExporting = isOpeningPdf || isGeneratingDocx;
 
   return (
     <>
@@ -164,11 +149,12 @@ export default function ShareExportModal({
           <Button
             variant="secondary"
             size="fullWidth"
-            onClick={handlePrint}
+            onClick={handleOpenPdf}
+            disabled={isExporting}
             className="flex items-center justify-center gap-3"
           >
-            <Printer size={18} />
-            PRINT GENERATED NARRATIVE
+            <ExternalLink size={18} />
+            {isOpeningPdf ? 'OPENING PDF...' : 'VIEW / PRINT / DOWNLOAD'}
           </Button>
 
           <Button
@@ -180,17 +166,6 @@ export default function ShareExportModal({
           >
             <Mail size={18} />
             EMAIL NARRATIVE
-          </Button>
-
-          <Button
-            variant="secondary"
-            size="fullWidth"
-            onClick={handleDownloadPdf}
-            disabled={isExporting}
-            className="flex items-center justify-center gap-3"
-          >
-            <FileDown size={18} />
-            {isGeneratingPdf ? 'GENERATING PDF...' : 'DOWNLOAD AS PDF DOCUMENT'}
           </Button>
 
           <Button

@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Copy, Printer, FileDown, FileText, Mail, ArrowUpCircle } from 'lucide-react';
+import { Copy, ExternalLink, FileText, Mail, ArrowUpCircle } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
-import { downloadExport, buildPrintHtml } from '@/lib/exportUtils';
+import { downloadExport } from '@/lib/exportUtils';
 import type { ExportPayload } from '@/lib/exportUtils';
 import EmailExportModal from '@/components/narrative/EmailExportModal';
 import UpdateWithRepairModal from '@/components/dashboard/UpdateWithRepairModal';
@@ -24,7 +24,7 @@ export default function NarrativeDetailModal({
   narrative,
   senderName,
 }: NarrativeDetailModalProps) {
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isOpeningPdf, setIsOpeningPdf] = useState(false);
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -62,43 +62,32 @@ export default function NarrativeDetailModal({
     }
   };
 
-  const handlePrint = () => {
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.left = '-9999px';
-    iframe.style.top = '-9999px';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!doc) {
-      toast.error('Failed to prepare print content');
-      document.body.removeChild(iframe);
-      return;
-    }
-
-    doc.open();
-    doc.write(buildPrintHtml(buildPayload()));
-    doc.close();
-
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
-
-    setTimeout(() => {
-      document.body.removeChild(iframe);
-    }, 1000);
-  };
-
-  const handleDownloadPdf = async () => {
-    setIsGeneratingPdf(true);
+  const handleOpenPdf = async () => {
+    setIsOpeningPdf(true);
     try {
-      await downloadExport('pdf', buildPayload());
-      toast.success('PDF downloaded');
+      const res = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildPayload()),
+      });
+
+      if (!res.ok) throw new Error('PDF generation failed');
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const tab = window.open(url, '_blank');
+
+      if (!tab) {
+        toast.error('Pop-up blocked — please allow pop-ups for this site');
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch {
       toast.error('Failed to generate PDF');
     } finally {
-      setIsGeneratingPdf(false);
+      setIsOpeningPdf(false);
     }
   };
 
@@ -114,7 +103,7 @@ export default function NarrativeDetailModal({
     }
   };
 
-  const isExporting = isGeneratingPdf || isGeneratingDocx;
+  const isExporting = isOpeningPdf || isGeneratingDocx;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Saved Narrative" width="max-w-5xl">
@@ -179,21 +168,12 @@ export default function NarrativeDetailModal({
         <Button
           variant="secondary"
           size="medium"
-          onClick={handlePrint}
-          className="flex items-center gap-2"
-        >
-          <Printer size={15} />
-          PRINT
-        </Button>
-        <Button
-          variant="secondary"
-          size="medium"
-          onClick={handleDownloadPdf}
+          onClick={handleOpenPdf}
           disabled={isExporting}
           className="flex items-center gap-2"
         >
-          <FileDown size={15} />
-          {isGeneratingPdf ? 'PDF...' : 'PDF'}
+          <ExternalLink size={15} />
+          {isOpeningPdf ? 'OPENING...' : 'VIEW / PRINT / DOWNLOAD'}
         </Button>
         <Button
           variant="secondary"
