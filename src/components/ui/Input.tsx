@@ -9,7 +9,7 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className, id, ...props }, ref) => {
+  ({ label, error, className, id, spellCheck, ...props }, ref) => {
     return (
       <div className="mb-5">
         {label && (
@@ -23,6 +23,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={id}
+          spellCheck={spellCheck ?? true}
           className={cn(
             'w-full p-3 font-data',
             'bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg',

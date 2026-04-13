@@ -9,7 +9,7 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 }
 
 const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, className, id, ...props }, ref) => {
+  ({ label, error, className, id, spellCheck, ...props }, ref) => {
     return (
       <div className="mb-5">
         {label && (
@@ -23,6 +23,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           ref={ref}
           id={id}
+          spellCheck={spellCheck ?? true}
           className={cn(
             'w-full p-3 min-h-[120px] resize-vertical leading-relaxed font-data',
             'bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg',

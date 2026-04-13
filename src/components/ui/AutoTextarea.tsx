@@ -9,7 +9,7 @@ interface AutoTextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> 
 }
 
 const AutoTextarea = forwardRef<HTMLTextAreaElement, AutoTextareaProps>(
-  ({ label, error, className, id, onChange, value, ...props }, ref) => {
+  ({ label, error, className, id, onChange, value, spellCheck, ...props }, ref) => {
     const internalRef = useRef<HTMLTextAreaElement | null>(null);
 
     const resize = useCallback(() => {
@@ -47,6 +47,7 @@ const AutoTextarea = forwardRef<HTMLTextAreaElement, AutoTextareaProps>(
           }}
           id={id}
           rows={2}
+          spellCheck={spellCheck ?? true}
           value={value}
           onChange={handleChange}
           className={cn(

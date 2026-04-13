@@ -24,9 +24,10 @@ This file is a living document that Claude Code reads at the start of every sess
 ## CURRENT STATUS
 
 **Last Updated:** 2026-04-13
-**Current Version:** v1.0.7-beta
-**Current Phase:** Sprint 5 — UI/behavior fixes (tooltip reshape, modal button move, modal close fix) — COMPLETE
-**Next Task:** Manual testing on localhost (verify proofread tooltip width/theme, Update Narrative button position in saved modal, sub-modal close behavior)
+**Current Version:** v1.0.8-beta
+**Current Phase:** Sprint 6 — Enable browser-native spell check on all text inputs — COMPLETE
+**Next Task:** Manual testing on localhost (verify spell check underlines appear in text inputs/textareas across Input, Narrative, Dashboard, and Customization pages)
+**Sprint 6 — Enable browser-native spell check on all text inputs:** [x] COMPLETE (2026-04-13) — v1.0.8-beta
 **Sprint 5 — UI/behavior fixes (tooltip, modal button, modal close):** [x] COMPLETE (2026-04-13) — v1.0.7-beta
 **Sprint 4 — Theme display-name swap + light mode contrast fixes:** [x] COMPLETE (2026-04-13) — v1.0.6-beta
 **Sprint 5 — UI/behavior fixes (tooltip reshape, modal button move, modal close fix):** [x] COMPLETE (2026-04-13) — v1.0.7-beta — Three targeted UI/behavior fixes on the generated story page and saved narrative modal: (1) Proofread highlight tooltip reshaped — changed max-w-[280px] (narrow vertical column) to min-w-[300px] max-w-[440px] (landscape/square layout), replaced hardcoded background '#111827' with theme-aware var(--bg-modal), increased padding from px-3 py-2 to px-4 py-3 for better proportions. Border remains 1px solid var(--accent-primary), text remains var(--text-primary). File: src/components/narrative/NarrativeDisplay.tsx. (2) Moved 'Update Narrative with Repair' button in saved narrative modal — relocated from top of modal (immediately inside Modal wrapper, before Meta Info) to between the Correction section and the COPY/PRINT/PDF/WORD/EMAIL action buttons row. File: src/components/dashboard/NarrativeDetailModal.tsx. (3) Fixed saved narrative modal close behavior — removed erroneous onClose() call from UpdateWithRepairModal's onClose handler that was closing BOTH the sub-popup AND the parent saved narrative modal. Now only calls setShowUpdateModal(false), keeping the parent modal open when the update sub-popup is dismissed. Parent modal's own X button close still works correctly via Modal component's onClose prop. File: src/components/dashboard/NarrativeDetailModal.tsx. No new files, no database changes, no auth/protected files touched. Build verified with zero TypeScript errors.
@@ -3214,6 +3215,14 @@ Previous auth loading fix attempts (commits de85135 through 199b4ef) were revert
 **Build:** Verified with zero TypeScript errors.
 
 ---
+
+## Sprint 6 — Enable Browser-Native Spell Check on All Text Inputs (2026-04-13) — v1.0.8-beta
+
+- [x] **Task 1 — Textarea.tsx** — Destructured `spellCheck` from props, added `spellCheck={spellCheck ?? true}` on the `<textarea>` element before `{...props}` spread. Defaults to enabled; callers can override with `spellCheck={false}`.
+- [x] **Task 2 — AutoTextarea.tsx** — Same pattern: destructured `spellCheck`, added `spellCheck={spellCheck ?? true}` on the `<textarea>` element before `{...props}` spread.
+- [x] **Task 3 — Input.tsx** — Same pattern: destructured `spellCheck`, added `spellCheck={spellCheck ?? true}` on the `<input>` element before `{...props}` spread.
+
+**Coverage:** All text fields app-wide now have browser-native spell check enabled by default — Customer Concern, Codes Present, Diagnostics Performed, Root Cause/Failure, Repair Performed, Repair Verification, Recommended Action (Input page), Edit Story Modal fields (Narrative page), Custom Instructions (CustomizationPanel), and all other text inputs (signup, profile edit, support form). No exclusion logic needed — browsers auto-skip spellcheck on numeric-context inputs. No new files, no database changes, no auth/protected files touched. Build verified with zero TypeScript errors.
 
 ## Sprint 4 — Theme Display-Name Swap + Light Mode Contrast Fixes (2026-04-13) — v1.0.6-beta
 
