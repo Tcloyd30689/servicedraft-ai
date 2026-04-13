@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { concern, cause, correction, storyType, year, make, model } = await request.json();
+    const { concern, cause, correction, storyType, year, make, model, originalInputContext } = await request.json();
 
     if (!concern || !cause || !correction) {
       return NextResponse.json(
@@ -46,12 +46,16 @@ export async function POST(request: Request) {
       ? DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT
       : PROOFREAD_SYSTEM_PROMPT;
 
+    const inputContextBlock = originalInputContext
+      ? `\nORIGINAL INPUT CONTEXT (from input page — flag any mismatches between these facts and the narrative):\n---\n${originalInputContext}\n---\n`
+      : '';
+
     const userPrompt = isDiagnosticOnly
       ? `Review the following diagnostic-only narrative for strength, clarity, and authorization-readiness. This is a diagnosis-only scenario — the repair has NOT been performed yet. Evaluate whether this narrative is detailed and compelling enough to support repair authorization from a manufacturer, extended warranty company, or customer approval.
 
 STORY TYPE: Diagnostic Only
 VEHICLE: ${year || ''} ${make || ''} ${model || ''}
-
+${inputContextBlock}
 NARRATIVE TO REVIEW:
 ---
 CONCERN: ${concern}
@@ -64,7 +68,7 @@ CORRECTION: ${correction}
 
 STORY TYPE: Repair Complete
 VEHICLE: ${year || ''} ${make || ''} ${model || ''}
-
+${inputContextBlock}
 NARRATIVE TO REVIEW:
 ---
 CONCERN: ${concern}

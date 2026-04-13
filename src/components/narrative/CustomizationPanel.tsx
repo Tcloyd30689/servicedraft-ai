@@ -1,8 +1,25 @@
 'use client';
 
+import { useState } from 'react';
 import { useNarrativeStore, type NarrativeState } from '@/stores/narrativeStore';
 import Button from '@/components/ui/Button';
 import Textarea from '@/components/ui/Textarea';
+
+const BLOCKED_PATTERNS = [
+  /ignore (previous|prior|all) instructions/i,
+  /you are now/i,
+  /system\s*:/i,
+  /assistant\s*:/i,
+  /disregard/i,
+  /forget (your|all|previous)/i,
+  /new (instructions|persona|role)/i,
+  /act as/i,
+  /pretend (to be|you are)/i,
+];
+
+function hasBlockedContent(text: string): boolean {
+  return BLOCKED_PATTERNS.some((pattern) => pattern.test(text));
+}
 
 interface SliderOption<T extends string> {
   value: T;
@@ -79,6 +96,17 @@ export default function CustomizationPanel({
     setCustomInstructions,
   } = useNarrativeStore();
 
+  const [instructionsError, setInstructionsError] = useState('');
+
+  const handleApply = () => {
+    if (state.customInstructions.trim() && hasBlockedContent(state.customInstructions)) {
+      setInstructionsError('This input contains restricted content. Please rephrase your customization.');
+      return;
+    }
+    setInstructionsError('');
+    onApply();
+  };
+
   return (
     <div className="space-y-2">
       <SegmentedControl
@@ -107,18 +135,21 @@ export default function CustomizationPanel({
           label="Custom Instructions"
           placeholder="Add any specific instructions for rewriting the narrative..."
           value={state.customInstructions}
-          onChange={(e) => setCustomInstructions(e.target.value)}
-          maxLength={50}
+          onChange={(e) => { setCustomInstructions(e.target.value); if (instructionsError) setInstructionsError(''); }}
+          maxLength={100}
           className="min-h-[80px]"
         />
         <p className="text-[var(--text-muted)] text-xs text-right -mt-4 mr-1">
-          {state.customInstructions.length} / 50
+          {state.customInstructions.length} / 100
         </p>
+        {instructionsError && (
+          <p className="text-red-500 text-xs mt-1">{instructionsError}</p>
+        )}
       </div>
 
       <Button
         size="fullWidth"
-        onClick={onApply}
+        onClick={handleApply}
         disabled={isLoading}
       >
         {isLoading ? 'APPLYING...' : 'APPLY CUSTOMIZATION TO STORY'}

@@ -129,7 +129,7 @@ export default function InputPage() {
   }, [setStoryType, setFieldValue, setDropdownSelection]);
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

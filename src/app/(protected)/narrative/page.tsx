@@ -298,6 +298,7 @@ export default function NarrativePage() {
           toneSlider: toneSlider !== 'standard' ? toneSlider : undefined,
           detailSlider: detailSlider !== 'standard' ? detailSlider : undefined,
           customInstructions: customInstructions.trim() || undefined,
+          originalInputContext: state.compiledDataBlock || undefined,
         }),
       });
 
@@ -352,6 +353,7 @@ export default function NarrativePage() {
           year: state.fieldValues['year'] || '',
           make: state.fieldValues['make'] || '',
           model: state.fieldValues['model'] || '',
+          originalInputContext: state.compiledDataBlock || undefined,
         }),
       });
 

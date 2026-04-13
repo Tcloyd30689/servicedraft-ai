@@ -28,6 +28,7 @@ export async function POST(request: Request) {
       toneSlider,
       detailSlider,
       customInstructions,
+      originalInputContext,
     } = await request.json();
 
     if (!concern || !cause || !correction) {
@@ -35,6 +36,36 @@ export async function POST(request: Request) {
         { error: 'Missing narrative text' },
         { status: 400 },
       );
+    }
+
+    // Server-side custom instructions validation (source of truth)
+    if (customInstructions) {
+      if (customInstructions.length > 100) {
+        return NextResponse.json(
+          { error: 'Custom instructions exceed maximum length of 100 characters' },
+          { status: 400 },
+        );
+      }
+
+      const BLOCKED_PATTERNS = [
+        /ignore (previous|prior|all) instructions/i,
+        /you are now/i,
+        /system\s*:/i,
+        /assistant\s*:/i,
+        /disregard/i,
+        /forget (your|all|previous)/i,
+        /new (instructions|persona|role)/i,
+        /act as/i,
+        /pretend (to be|you are)/i,
+      ];
+
+      const hasBlockedContent = BLOCKED_PATTERNS.some((pattern) => pattern.test(customInstructions));
+      if (hasBlockedContent) {
+        return NextResponse.json(
+          { error: 'Custom instructions contain restricted content' },
+          { status: 400 },
+        );
+      }
     }
 
     // Build customization block
@@ -62,10 +93,14 @@ export async function POST(request: Request) {
 
     const customizationBlock = modifiers.join('\n');
 
+    const inputContextBlock = originalInputContext
+      ? `\nORIGINAL INPUT CONTEXT (from input page — preserve consistency with these facts):\n---\n${originalInputContext}\n---\n`
+      : '';
+
     const userPrompt = `Rewrite the following warranty narrative according to the customization preferences listed below. Preserve all factual content — only adjust the style, length, tone, and detail level as specified.
 
 STORY TYPE: ${storyType === 'diagnostic_only' ? 'Diagnostic Only' : 'Repair Complete'}
-
+${inputContextBlock}
 CURRENT NARRATIVE:
 ---
 CONCERN: ${concern}
