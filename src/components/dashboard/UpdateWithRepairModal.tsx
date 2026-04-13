@@ -179,6 +179,7 @@ export default function UpdateWithRepairModal({
           <textarea
             ref={repairRef}
             rows={2}
+            spellCheck={true}
             value={repairPerformed}
             onChange={(e) => setRepairPerformed(e.target.value)}
             placeholder="Describe the repair that was performed..."
@@ -247,6 +248,7 @@ export default function UpdateWithRepairModal({
           <textarea
             ref={verificationRef}
             rows={2}
+            spellCheck={true}
             value={repairVerification}
             onChange={(e) => setRepairVerification(e.target.value)}
             placeholder="Describe how the repair was verified..."
@@ -273,6 +275,7 @@ export default function UpdateWithRepairModal({
         <textarea
           ref={notesRef}
           rows={2}
+          spellCheck={true}
           value={additionalNotes}
           onChange={(e) => setAdditionalNotes(e.target.value)}
           placeholder="Add any additional context about the completed repair..."

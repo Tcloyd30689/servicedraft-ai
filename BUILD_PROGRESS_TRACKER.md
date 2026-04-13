@@ -3222,8 +3222,13 @@ Previous auth loading fix attempts (commits de85135 through 199b4ef) were revert
 - [x] **Task 2 — AutoTextarea.tsx** — Same pattern: destructured `spellCheck`, added `spellCheck={spellCheck ?? true}` on the `<textarea>` element before `{...props}` spread.
 - [x] **Task 3 — Input.tsx** — Same pattern: destructured `spellCheck`, added `spellCheck={spellCheck ?? true}` on the `<input>` element before `{...props}` spread.
 - [x] **Task 4 — ConditionalField.tsx** (missed by initial audit) — The 6 conditional fields (Codes Present, Diagnostics, Root Cause, Repair Performed, Repair Verification, Recommended Action) use a raw `<textarea>` in `src/components/input/ConditionalField.tsx`, bypassing the shared UI components. Added `spellCheck={true}` directly on the raw textarea element.
+- [x] **Task 5 — EditStoryModal.tsx** (missed by initial audit) — 4 raw textareas (Block Narrative, Concern, Cause, Correction). Added `spellCheck={true}` to all four.
+- [x] **Task 6 — UpdateWithRepairModal.tsx** (missed by initial audit) — 3 raw textareas (Repair Performed, Repair Verification, Additional Notes). Added `spellCheck={true}` to all three.
+- [x] **Task 7 — EditRepairModal.tsx** (missed by initial audit) — 1 raw textarea (dynamic core fields). Added `spellCheck={true}`.
+- [x] **Task 8 — SavedRepairsModal.tsx** (missed by initial audit) — 2 raw textareas (new repair fields, edit repair fields). Added `spellCheck={true}` to both.
+- [x] **Task 9 — admin/page.tsx** (missed by initial audit) — 2 raw textareas (new team description, edit team description). Added `spellCheck={true}` to both.
 
-**Coverage:** All text fields app-wide now have browser-native spell check enabled by default — Customer Concern, Codes Present, Diagnostics Performed, Root Cause/Failure, Repair Performed, Repair Verification, Recommended Action (Input page), Edit Story Modal fields (Narrative page), Custom Instructions (CustomizationPanel), and all other text inputs (signup, profile edit, support form). No exclusion logic needed — browsers auto-skip spellcheck on numeric-context inputs. No new files created, no database changes, no auth/protected files touched. Build verified with zero TypeScript errors.
+**Coverage:** Full codebase grep confirmed every `<textarea>` and `<input>` in src/ now has explicit `spellCheck={true}` — either via the shared UI components (Textarea, AutoTextarea, Input with default prop) or directly on raw elements. No new files created, no database changes, no auth/protected files touched. Build verified with zero TypeScript errors.
 
 ## Sprint 4 — Theme Display-Name Swap + Light Mode Contrast Fixes (2026-04-13) — v1.0.6-beta
 

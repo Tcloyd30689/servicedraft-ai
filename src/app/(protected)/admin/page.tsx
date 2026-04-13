@@ -3317,6 +3317,7 @@ export default function AdminPage() {
             <div>
               <label className="block text-sm text-[var(--text-muted)] mb-1.5">Description</label>
               <textarea
+                spellCheck={true}
                 value={newTeam.description}
                 onChange={(e) => setNewTeam((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="Optional description of the team..."
@@ -3391,6 +3392,7 @@ export default function AdminPage() {
               <div>
                 <label className="block text-sm text-[var(--text-muted)] mb-1.5">Description</label>
                 <textarea
+                  spellCheck={true}
                   value={editingTeam.description || ''}
                   onChange={(e) =>
                     setEditingTeam((prev) => (prev ? { ...prev, description: e.target.value } : null))

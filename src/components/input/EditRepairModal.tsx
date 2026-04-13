@@ -107,6 +107,7 @@ export default function EditRepairModal({ isOpen, onClose, template, onSaved }: 
                 )}
               </label>
               <textarea
+                spellCheck={true}
                 value={fieldValues[f.key] || ''}
                 onChange={(e) => setFieldValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
                 rows={2}

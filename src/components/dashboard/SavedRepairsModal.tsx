@@ -265,6 +265,7 @@ export default function SavedRepairsModal({ isOpen, onClose }: SavedRepairsModal
                   <div key={f.key}>
                     <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">{f.label}</label>
                     <textarea
+                      spellCheck={true}
                       value={newFields[f.key] || ''}
                       onChange={(e) => setNewFields((prev) => ({ ...prev, [f.key]: e.target.value }))}
                       rows={2}
@@ -435,6 +436,7 @@ export default function SavedRepairsModal({ isOpen, onClose }: SavedRepairsModal
                                   <div key={f.key}>
                                     <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">{f.label}</label>
                                     <textarea
+                                      spellCheck={true}
                                       value={editFields[f.key] || ''}
                                       onChange={(e) => setEditFields((prev) => ({ ...prev, [f.key]: e.target.value }))}
                                       rows={2}

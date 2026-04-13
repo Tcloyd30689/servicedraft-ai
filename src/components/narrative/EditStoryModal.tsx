@@ -112,6 +112,7 @@ export default function EditStoryModal({
           </label>
           <textarea
             ref={blockRef}
+            spellCheck={true}
             value={blockText}
             onChange={(e) => {
               setBlockText(e.target.value);
@@ -129,6 +130,7 @@ export default function EditStoryModal({
             </label>
             <textarea
               ref={concernRef}
+              spellCheck={true}
               value={concern}
               onChange={(e) => {
                 setConcern(e.target.value);
@@ -144,6 +146,7 @@ export default function EditStoryModal({
             </label>
             <textarea
               ref={causeRef}
+              spellCheck={true}
               value={cause}
               onChange={(e) => {
                 setCause(e.target.value);
@@ -159,6 +162,7 @@ export default function EditStoryModal({
             </label>
             <textarea
               ref={correctionRef}
+              spellCheck={true}
               value={correction}
               onChange={(e) => {
                 setCorrection(e.target.value);
