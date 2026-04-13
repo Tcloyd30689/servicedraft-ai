@@ -66,9 +66,9 @@ function HighlightedText({
         {highlightedText}
         {tooltip && hoveredIndex === hl.issueIndex && (
           <span
-            className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg text-xs whitespace-normal max-w-[280px] pointer-events-none"
+            className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-4 py-3 rounded-lg text-xs whitespace-normal min-w-[300px] max-w-[440px] pointer-events-none"
             style={{
-              background: '#111827',
+              background: 'var(--bg-modal)',
               border: '1px solid var(--accent-primary)',
               color: 'var(--text-primary)',
               boxShadow: '0 4px 20px rgba(0,0,0,0.9)',

@@ -17,4 +17,4 @@
  * Both display points must always reflect the same value. If either drifts,
  * something is wrong with the import — investigate immediately.
  */
-export const APP_VERSION = 'v1.0.6-beta';
+export const APP_VERSION = 'v1.0.7-beta';
