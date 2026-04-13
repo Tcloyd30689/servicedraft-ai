@@ -1,0 +1,22 @@
+SERVICEDRAFT.AI — Confirm Signup Email (Plain Text Version)
+============================================================
+This template must be MANUALLY pasted into:
+  Supabase Dashboard > Authentication > Email Templates > Confirm Signup
+
+It is NOT loaded by application code. This file exists as a version-controlled
+reference so the team can track changes and revert if needed.
+
+DO NOT use this template for the Magic Link email.
+Outlook Safe Links pre-fetches magic link URLs and consumes OTP tokens.
+============================================================
+
+
+Welcome to ServiceDraft.AI
+
+Thanks for signing up for the beta! ServiceDraft.AI helps HVAC technicians generate professional service narratives from repair data in seconds.
+
+Click the link below to confirm your email and finish setting up your account:
+
+{{ .ConfirmationURL }}
+
+If you didn't sign up for ServiceDraft.AI, you can safely ignore this email.

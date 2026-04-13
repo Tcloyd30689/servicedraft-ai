@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Palette, Wrench, Trash2, AlertTriangle, Shield } from 'lucide-react';
+import { Palette, Wrench, Trash2, AlertTriangle, Shield, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import Button from '@/components/ui/Button';
@@ -105,13 +105,23 @@ export default function DashboardPage() {
                 OWNER DASHBOARD
               </motion.button>
             )}
-            <Button
-              variant="secondary"
-              size="medium"
-              onClick={() => router.push('/main-menu')}
-            >
-              MAIN MENU
-            </Button>
+            {profile.role === 'owner' && (
+              <motion.button
+                onClick={() => router.push('/team-dashboard')}
+                whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(59,130,246,0.4), 0 0 30px rgba(59,130,246,0.2)' }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold cursor-pointer"
+                style={{
+                  backgroundColor: 'var(--bg-input)',
+                  border: '1px solid #3b82f6',
+                  color: '#3b82f6',
+                }}
+              >
+                <Users size={16} />
+                TEAM DASHBOARD
+              </motion.button>
+            )}
           </div>
         </div>
 
