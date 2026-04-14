@@ -17,7 +17,6 @@ interface EmailExportModalProps {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const STORAGE_KEY = 'sd-last-export-email';
 const MAX_RECIPIENTS = 10;
 
 export default function EmailExportModal({
@@ -46,15 +45,10 @@ export default function EmailExportModal({
   const [newContactEmailError, setNewContactEmailError] = useState('');
   const [isSavingNewContact, setIsSavingNewContact] = useState(false);
 
-  // Load last-used email from localStorage on mount
+  // Reset recipient list when modal opens
   useEffect(() => {
     if (isOpen) {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setEmails([saved]);
-      } else {
-        setEmails(['']);
-      }
+      setEmails(['']);
       setErrors([]);
     }
   }, [isOpen]);
@@ -254,9 +248,6 @@ export default function EmailExportModal({
       if (!response.ok) {
         throw new Error(data.error || 'Failed to send email');
       }
-
-      // Save first email to localStorage for next time
-      localStorage.setItem(STORAGE_KEY, validEmails[0]);
 
       const recipientList = validEmails.join(', ');
       toast.success(`Narrative sent to ${recipientList}`);
