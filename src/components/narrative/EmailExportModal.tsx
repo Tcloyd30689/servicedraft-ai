@@ -38,6 +38,14 @@ export default function EmailExportModal({
   const [selectedContactEmails, setSelectedContactEmails] = useState<Set<string>>(new Set());
   const [isLoadingContacts, setIsLoadingContacts] = useState(false);
 
+  // Inline new-contact form state (inside picker)
+  const [showNewContactForm, setShowNewContactForm] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [newContactNotes, setNewContactNotes] = useState('');
+  const [newContactEmailError, setNewContactEmailError] = useState('');
+  const [isSavingNewContact, setIsSavingNewContact] = useState(false);
+
   // Load last-used email from localStorage on mount
   useEffect(() => {
     if (isOpen) {
@@ -54,6 +62,11 @@ export default function EmailExportModal({
   async function openContactsPicker() {
     setShowContactsPicker(true);
     setSelectedContactEmails(new Set());
+    setShowNewContactForm(false);
+    setNewContactName('');
+    setNewContactEmail('');
+    setNewContactNotes('');
+    setNewContactEmailError('');
     setIsLoadingContacts(true);
     try {
       const res = await fetch('/api/contacts');
@@ -65,6 +78,53 @@ export default function EmailExportModal({
       setShowContactsPicker(false);
     } finally {
       setIsLoadingContacts(false);
+    }
+  }
+
+  async function handleSaveNewContact() {
+    if (!newContactName.trim()) {
+      toast.error('Contact name is required');
+      return;
+    }
+    if (!newContactEmail.trim()) {
+      setNewContactEmailError('Email is required');
+      return;
+    }
+    if (!EMAIL_REGEX.test(newContactEmail.trim())) {
+      setNewContactEmailError('Invalid email address');
+      return;
+    }
+
+    setIsSavingNewContact(true);
+    try {
+      const res = await fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contact_name: newContactName.trim(),
+          contact_email: newContactEmail.trim(),
+          notes: newContactNotes.trim() || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to save contact');
+      }
+
+      const { contact } = await res.json();
+      // Add to local list so it appears immediately
+      setContactsList((prev) => [...prev, contact].sort((a, b) => a.contact_name.localeCompare(b.contact_name)));
+      toast.success('Contact saved');
+      setShowNewContactForm(false);
+      setNewContactName('');
+      setNewContactEmail('');
+      setNewContactNotes('');
+      setNewContactEmailError('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save contact');
+    } finally {
+      setIsSavingNewContact(false);
     }
   }
 
@@ -299,6 +359,77 @@ export default function EmailExportModal({
               </button>
             </div>
 
+            {/* Inline New Contact Form */}
+            {showNewContactForm ? (
+              <div className="rounded-lg border border-[var(--accent-vivid)] bg-[var(--bg-card)] p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[var(--text-primary)]">New Contact</span>
+                  <button
+                    type="button"
+                    onClick={() => { setShowNewContactForm(false); setNewContactEmailError(''); }}
+                    className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-0.5"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={newContactName}
+                  onChange={(e) => setNewContactName(e.target.value)}
+                  placeholder="Name *"
+                  className="w-full px-3 py-1.5 text-xs font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
+                />
+                <div>
+                  <input
+                    type="email"
+                    value={newContactEmail}
+                    onChange={(e) => { setNewContactEmail(e.target.value); setNewContactEmailError(''); }}
+                    placeholder="Email *"
+                    className="w-full px-3 py-1.5 text-xs font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
+                  />
+                  {newContactEmailError && (
+                    <p className="text-red-400 text-[10px] mt-0.5">{newContactEmailError}</p>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={newContactNotes}
+                  onChange={(e) => setNewContactNotes(e.target.value)}
+                  placeholder="Notes (optional)"
+                  className="w-full px-3 py-1.5 text-xs font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setShowNewContactForm(false); setNewContactEmailError(''); }}
+                    className="flex-1 px-2 py-1 text-[10px] font-semibold rounded-md transition-colors cursor-pointer"
+                    style={{ color: 'var(--text-secondary)', border: '1px solid var(--accent-border)' }}
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveNewContact}
+                    disabled={!newContactName.trim() || !newContactEmail.trim() || isSavingNewContact}
+                    className="flex-1 px-2 py-1 text-[10px] font-semibold rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                    style={{ backgroundColor: 'var(--accent-primary)', color: 'var(--btn-text-on-accent)' }}
+                  >
+                    {isSavingNewContact ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
+                    {isSavingNewContact ? 'SAVING...' : 'SAVE CONTACT'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowNewContactForm(true)}
+                className="flex items-center gap-1.5 text-[10px] font-semibold text-[var(--accent-bright)] hover:text-[var(--accent-hover)] transition-colors cursor-pointer"
+              >
+                <Plus size={12} />
+                NEW CONTACT
+              </button>
+            )}
+
             {isLoadingContacts ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 size={18} className="animate-spin text-[var(--accent-bright)]" />
@@ -306,7 +437,7 @@ export default function EmailExportModal({
               </div>
             ) : contactsList.length === 0 ? (
               <p className="text-xs text-[var(--text-muted)] text-center py-4">
-                No saved contacts yet. Add contacts from your Dashboard.
+                No saved contacts yet. Click &ldquo;New Contact&rdquo; above to add one.
               </p>
             ) : (
               <>
