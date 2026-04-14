@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Palette, Wrench, Trash2, AlertTriangle, Shield, Users } from 'lucide-react';
+import { Palette, Wrench, Trash2, AlertTriangle, Shield, Users, BookUser } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import Button from '@/components/ui/Button';
@@ -15,6 +15,7 @@ import EditProfileModal from '@/components/dashboard/EditProfileModal';
 import NarrativeHistory from '@/components/dashboard/NarrativeHistory';
 import AppearanceModal from '@/components/dashboard/AppearanceModal';
 import SavedRepairsModal from '@/components/dashboard/SavedRepairsModal';
+import ContactsModal from '@/components/dashboard/ContactsModal';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function DashboardPage() {
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [showAppearance, setShowAppearance] = useState(false);
   const [showSavedRepairs, setShowSavedRepairs] = useState(false);
+  const [showContacts, setShowContacts] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -151,6 +153,15 @@ export default function DashboardPage() {
             <Wrench size={16} />
             MY SAVED REPAIRS
           </Button>
+          <Button
+            variant="secondary"
+            size="medium"
+            onClick={() => setShowContacts(true)}
+            className="flex items-center gap-2"
+          >
+            <BookUser size={16} />
+            SAVED CONTACTS
+          </Button>
         </div>
 
         {/* Narrative History */}
@@ -190,6 +201,12 @@ export default function DashboardPage() {
       <SavedRepairsModal
         isOpen={showSavedRepairs}
         onClose={() => setShowSavedRepairs(false)}
+      />
+
+      {/* Contacts Modal */}
+      <ContactsModal
+        isOpen={showContacts}
+        onClose={() => setShowContacts(false)}
       />
 
       {/* Delete Account Confirmation Modal */}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Mail, Plus, X, Loader2 } from 'lucide-react';
+import { Mail, Plus, X, Loader2, BookUser, Check } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import type { NarrativeData } from '@/stores/narrativeStore';
@@ -32,6 +32,12 @@ export default function EmailExportModal({
   const [isSending, setIsSending] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
+  // Contacts picker state
+  const [showContactsPicker, setShowContactsPicker] = useState(false);
+  const [contactsList, setContactsList] = useState<{ id: string; contact_name: string; contact_email: string }[]>([]);
+  const [selectedContactEmails, setSelectedContactEmails] = useState<Set<string>>(new Set());
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+
   // Load last-used email from localStorage on mount
   useEffect(() => {
     if (isOpen) {
@@ -44,6 +50,72 @@ export default function EmailExportModal({
       setErrors([]);
     }
   }, [isOpen]);
+
+  async function openContactsPicker() {
+    setShowContactsPicker(true);
+    setSelectedContactEmails(new Set());
+    setIsLoadingContacts(true);
+    try {
+      const res = await fetch('/api/contacts');
+      if (!res.ok) throw new Error('Failed to fetch contacts');
+      const data = await res.json();
+      setContactsList(data.contacts || []);
+    } catch {
+      toast.error('Failed to load contacts');
+      setShowContactsPicker(false);
+    } finally {
+      setIsLoadingContacts(false);
+    }
+  }
+
+  function toggleContactSelection(email: string) {
+    setSelectedContactEmails((prev) => {
+      const next = new Set(prev);
+      if (next.has(email)) {
+        next.delete(email);
+      } else {
+        next.add(email);
+      }
+      return next;
+    });
+  }
+
+  function handleAddSelectedContacts() {
+    const currentEmails = emails.map((e) => e.trim().toLowerCase()).filter(Boolean);
+    const toAdd: string[] = [];
+
+    for (const email of selectedContactEmails) {
+      if (currentEmails.includes(email.toLowerCase())) continue; // skip duplicates
+      toAdd.push(email);
+    }
+
+    const totalAfterAdd = currentEmails.length + toAdd.length;
+    // Account for empty first slot
+    const hasEmptyFirst = emails.length === 1 && !emails[0].trim();
+
+    if (totalAfterAdd > MAX_RECIPIENTS && !hasEmptyFirst) {
+      toast.error(`Maximum ${MAX_RECIPIENTS} recipients allowed`);
+      // Add as many as we can
+      const slotsAvailable = MAX_RECIPIENTS - currentEmails.length;
+      const trimmedToAdd = toAdd.slice(0, slotsAvailable);
+      if (trimmedToAdd.length > 0) {
+        setEmails([...emails.filter((e) => e.trim()), ...trimmedToAdd]);
+      }
+    } else if (hasEmptyFirst) {
+      // Replace the empty first slot
+      const capped = toAdd.slice(0, MAX_RECIPIENTS);
+      setEmails(capped.length > 0 ? capped : ['']);
+    } else {
+      setEmails([...emails.filter((e) => e.trim()), ...toAdd]);
+    }
+
+    setShowContactsPicker(false);
+    if (toAdd.length > 0) {
+      toast.success(`Added ${Math.min(toAdd.length, MAX_RECIPIENTS)} contact${toAdd.length === 1 ? '' : 's'}`);
+    } else if (selectedContactEmails.size > 0) {
+      toast.error('Selected contacts are already in the recipient list');
+    }
+  }
 
   const subjectPreview = buildSubjectPreview(vehicleInfo);
 
@@ -185,18 +257,125 @@ export default function EmailExportModal({
           ))}
         </div>
 
-        {/* Add recipient link */}
-        {emails.length < MAX_RECIPIENTS && (
+        {/* Add recipient / Select from contacts row */}
+        <div className="flex items-center gap-3">
+          {emails.length < MAX_RECIPIENTS && (
+            <button
+              type="button"
+              onClick={handleAddRecipient}
+              disabled={isSending}
+              className="flex items-center gap-1.5 text-xs text-[var(--accent-bright)]
+                hover:text-[var(--accent-hover)] transition-colors disabled:opacity-50"
+            >
+              <Plus size={14} />
+              ADD ANOTHER RECIPIENT
+            </button>
+          )}
           <button
             type="button"
-            onClick={handleAddRecipient}
+            onClick={openContactsPicker}
             disabled={isSending}
             className="flex items-center gap-1.5 text-xs text-[var(--accent-bright)]
-              hover:text-[var(--accent-hover)] transition-colors disabled:opacity-50"
+              hover:text-[var(--accent-hover)] transition-colors disabled:opacity-50 ml-auto"
           >
-            <Plus size={14} />
-            ADD ANOTHER RECIPIENT
+            <BookUser size={14} />
+            SELECT FROM CONTACTS
           </button>
+        </div>
+
+        {/* Contacts Picker Panel */}
+        {showContactsPicker && (
+          <div className="rounded-lg border border-[var(--accent-border)] bg-[var(--bg-input)] p-3 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[var(--text-primary)] uppercase tracking-wider">
+                Select Contacts
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowContactsPicker(false)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors p-0.5"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {isLoadingContacts ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 size={18} className="animate-spin text-[var(--accent-bright)]" />
+                <span className="ml-2 text-xs text-[var(--text-muted)]">Loading contacts...</span>
+              </div>
+            ) : contactsList.length === 0 ? (
+              <p className="text-xs text-[var(--text-muted)] text-center py-4">
+                No saved contacts yet. Add contacts from your Dashboard.
+              </p>
+            ) : (
+              <>
+                <div className="max-h-[200px] overflow-y-auto space-y-1">
+                  {contactsList.map((contact) => {
+                    const isSelected = selectedContactEmails.has(contact.contact_email);
+                    const alreadyAdded = emails.map((e) => e.trim().toLowerCase()).includes(contact.contact_email.toLowerCase());
+                    return (
+                      <button
+                        key={contact.id}
+                        type="button"
+                        onClick={() => !alreadyAdded && toggleContactSelection(contact.contact_email)}
+                        disabled={alreadyAdded}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                          alreadyAdded
+                            ? 'opacity-40 cursor-not-allowed'
+                            : isSelected
+                              ? 'bg-[var(--accent-primary)]/15 border border-[var(--accent-primary)]'
+                              : 'hover:bg-[var(--accent-8)] cursor-pointer'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                          isSelected
+                            ? 'bg-[var(--accent-primary)] border-[var(--accent-primary)]'
+                            : 'border-[var(--accent-border)]'
+                        }`}>
+                          {isSelected && <Check size={12} className="text-white" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <span className="text-sm font-data text-[var(--text-primary)] block truncate">
+                            {contact.contact_name}
+                          </span>
+                          <span className="text-xs text-[var(--text-muted)] block truncate">
+                            {contact.contact_email}
+                            {alreadyAdded && ' (already added)'}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowContactsPicker(false)}
+                    className="flex-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                    style={{
+                      color: 'var(--text-secondary)',
+                      border: '1px solid var(--accent-border)',
+                    }}
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddSelectedContacts}
+                    disabled={selectedContactEmails.size === 0}
+                    className="flex-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{
+                      backgroundColor: 'var(--accent-primary)',
+                      color: 'var(--btn-text-on-accent)',
+                    }}
+                  >
+                    ADD SELECTED ({selectedContactEmails.size})
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         )}
 
         {/* Subject preview */}
