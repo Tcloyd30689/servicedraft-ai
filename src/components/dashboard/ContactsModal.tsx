@@ -184,7 +184,7 @@ export default function ContactsModal({ isOpen, onClose }: ContactsModalProps) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Saved Contacts">
+    <Modal isOpen={isOpen} onClose={onClose} title="Email Contact List">
       <div className="space-y-4">
         {/* New Contact Button */}
         {!showNewForm && (

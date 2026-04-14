@@ -160,7 +160,7 @@ export default function DashboardPage() {
             className="flex items-center gap-2"
           >
             <BookUser size={16} />
-            SAVED CONTACTS
+            EMAIL CONTACT LIST
           </Button>
         </div>
 
