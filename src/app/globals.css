@@ -151,22 +151,155 @@ select {
   background-color: var(--bg-input);
   color: var(--text-primary);
 }
+/* Native select option dropdowns inherit color-scheme from the page. In light
+   mode the browser renders option lists with a light-grey background. Force
+   dark backgrounds and light text so they always match the dark input styling. */
+select {
+  color-scheme: dark !important;
+}
+select option {
+  background-color: #1a1a2e;
+  color: #f0f0f5;
+}
 input::placeholder,
 textarea::placeholder {
   color: var(--text-muted);
 }
 
-/* Light mode: force dark text on form controls for readable contrast.
-   When color-scheme is "light", browsers may apply white backgrounds to
-   inputs/selects while --text-primary remains near-white, causing
-   invisible text. This override ensures dark text in all light configs. */
-html[data-mode="light"] input,
-html[data-mode="light"] textarea,
-html[data-mode="light"] select,
-html[data-mode="light"] select option {
-  color: #1a1a2e;
+/* Light mode: inputs keep dark backgrounds (frosted glass cards), so text
+   stays light via --text-primary (#f0f0f5, set by ThemeProvider). No
+   override needed — the Tailwind classes and the generic input rule above
+   already apply var(--text-primary) and var(--text-muted). */
+
+/* Override browser autofill styling (Chrome/Edge force white bg + black text).
+   The box-shadow trick floods the background with our input color, and
+   transition-delay prevents the browser's !important styles from flashing. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+  box-shadow: 0 0 0 1000px var(--bg-input) inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  caret-color: var(--text-primary) !important;
+  transition: background-color 600000s 0s, color 600000s 0s;
 }
-html[data-mode="light"] input::placeholder,
-html[data-mode="light"] textarea::placeholder {
-  color: #6b7280;
+
+/* ── Navbar hover effects (real CSS — Tailwind v4 arbitrary hover + CSS vars unreliable) ── */
+
+/* Back/forward circle buttons + theme toggle */
+.nav-btn-hover {
+  transition: all 150ms ease;
+}
+.nav-btn-hover:hover {
+  color: #ffffff !important;
+  background-color: var(--accent-30) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: var(--shadow-glow-btn) !important;
+  transform: scale(1.12);
+}
+
+/* Dropdown menu trigger button */
+.nav-trigger-hover {
+  transition: all 150ms ease;
+}
+.nav-trigger-hover:hover {
+  background-color: var(--accent-20) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: var(--shadow-glow-btn) !important;
+}
+
+/* Dropdown menu items */
+.nav-item-hover {
+  transition: all 120ms ease;
+}
+.nav-item-hover:hover {
+  color: #ffffff !important;
+  background-color: var(--accent-30) !important;
+  box-shadow: inset 3px 0 0 var(--accent-primary), var(--shadow-glow-sm) !important;
+  padding-left: 20px;
+}
+
+/* ── Theme toggle pill switch ── */
+.theme-toggle-pill {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  line-height: 0;
+}
+.theme-toggle-pill:hover .theme-toggle-track {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-glow-sm);
+}
+
+.theme-toggle-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 52px;
+  height: 26px;
+  border-radius: 9999px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-10);
+  transition: border-color 250ms ease, box-shadow 250ms ease;
+}
+
+/* Sliding thumb */
+.theme-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-primary);
+  transition: left 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.theme-toggle-track.is-dark .theme-toggle-thumb {
+  left: 2px;
+}
+.theme-toggle-track.is-light .theme-toggle-thumb {
+  left: 28px;
+}
+
+/* Icons — always visible, thumb slides behind the active one */
+.theme-toggle-icon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: opacity 250ms ease, color 250ms ease;
+}
+.theme-icon-moon {
+  left: 6px;
+}
+.theme-icon-sun {
+  right: 6px;
+}
+
+/* Dark mode: moon is active (bright), sun is muted */
+.theme-toggle-track.is-dark .theme-icon-moon {
+  color: #ffffff;
+  opacity: 1;
+}
+.theme-toggle-track.is-dark .theme-icon-sun {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
+/* Light mode: sun is active (bright), moon is muted */
+.theme-toggle-track.is-light .theme-icon-sun {
+  color: #ffffff;
+  opacity: 1;
+}
+.theme-toggle-track.is-light .theme-icon-moon {
+  color: var(--text-muted);
+  opacity: 0.4;
 }

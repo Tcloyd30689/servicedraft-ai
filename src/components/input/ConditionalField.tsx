@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useCallback, useEffect } from 'react';
-import { Sparkles } from 'lucide-react';
+import { ChevronDown, Sparkles } from 'lucide-react';
 import type { FieldConfig, DropdownOption } from '@/constants/fieldConfig';
 import { dropdownOptions } from '@/constants/fieldConfig';
 import { cn } from '@/lib/utils';
@@ -55,17 +55,23 @@ export default function ConditionalField({
           )}
         </label>
 
-        <select
-          value={dropdownSelection}
-          onChange={(e) => onDropdownChange(e.target.value as DropdownOption)}
-          className="text-xs bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-md px-2 py-1.5 text-[var(--text-secondary)] cursor-pointer focus:outline-none focus:border-[var(--accent-hover)] appearance-none"
-        >
-          {dropdownOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            value={dropdownSelection}
+            onChange={(e) => onDropdownChange(e.target.value as DropdownOption)}
+            className="text-xs bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-md px-2 pr-7 py-1.5 text-[var(--text-secondary)] cursor-pointer focus:outline-none focus:border-[var(--accent-hover)] appearance-none"
+          >
+            {dropdownOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            size={12}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none"
+          />
+        </div>
       </div>
 
       {/* Text field — only shown for "Include Information" */}
