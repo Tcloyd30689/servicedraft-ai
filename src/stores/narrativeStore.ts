@@ -131,7 +131,12 @@ export function useNarrativeStore() {
   }, []);
 
   const setNarrative = useCallback((data: NarrativeData | null) => {
-    globalState = { ...globalState, narrative: data, isSaved: false, savedNarrativeId: null };
+    globalState = { ...globalState, narrative: data, isSaved: false };
+    notifyListeners();
+  }, []);
+
+  const setNarrativeWithSavedId = useCallback((data: NarrativeData, narrativeId: string) => {
+    globalState = { ...globalState, narrative: data, isSaved: true, savedNarrativeId: narrativeId };
     notifyListeners();
   }, []);
 
@@ -249,6 +254,7 @@ export function useNarrativeStore() {
     setRoNumber,
     setCompiledDataBlock,
     setNarrative,
+    setNarrativeWithSavedId,
     setDisplayFormat,
     setLengthSlider,
     setToneSlider,

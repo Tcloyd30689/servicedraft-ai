@@ -54,6 +54,16 @@ export interface ActivityLog {
   created_at: string;
 }
 
+export interface NarrativeHistoryEntry {
+  action: string;
+  version: number;
+  at: string;
+  narrative_text?: string;
+  concern?: string;
+  cause?: string;
+  correction?: string;
+}
+
 export interface Narrative {
   id: string;
   user_id: string;
@@ -66,6 +76,7 @@ export interface Narrative {
   correction: string | null;
   full_narrative: string | null;
   story_type: 'diagnostic_only' | 'repair_complete';
+  action_history: NarrativeHistoryEntry[];
   created_at: string;
   updated_at: string;
 }

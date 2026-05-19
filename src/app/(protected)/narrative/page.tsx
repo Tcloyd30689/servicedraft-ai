@@ -76,6 +76,77 @@ export default function NarrativePage() {
 
   const lastGenerationId = useRef(-1);
 
+  // Ref to track savedNarrativeId without stale closures
+  const savedIdRef = useRef(state.savedNarrativeId);
+  useEffect(() => { savedIdRef.current = state.savedNarrativeId; }, [state.savedNarrativeId]);
+
+  // Unified auto-save: INSERT on first save, PATCH on subsequent saves.
+  // Accepts narrativeData directly to avoid stale closure issues when called
+  // immediately after setNarrative() within the same async handler.
+  const autoSaveNarrative = useCallback(async (actionType: string, narrativeData?: NarrativeData): Promise<string | null> => {
+    const nd = narrativeData || state.narrative;
+    if (!nd || !user) return null;
+
+    const currentSavedId = savedIdRef.current;
+
+    if (!currentSavedId) {
+      // First save — INSERT a new row
+      const res = await fetch('/api/narratives/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ro_number: state.roNumber || null,
+          vehicle_year: state.fieldValues['year']
+            ? parseInt(state.fieldValues['year'], 10) || null
+            : null,
+          vehicle_make: state.fieldValues['make'] || null,
+          vehicle_model: state.fieldValues['model'] || null,
+          concern: nd.concern,
+          cause: nd.cause,
+          correction: nd.correction,
+          full_narrative: nd.block_narrative,
+          story_type: state.storyType,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to save narrative');
+      }
+
+      const { id } = await res.json();
+      if (id) {
+        markSaved(id);
+        savedIdRef.current = id;
+      }
+      return id;
+    } else {
+      // Subsequent save — PATCH existing row
+      const res = await fetch(`/api/narratives/${currentSavedId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action_type: actionType,
+          narrative: {
+            block_narrative: nd.block_narrative,
+            concern: nd.concern,
+            cause: nd.cause,
+            correction: nd.correction,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to update narrative');
+      }
+
+      // Re-mark as saved to flip the dirty flag
+      markSaved(currentSavedId);
+      return currentSavedId;
+    }
+  }, [state.narrative, state.roNumber, state.fieldValues, state.storyType, user, markSaved]);
+
   // Generate narrative on mount if we have compiled data but no narrative yet
   const generateNarrative = useCallback(async () => {
     if (!state.compiledDataBlock || !state.storyType) return;
@@ -108,6 +179,11 @@ export default function NarrativePage() {
       setAnimateNarrative(true);
       setRetryCount(0);
 
+      // Auto-save the initial generation (silent — no toast except first time)
+      autoSaveNarrative('initial_save', data)
+        .then(() => toast.success('Saved automatically', { id: 'auto-save-once' }))
+        .catch((err) => console.error('Auto-save on generate error:', err));
+
       // Create tracker entry — awaited because we need the ID back
       const trackerId = await createTrackerEntry({
         ro_number: state.roNumber || undefined,
@@ -136,7 +212,7 @@ export default function NarrativePage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [state.compiledDataBlock, state.storyType, state.roNumber, state.fieldValues, state.lengthSlider, state.toneSlider, state.detailSlider, state.customInstructions, setNarrative, setTrackerId]);
+  }, [state.compiledDataBlock, state.storyType, state.roNumber, state.fieldValues, state.lengthSlider, state.toneSlider, state.detailSlider, state.customInstructions, setNarrative, setTrackerId, autoSaveNarrative]);
 
   useEffect(() => {
     // Redirect if no data to work with — allow through if narrative already exists (repair update flow)
@@ -253,6 +329,11 @@ export default function NarrativePage() {
       }
 
       logActivity('regenerate', { story_type: state.storyType || undefined });
+
+      // Auto-save after regeneration (silent)
+      autoSaveNarrative('regenerate', data)
+        .catch((err) => console.error('Auto-save on regenerate error:', err));
+
       toast.success('Story regenerated');
     } catch {
       setGenerationError('Failed to regenerate narrative. Please try again.');
@@ -326,6 +407,11 @@ export default function NarrativePage() {
       }
 
       logActivity('customize', { story_type: state.storyType || undefined });
+
+      // Auto-save after customization (silent)
+      autoSaveNarrative('customize', data)
+        .catch((err) => console.error('Auto-save on customize error:', err));
+
       toast.success('Customization applied');
     } catch {
       toast.error('Failed to customize narrative. Please try again.');
@@ -431,6 +517,10 @@ export default function NarrativePage() {
         });
       }
 
+      // Auto-save after applying edits (silent)
+      autoSaveNarrative('proofread_apply', data)
+        .catch((err) => console.error('Auto-save on apply-edits error:', err));
+
       toast.success('Selected edits applied');
     } catch {
       toast.error('Failed to apply edits. Please try again.');
@@ -438,40 +528,6 @@ export default function NarrativePage() {
       setIsApplyingEdits(false);
     }
   };
-
-  // Save to server-side API route — always INSERTs a new row (preserves audit trail)
-  const saveToDatabase = useCallback(async (): Promise<string | null> => {
-    if (!state.narrative || !user) return null;
-    // Skip if already saved in this session (prevents duplicate rows from auto-save)
-    if (state.savedNarrativeId) return state.savedNarrativeId;
-
-    const res = await fetch('/api/narratives/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ro_number: state.roNumber || null,
-        vehicle_year: state.fieldValues['year']
-          ? parseInt(state.fieldValues['year'], 10) || null
-          : null,
-        vehicle_make: state.fieldValues['make'] || null,
-        vehicle_model: state.fieldValues['model'] || null,
-        concern: state.narrative.concern,
-        cause: state.narrative.cause,
-        correction: state.narrative.correction,
-        full_narrative: state.narrative.block_narrative,
-        story_type: state.storyType,
-      }),
-    });
-
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || 'Failed to save narrative');
-    }
-
-    const { id } = await res.json();
-    if (id) markSaved(id);
-    return id;
-  }, [state.narrative, state.roNumber, state.fieldValues, state.storyType, state.savedNarrativeId, user, markSaved]);
 
   // Manual save handler
   const handleSave = async () => {
@@ -483,7 +539,7 @@ export default function NarrativePage() {
     setIsSaving(true);
     dispatchActivity(0.5);
     try {
-      await saveToDatabase();
+      await autoSaveNarrative('manual_save');
 
       // Fire-and-forget tracker update
       if (state.trackerId) {
@@ -507,12 +563,11 @@ export default function NarrativePage() {
 
     dispatchActivity(0.5);
     if (!state.isSaved) {
-      // Fire-and-forget: don't block exports on save
-      saveToDatabase()
+      autoSaveNarrative('auto_save')
         .then(() => toast.success('Narrative auto-saved to your history', { id: 'auto-save' }))
         .catch((err) => console.error('Auto-save on export error:', err));
     }
-  }, [state.narrative, state.isSaved, user, saveToDatabase]);
+  }, [state.narrative, state.isSaved, user, autoSaveNarrative]);
 
   // Edit handler
   const handleEditSave = (updated: NarrativeData) => {
@@ -520,6 +575,11 @@ export default function NarrativePage() {
     setAnimateNarrative(false);
     setProofreadData(null);
     clearHighlights();
+
+    // Auto-save after manual edit (silent)
+    autoSaveNarrative('manual_edit', updated)
+      .catch((err) => console.error('Auto-save on edit error:', err));
+
     toast.success('Story updated');
   };
 
@@ -825,6 +885,11 @@ export default function NarrativePage() {
         narrative={state.narrative}
         displayFormat={state.displayFormat}
         onSave={handleEditSave}
+        onAutoSave={(updated) => {
+          setNarrative(updated);
+          autoSaveNarrative('auto_save', updated)
+            .catch((err) => console.error('Auto-save from edit modal error:', err));
+        }}
       />
 
       <ShareExportModal

@@ -13,6 +13,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    const now = new Date().toISOString();
+
     const narrativeData = {
       user_id: user.id,
       ro_number: body.ro_number || null,
@@ -24,7 +26,16 @@ export async function POST(request: NextRequest) {
       correction: body.correction,
       full_narrative: body.full_narrative,
       story_type: body.story_type,
-      updated_at: new Date().toISOString(),
+      action_history: [{
+        action: 'generate',
+        version: 1,
+        at: now,
+        narrative_text: body.full_narrative,
+        concern: body.concern,
+        cause: body.cause,
+        correction: body.correction,
+      }],
+      updated_at: now,
     };
 
     const { data, error } = await supabase
