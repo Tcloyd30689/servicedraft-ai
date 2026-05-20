@@ -31,6 +31,7 @@ async function getAuthUser() {
 //   team_id, page (1-based), filter (all|regenerated|customized|proofread|saved|exported),
 //   search, sort (asc|desc)
 //   detail_id — when present, fetch a single tracker entry by ID with all columns
+//   stats — when '1', return aggregate stats for the team (overview widgets)
 export async function GET(request: Request) {
   try {
     const authUser = await getAuthUser();
@@ -45,10 +46,24 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     let teamId = searchParams.get('team_id');
     const detailId = searchParams.get('detail_id');
+    const statsMode = searchParams.get('stats') === '1';
 
     // Admin can only query their own team
     if (authUser.role === 'admin') {
       if (!authUser.teamId) {
+        if (statsMode) {
+          return NextResponse.json({
+            success: true,
+            stats: {
+              totalUsers: 0,
+              totalGenerations: 0,
+              totalExports: 0,
+              totalProofreads: 0,
+              narrativesToday: 0,
+              topActiveUsers: [],
+            },
+          });
+        }
         return NextResponse.json({ success: true, data: [], totalCount: 0 });
       }
       teamId = authUser.teamId;
@@ -59,6 +74,94 @@ export async function GET(request: Request) {
     }
 
     const svc = createServiceClient();
+
+    // ─── Stats mode: aggregate counts for overview widgets ─────────
+    if (statsMode && teamId) {
+      // Resolve team member ids (and basic profile fields for the leaderboard)
+      const { data: statsMembers } = await svc
+        .from('users')
+        .select('id, first_name, last_name, email, position')
+        .eq('team_id', teamId);
+
+      const memberIds = (statsMembers || []).map((m: { id: string }) => m.id);
+      const totalUsers = memberIds.length;
+
+      if (totalUsers === 0) {
+        return NextResponse.json({
+          success: true,
+          stats: {
+            totalUsers: 0,
+            totalGenerations: 0,
+            totalExports: 0,
+            totalProofreads: 0,
+            narrativesToday: 0,
+            topActiveUsers: [],
+          },
+        });
+      }
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayIso = todayStart.toISOString();
+
+      // Parallel aggregate queries
+      const [
+        { count: totalGenerations },
+        { count: totalExports },
+        { count: totalProofreads },
+        { count: narrativesToday },
+        { data: narrativeRows },
+      ] = await Promise.all([
+        svc.from('narratives').select('id', { count: 'exact', head: true }).in('user_id', memberIds),
+        svc.from('narrative_tracker').select('id', { count: 'exact', head: true }).in('user_id', memberIds).eq('is_exported', true),
+        svc.from('narrative_tracker').select('id', { count: 'exact', head: true }).in('user_id', memberIds).eq('is_proofread', true),
+        svc.from('narratives').select('id', { count: 'exact', head: true }).in('user_id', memberIds).gte('created_at', todayIso),
+        svc.from('narratives').select('user_id').in('user_id', memberIds),
+      ]);
+
+      // Aggregate top 3 active users by narrative count
+      const countsByUser: Record<string, number> = {};
+      ((narrativeRows || []) as Array<{ user_id: string }>).forEach((row) => {
+        countsByUser[row.user_id] = (countsByUser[row.user_id] || 0) + 1;
+      });
+
+      const memberLookup: Record<string, { first_name: string | null; last_name: string | null; email: string; position: string | null }> = {};
+      (statsMembers || []).forEach((m: { id: string; first_name: string | null; last_name: string | null; email: string; position: string | null }) => {
+        memberLookup[m.id] = {
+          first_name: m.first_name,
+          last_name: m.last_name,
+          email: m.email,
+          position: m.position,
+        };
+      });
+
+      const topActiveUsers = Object.entries(countsByUser)
+        .map(([user_id, count]) => {
+          const u = memberLookup[user_id] || { first_name: null, last_name: null, email: 'Unknown', position: null };
+          return {
+            user_id,
+            first_name: u.first_name,
+            last_name: u.last_name,
+            email: u.email,
+            position: u.position,
+            count,
+          };
+        })
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3);
+
+      return NextResponse.json({
+        success: true,
+        stats: {
+          totalUsers,
+          totalGenerations: totalGenerations ?? 0,
+          totalExports: totalExports ?? 0,
+          totalProofreads: totalProofreads ?? 0,
+          narrativesToday: narrativesToday ?? 0,
+          topActiveUsers,
+        },
+      });
+    }
 
     // ─── Detail mode: fetch a single tracker entry by ID ───────────
     if (detailId) {
