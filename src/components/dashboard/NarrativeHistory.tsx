@@ -257,14 +257,14 @@ export default function NarrativeHistory({ userId, senderName }: NarrativeHistor
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--accent-15)]">
-                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Date</th>
-                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Time</th>
-                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">R.O. #</th>
-                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Year</th>
-                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Make</th>
-                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Model</th>
-                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Type</th>
-                <th className="text-left py-2 px-2 text-[var(--text-secondary)] font-medium">Saved Story</th>
+                <th className="text-left py-2 px-2 text-white font-medium">Date</th>
+                <th className="text-left py-2 px-2 text-white font-medium">Time</th>
+                <th className="text-left py-2 px-2 text-white font-medium">R.O. #</th>
+                <th className="text-left py-2 px-2 text-white font-medium">Year</th>
+                <th className="text-left py-2 px-2 text-white font-medium">Make</th>
+                <th className="text-left py-2 px-2 text-white font-medium">Model</th>
+                <th className="text-left py-2 px-2 text-white font-medium">Type</th>
+                <th className="text-left py-2 px-2 text-white font-medium">Saved Story</th>
               </tr>
             </thead>
             <tbody>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { Mail, Plus, X, Loader2, BookUser, Check } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
@@ -45,15 +45,7 @@ export default function EmailExportModal({
   const [newContactEmailError, setNewContactEmailError] = useState('');
   const [isSavingNewContact, setIsSavingNewContact] = useState(false);
 
-  // Reset recipient list when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setEmails(['']);
-      setErrors([]);
-    }
-  }, [isOpen]);
-
-  async function openContactsPicker() {
+  const openContactsPicker = useCallback(async () => {
     setShowContactsPicker(true);
     setSelectedContactEmails(new Set());
     setShowNewContactForm(false);
@@ -73,7 +65,16 @@ export default function EmailExportModal({
     } finally {
       setIsLoadingContacts(false);
     }
-  }
+  }, []);
+
+  // Reset recipient list + auto-open contacts picker when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setEmails(['']);
+      setErrors([]);
+      void openContactsPicker();
+    }
+  }, [isOpen, openContactsPicker]);
 
   async function handleSaveNewContact() {
     if (!newContactName.trim()) {

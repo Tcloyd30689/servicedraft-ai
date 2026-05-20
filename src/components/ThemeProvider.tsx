@@ -106,9 +106,9 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
 
   // --- Luminance-based overrides for extreme accent colors (Noir, White, etc.) ---
 
-  // Button text: ensure contrast on accent-hover backgrounds (used by primary buttons)
-  const hoverBrightness = perceivedBrightness(accent.hover);
-  root.style.setProperty('--btn-text-on-accent', hoverBrightness > 180 ? '#000000' : '#ffffff');
+  // Button text on accent backgrounds is always white per Tyler's directive (Sprint 15).
+  // Light accents may need a darker fill override in a future sprint if contrast becomes a problem.
+  root.style.setProperty('--btn-text-on-accent', '#ffffff');
 
   // Light mode: if accent.border is too light on dark glass cards, use accent.hover for borders
   if (effectiveMode === 'light') {
@@ -118,11 +118,6 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
       root.style.setProperty('--card-border', accent.hover);
       root.style.setProperty('--modal-border', accent.hover);
     }
-  }
-
-  // Dark mode: if accent.hover is very light (e.g. Noir accent), darken secondary/ghost text
-  if (effectiveMode === 'dark' && hoverBrightness > 200) {
-    root.style.setProperty('--accent-vivid', accent.border);
   }
 }
 

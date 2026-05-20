@@ -167,16 +167,18 @@ export default function DashboardPage() {
         {/* Narrative History */}
         <NarrativeHistory userId={user.id} senderName={[profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username || ''} />
 
-        {/* Delete Account */}
-        <div className="flex justify-center pt-4 pb-2">
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="flex items-center gap-1.5 text-[var(--text-muted)] text-sm hover:text-red-400 transition-colors cursor-pointer"
-          >
-            <Trash2 size={14} />
-            Delete Account
-          </button>
-        </div>
+        {/* Delete Account — hidden for owner role */}
+        {profile.role !== 'owner' && (
+          <div className="flex justify-center pt-4 pb-2">
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-1.5 text-[var(--text-muted)] text-sm hover:text-red-400 transition-colors cursor-pointer"
+            >
+              <Trash2 size={14} />
+              Delete Account
+            </button>
+          </div>
+        )}
       </motion.div>
 
       {/* Edit Profile Modal */}
