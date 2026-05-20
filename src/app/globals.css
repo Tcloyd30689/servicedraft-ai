@@ -190,6 +190,14 @@ select:-webkit-autofill:focus {
   transition: background-color 600000s 0s, color 600000s 0s;
 }
 
+/* ── White accent (Sprint 16): secondary buttons inside cards get a white outline.
+   Buttons outside .liquid-card containers keep their transparent border so they
+   stay fluid with the page surface. Scoped strictly to the White accent so other
+   themes are unaffected. ── */
+html[data-accent="black"] .liquid-card .btn-secondary {
+  border-color: #ffffff !important;
+}
+
 /* ── Navbar hover effects (real CSS — Tailwind v4 arbitrary hover + CSS vars unreliable) ── */
 
 /* Back/forward circle buttons + theme toggle */

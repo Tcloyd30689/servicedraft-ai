@@ -60,6 +60,7 @@ export default function NavBar() {
   const dropdownItemClasses = cn(
     'nav-item-hover flex items-center gap-2.5 text-sm font-medium px-4 py-2.5 rounded-md w-full text-left',
     'text-[var(--text-secondary)]',
+    '[html[data-accent=black]_&]:text-white',
   );
 
   const isOwnerOrAdmin = profile?.role === 'owner' || profile?.role === 'admin';
@@ -70,14 +71,14 @@ export default function NavBar() {
       <div className="flex items-center gap-1.5 flex-shrink-0">
         <button
           onClick={() => router.back()}
-          className="nav-btn-hover w-8 h-8 flex items-center justify-center rounded-full border border-[var(--accent-border)] bg-[var(--accent-10)] text-[var(--accent-bright)] cursor-pointer"
+          className="nav-btn-hover w-8 h-8 flex items-center justify-center rounded-full border border-[var(--accent-border)] bg-[var(--accent-10)] text-[var(--accent-bright)] cursor-pointer [html[data-accent=black]_&]:bg-white [html[data-accent=black]_&]:border-black [html[data-accent=black]_&]:text-black"
           aria-label="Go back"
         >
           <ChevronLeft size={18} />
         </button>
         <button
           onClick={() => router.forward()}
-          className="nav-btn-hover w-8 h-8 flex items-center justify-center rounded-full border border-[var(--accent-border)] bg-[var(--accent-10)] text-[var(--accent-bright)] cursor-pointer"
+          className="nav-btn-hover w-8 h-8 flex items-center justify-center rounded-full border border-[var(--accent-border)] bg-[var(--accent-10)] text-[var(--accent-bright)] cursor-pointer [html[data-accent=black]_&]:bg-white [html[data-accent=black]_&]:border-black [html[data-accent=black]_&]:text-black"
           aria-label="Go forward"
         >
           <ChevronRight size={18} />
@@ -86,7 +87,7 @@ export default function NavBar() {
 
       {/* CENTER: App version label */}
       <div className="hidden md:block absolute left-1/2 -translate-x-1/2">
-        <span className="text-sm font-medium text-[var(--accent-bright)]">
+        <span className="text-sm font-medium text-[var(--accent-bright)] [html[data-accent=black]_&]:text-white">
           {APP_VERSION}
         </span>
       </div>
@@ -100,6 +101,7 @@ export default function NavBar() {
             className={cn(
               'nav-trigger-hover inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide uppercase border cursor-pointer',
               'bg-[var(--accent-10)] border-[var(--accent-border)] text-[var(--accent-bright)]',
+              '[html[data-accent=black]_&]:bg-white [html[data-accent=black]_&]:border-black [html[data-accent=black]_&]:text-black',
               navOpen && 'bg-[var(--accent-20)] border-[var(--accent-primary)] shadow-[var(--shadow-glow-sm)]',
             )}
             aria-label="Navigation menu"

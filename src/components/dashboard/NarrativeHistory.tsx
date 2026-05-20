@@ -177,7 +177,7 @@ export default function NarrativeHistory({ userId, senderName }: NarrativeHistor
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setActiveSort(opt.key)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors${!isActive ? ' [html[data-accent=black]_&]:bg-white! [html[data-accent=black]_&]:text-black! [html[data-accent=black]_&]:border-black!' : ''}`}
                 style={{
                   backgroundColor: isActive ? 'var(--accent-primary)' : 'var(--bg-input)',
                   color: isActive ? 'var(--btn-text-on-accent)' : 'var(--text-secondary)',
@@ -201,7 +201,7 @@ export default function NarrativeHistory({ userId, senderName }: NarrativeHistor
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setActiveFilter(opt.key)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors${isActive ? ' [html[data-accent=black]_&]:bg-white! [html[data-accent=black]_&]:text-black! [html[data-accent=black]_&]:border-black!' : ''}`}
                 style={{
                   backgroundColor: isActive ? 'var(--accent-8)' : 'transparent',
                   color: isActive ? 'var(--accent-vivid)' : 'var(--text-muted)',

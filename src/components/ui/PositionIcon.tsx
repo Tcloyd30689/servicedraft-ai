@@ -29,9 +29,9 @@ export default function PositionIcon({ position, size = 'medium', className = ''
 
   return (
     <div
-      className={`${config.container} rounded-full bg-[var(--bg-input)] ${config.border} border-[var(--accent-border)] flex items-center justify-center shrink-0 shadow-[0_0_12px_var(--accent-25)] ${className}`}
+      className={`${config.container} rounded-full bg-[var(--bg-input)] ${config.border} border-[var(--accent-border)] flex items-center justify-center shrink-0 shadow-[0_0_12px_var(--accent-25)] [html[data-accent=black]_&]:bg-white [html[data-accent=black]_&]:border-black ${className}`}
     >
-      <Icon size={config.icon} className="text-[var(--accent-hover)]" />
+      <Icon size={config.icon} className="text-[var(--accent-hover)] [html[data-accent=black]_&]:text-black" />
     </div>
   );
 }

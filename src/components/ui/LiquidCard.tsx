@@ -28,7 +28,7 @@ export default function LiquidCard({
 }: LiquidCardProps) {
   return (
     <CursorGlow enabled={glow} className={cn(
-      'relative bg-[var(--bg-card)]',
+      'liquid-card relative bg-[var(--bg-card)]',
       'border-2 border-[var(--card-border)] rounded-[23px]',
       'backdrop-blur-sm',
       'shadow-[var(--shadow-glow-md)]',

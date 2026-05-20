@@ -44,9 +44,13 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
     root.style.setProperty(key, value);
   }
 
-  // Set color-scheme and data-mode for CSS selectors
+  // Set color-scheme, data-mode, and data-accent for CSS selectors.
+  // data-accent lets CSS target a specific accent (e.g. White uses key='black')
+  // for accent-scoped overrides where the accent's themed colors clash with
+  // the dark frosted-glass card surfaces (Sprint 16).
   root.style.setProperty('color-scheme', effectiveMode === 'light' ? 'light' : 'dark');
   root.setAttribute('data-mode', effectiveMode);
+  root.setAttribute('data-accent', accent.key);
 
   const [r, g, b] = accent.rgb;
 
@@ -95,6 +99,14 @@ function applyTheme(accent: AccentColor, mode: ColorMode) {
     root.style.setProperty('--accent-text-emphasis-weight', 'inherit');
     root.style.setProperty('--accent-vivid', accent.hover);
     root.style.setProperty('--scrollbar-track', 'rgba(0, 0, 0, 0.2)');
+
+    // White accent (key='black', isLightMode) — accent.hex resolves to dark navy
+    // (#1e293b), which makes card titles like Concern/Cause/Correction render
+    // dark grey on the dark frosted-glass surfaces. Force white for readability
+    // per Tyler's directive (Sprint 16).
+    if (accent.isLightMode) {
+      root.style.setProperty('--accent-text-emphasis', '#ffffff');
+    }
   } else {
     root.style.setProperty('--bg-card', `rgba(${r}, ${g}, ${b}, 0.05)`);
     root.style.setProperty('--border-default', 'transparent');
