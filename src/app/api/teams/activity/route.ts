@@ -59,7 +59,7 @@ export async function GET(request: Request) {
               totalGenerations: 0,
               totalExports: 0,
               totalProofreads: 0,
-              narrativesToday: 0,
+              narrativesOverTime: [],
               topActiveUsers: [],
             },
           });
@@ -94,30 +94,47 @@ export async function GET(request: Request) {
             totalGenerations: 0,
             totalExports: 0,
             totalProofreads: 0,
-            narrativesToday: 0,
+            narrativesOverTime: [],
             topActiveUsers: [],
           },
         });
       }
 
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayIso = todayStart.toISOString();
+      // 30-day narratives-over-time window
+      const TIMELINE_DAYS = 30;
+      const now = new Date();
+      const windowStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (TIMELINE_DAYS - 1));
+      const windowStartIso = windowStart.toISOString();
 
       // Parallel aggregate queries
       const [
         { count: totalGenerations },
         { count: totalExports },
         { count: totalProofreads },
-        { count: narrativesToday },
+        { data: timelineRows },
         { data: narrativeRows },
       ] = await Promise.all([
         svc.from('narratives').select('id', { count: 'exact', head: true }).in('user_id', memberIds),
         svc.from('narrative_tracker').select('id', { count: 'exact', head: true }).in('user_id', memberIds).eq('is_exported', true),
         svc.from('narrative_tracker').select('id', { count: 'exact', head: true }).in('user_id', memberIds).eq('is_proofread', true),
-        svc.from('narratives').select('id', { count: 'exact', head: true }).in('user_id', memberIds).gte('created_at', todayIso),
+        svc.from('narratives').select('created_at').in('user_id', memberIds).gte('created_at', windowStartIso),
         svc.from('narratives').select('user_id').in('user_id', memberIds),
       ]);
+
+      // Build a 30-day continuous timeline pre-filled with zeros, then bucket rows by YYYY-MM-DD
+      const dailyCounts: Record<string, number> = {};
+      for (let i = TIMELINE_DAYS - 1; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        dailyCounts[key] = 0;
+      }
+      ((timelineRows || []) as Array<{ created_at: string }>).forEach((row) => {
+        const key = row.created_at.split('T')[0];
+        if (dailyCounts[key] !== undefined) {
+          dailyCounts[key]++;
+        }
+      });
+      const narrativesOverTime = Object.entries(dailyCounts).map(([date, count]) => ({ date, count }));
 
       // Aggregate top 3 active users by narrative count
       const countsByUser: Record<string, number> = {};
@@ -157,7 +174,7 @@ export async function GET(request: Request) {
           totalGenerations: totalGenerations ?? 0,
           totalExports: totalExports ?? 0,
           totalProofreads: totalProofreads ?? 0,
-          narrativesToday: narrativesToday ?? 0,
+          narrativesOverTime,
           topActiveUsers,
         },
       });

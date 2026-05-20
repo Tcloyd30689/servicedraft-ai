@@ -8,8 +8,11 @@ import {
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   ArrowUp, ArrowDown,
   FileText, Activity, UserCog, UserMinus,
-  Share2, CheckCircle, Calendar, TrendingUp,
+  Share2, CheckCircle, TrendingUp,
 } from 'lucide-react';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import LiquidCard from '@/components/ui/LiquidCard';
@@ -53,7 +56,7 @@ interface TeamStats {
   totalGenerations: number;
   totalExports: number;
   totalProofreads: number;
-  narrativesToday: number;
+  narrativesOverTime: Array<{ date: string; count: number }>;
   topActiveUsers: TopActiveUser[];
 }
 
@@ -729,19 +732,68 @@ export default function TeamDashboardPage() {
                     ))}
                   </div>
 
-                  {/* Bottom Row — Narratives Today + Top 3 Active Users */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-                    {/* Narratives Today */}
-                    <LiquidCard size="compact" className="!rounded-[16px] relative overflow-hidden">
+                  {/* Bottom Row — Narratives Over Time chart (2/3) + Top 3 Active Users (1/3) */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+                    {/* Narratives Over Time — last 30 days */}
+                    <LiquidCard size="compact" className="!rounded-[16px] relative overflow-hidden lg:col-span-2">
                       <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs sm:text-sm text-[var(--text-muted)] uppercase tracking-wider font-medium">Narratives Written Today</p>
-                          <Calendar size={22} style={{ color: '#8b5cf6', opacity: 0.6 }} />
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-xs sm:text-sm text-[var(--text-muted)] uppercase tracking-wider font-medium">Narratives Written Over Time</p>
+                          <Activity size={22} style={{ color: '#8b5cf6', opacity: 0.6 }} />
                         </div>
-                        <p className="text-2xl sm:text-4xl font-bold" style={{ color: '#8b5cf6' }}>
-                          {formatStat(teamStats?.narrativesToday ?? 0)}
-                        </p>
-                        <p className="text-[var(--text-muted)] text-xs sm:text-sm mt-1">since midnight</p>
+                        {(teamStats?.narrativesOverTime || []).length === 0 ? (
+                          <p className="text-[var(--text-muted)] text-sm py-12 text-center">No narrative activity recorded yet.</p>
+                        ) : (
+                          <ResponsiveContainer width="100%" height={220}>
+                            <AreaChart
+                              data={teamStats?.narrativesOverTime || []}
+                              margin={{ top: 5, right: 16, left: 0, bottom: 5 }}
+                            >
+                              <defs>
+                                <linearGradient id="narrativesGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.6} />
+                                  <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.05} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="var(--accent-15)" />
+                              <XAxis
+                                dataKey="date"
+                                tickFormatter={(d: string) => {
+                                  const dt = new Date(d + 'T12:00:00');
+                                  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                }}
+                                stroke="var(--text-muted)"
+                                tick={{ fontSize: 11 }}
+                                interval="preserveStartEnd"
+                                minTickGap={24}
+                              />
+                              <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} allowDecimals={false} />
+                              <Tooltip
+                                contentStyle={{
+                                  background: 'var(--bg-elevated)',
+                                  border: '1px solid var(--accent-30)',
+                                  borderRadius: '8px',
+                                  color: 'var(--text-primary)',
+                                  fontSize: 13,
+                                }}
+                                labelFormatter={(d) => {
+                                  const dt = new Date(d + 'T12:00:00');
+                                  return dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                                }}
+                                formatter={(value) => [value as number, 'Narratives']}
+                              />
+                              <Area
+                                type="monotone"
+                                dataKey="count"
+                                stroke="#8b5cf6"
+                                strokeWidth={2}
+                                fill="url(#narrativesGradient)"
+                                name="Narratives"
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        )}
+                        <p className="text-[var(--text-muted)] text-xs mt-2">last 30 days</p>
                       </div>
                     </LiquidCard>
 
