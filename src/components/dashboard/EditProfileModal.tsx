@@ -60,8 +60,8 @@ export default function EditProfileModal({
       const { error } = await supabase
         .from('users')
         .update({
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
+          first_name: firstName.trim().toUpperCase(),
+          last_name: lastName.trim().toUpperCase(),
           location,
           position,
         })

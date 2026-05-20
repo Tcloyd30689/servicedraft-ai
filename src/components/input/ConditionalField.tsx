@@ -82,10 +82,11 @@ export default function ConditionalField({
           spellCheck={true}
           value={value}
           onChange={(e) => {
-            onValueChange(e.target.value);
+            onValueChange(e.target.value.toUpperCase());
             resize();
           }}
           placeholder={field.placeholder}
+          style={{ textTransform: 'uppercase' }}
           className="w-full p-3 leading-relaxed resize-none overflow-hidden font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] focus:shadow-[0_0_0_3px_var(--accent-20)] hover:border-[var(--accent-primary)] transition-all duration-200"
         />
       )}

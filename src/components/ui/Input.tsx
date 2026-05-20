@@ -9,7 +9,16 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className, id, spellCheck, ...props }, ref) => {
+  ({ label, error, className, id, spellCheck, onChange, type, ...props }, ref) => {
+    const shouldUppercase = type !== 'email' && type !== 'password';
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (shouldUppercase) {
+        e.target.value = e.target.value.toUpperCase();
+      }
+      onChange?.(e);
+    };
+
     return (
       <div className="mb-5">
         {label && (
@@ -23,7 +32,10 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={id}
+          type={type}
           spellCheck={spellCheck ?? true}
+          onChange={handleChange}
+          style={shouldUppercase ? { textTransform: 'uppercase' } : undefined}
           className={cn(
             'w-full p-3 font-data',
             'bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg',

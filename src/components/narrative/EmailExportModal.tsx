@@ -366,8 +366,9 @@ export default function EmailExportModal({
                 <input
                   type="text"
                   value={newContactName}
-                  onChange={(e) => setNewContactName(e.target.value)}
+                  onChange={(e) => setNewContactName(e.target.value.toUpperCase())}
                   placeholder="Name *"
+                  style={{ textTransform: 'uppercase' }}
                   className="w-full px-3 py-1.5 text-xs font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
                 />
                 <div>
@@ -385,8 +386,9 @@ export default function EmailExportModal({
                 <input
                   type="text"
                   value={newContactNotes}
-                  onChange={(e) => setNewContactNotes(e.target.value)}
+                  onChange={(e) => setNewContactNotes(e.target.value.toUpperCase())}
                   placeholder="Notes (optional)"
+                  style={{ textTransform: 'uppercase' }}
                   className="w-full px-3 py-1.5 text-xs font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
                 />
                 <div className="flex gap-2">

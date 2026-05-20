@@ -181,8 +181,9 @@ export default function UpdateWithRepairModal({
             rows={2}
             spellCheck={true}
             value={repairPerformed}
-            onChange={(e) => setRepairPerformed(e.target.value)}
+            onChange={(e) => setRepairPerformed(e.target.value.toUpperCase())}
             placeholder="Describe the repair that was performed..."
+            style={{ textTransform: 'uppercase' }}
             className="w-full p-3 leading-relaxed resize-none overflow-hidden font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] focus:shadow-[0_0_0_3px_var(--accent-20)] hover:border-[var(--accent-primary)] transition-all duration-200"
           />
         )}
@@ -250,8 +251,9 @@ export default function UpdateWithRepairModal({
             rows={2}
             spellCheck={true}
             value={repairVerification}
-            onChange={(e) => setRepairVerification(e.target.value)}
+            onChange={(e) => setRepairVerification(e.target.value.toUpperCase())}
             placeholder="Describe how the repair was verified..."
+            style={{ textTransform: 'uppercase' }}
             className="w-full p-3 leading-relaxed resize-none overflow-hidden font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] focus:shadow-[0_0_0_3px_var(--accent-20)] hover:border-[var(--accent-primary)] transition-all duration-200"
           />
         )}
@@ -277,8 +279,9 @@ export default function UpdateWithRepairModal({
           rows={2}
           spellCheck={true}
           value={additionalNotes}
-          onChange={(e) => setAdditionalNotes(e.target.value)}
+          onChange={(e) => setAdditionalNotes(e.target.value.toUpperCase())}
           placeholder="Add any additional context about the completed repair..."
+          style={{ textTransform: 'uppercase' }}
           className="w-full p-3 leading-relaxed resize-none overflow-hidden font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] focus:shadow-[0_0_0_3px_var(--accent-20)] hover:border-[var(--accent-primary)] transition-all duration-200"
         />
       </div>

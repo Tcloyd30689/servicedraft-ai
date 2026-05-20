@@ -46,22 +46,24 @@ export default function SaveRepairModal({
         return opt || 'include';
       };
 
+      const upper = (v: string | null | undefined): string | null => v ? v.toUpperCase() : null;
+
       const body = {
-        template_name: templateName.trim(),
+        template_name: templateName.trim().toUpperCase(),
         story_type: apiStoryType,
         year: null,
         make: null,
         model: null,
         customer_concern: null,
-        codes_present: fieldValues['codes_present'] || null,
+        codes_present: upper(fieldValues['codes_present']),
         codes_present_option: mapOption(dropdownSelections['codes_present']),
-        diagnostics_performed: fieldValues['diagnostics_performed'] || null,
+        diagnostics_performed: upper(fieldValues['diagnostics_performed']),
         diagnostics_option: mapOption(dropdownSelections['diagnostics_performed']),
-        root_cause: fieldValues['root_cause'] || null,
+        root_cause: upper(fieldValues['root_cause']),
         root_cause_option: mapOption(dropdownSelections['root_cause']),
-        repair_performed: fieldValues['repair_performed'] || null,
+        repair_performed: upper(fieldValues['repair_performed']),
         repair_option: mapOption(dropdownSelections['repair_performed']),
-        repair_verification: fieldValues['repair_verification'] || null,
+        repair_verification: upper(fieldValues['repair_verification']),
         verification_option: mapOption(dropdownSelections['repair_verification']),
         recommended_action: null,
         recommended_option: null,

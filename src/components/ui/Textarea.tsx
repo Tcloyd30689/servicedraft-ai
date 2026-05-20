@@ -9,7 +9,12 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
 }
 
 const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, className, id, spellCheck, ...props }, ref) => {
+  ({ label, error, className, id, spellCheck, onChange, ...props }, ref) => {
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      e.target.value = e.target.value.toUpperCase();
+      onChange?.(e);
+    };
+
     return (
       <div className="mb-5">
         {label && (
@@ -24,6 +29,8 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           id={id}
           spellCheck={spellCheck ?? true}
+          onChange={handleChange}
+          style={{ textTransform: 'uppercase' }}
           className={cn(
             'w-full p-3 min-h-[120px] resize-vertical leading-relaxed font-data',
             'bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg',

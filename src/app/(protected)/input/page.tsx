@@ -182,9 +182,9 @@ export default function InputPage() {
                       : state.fieldValues[field.id] || '';
                   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
                     if (field.id === 'ro_number') {
-                      setRoNumber(e.target.value);
+                      setRoNumber(e.target.value.toUpperCase());
                     } else {
-                      setFieldValue(field.id, e.target.value);
+                      setFieldValue(field.id, e.target.value.toUpperCase());
                     }
                   };
 

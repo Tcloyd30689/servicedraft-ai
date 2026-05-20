@@ -25,6 +25,7 @@ const AutoTextarea = forwardRef<HTMLTextAreaElement, AutoTextareaProps>(
     }, [value, resize]);
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      e.target.value = e.target.value.toUpperCase();
       resize();
       onChange?.(e);
     };
@@ -50,6 +51,7 @@ const AutoTextarea = forwardRef<HTMLTextAreaElement, AutoTextareaProps>(
           spellCheck={spellCheck ?? true}
           value={value}
           onChange={handleChange}
+          style={{ textTransform: 'uppercase' }}
           className={cn(
             'w-full p-3 leading-relaxed resize-none overflow-hidden font-data',
             'bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg',

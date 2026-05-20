@@ -235,8 +235,9 @@ export default function ContactsModal({ isOpen, onClose }: ContactsModalProps) {
                   <input
                     type="text"
                     value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
+                    onChange={(e) => setNewName(e.target.value.toUpperCase())}
                     placeholder="e.g. John Smith"
+                    style={{ textTransform: 'uppercase' }}
                     className="w-full px-3 py-2 text-sm font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
                   />
                 </div>
@@ -268,9 +269,10 @@ export default function ContactsModal({ isOpen, onClose }: ContactsModalProps) {
                   <textarea
                     spellCheck={true}
                     value={newNotes}
-                    onChange={(e) => setNewNotes(e.target.value)}
+                    onChange={(e) => setNewNotes(e.target.value.toUpperCase())}
                     rows={2}
                     placeholder="Optional notes..."
+                    style={{ textTransform: 'uppercase' }}
                     className="w-full px-3 py-2 text-sm font-data resize-none bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
                   />
                 </div>
@@ -338,7 +340,8 @@ export default function ContactsModal({ isOpen, onClose }: ContactsModalProps) {
                             <input
                               type="text"
                               value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
+                              onChange={(e) => setEditName(e.target.value.toUpperCase())}
+                              style={{ textTransform: 'uppercase' }}
                               className="w-full px-3 py-2 text-sm font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
                             />
                           </div>
@@ -359,8 +362,9 @@ export default function ContactsModal({ isOpen, onClose }: ContactsModalProps) {
                             <textarea
                               spellCheck={true}
                               value={editNotes}
-                              onChange={(e) => setEditNotes(e.target.value)}
+                              onChange={(e) => setEditNotes(e.target.value.toUpperCase())}
                               rows={2}
+                              style={{ textTransform: 'uppercase' }}
                               className="w-full px-3 py-2 text-sm font-data resize-none bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
                             />
                           </div>

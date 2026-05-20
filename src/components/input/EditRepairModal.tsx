@@ -49,14 +49,15 @@ export default function EditRepairModal({ isOpen, onClose, template, onSaved }: 
     setIsSaving(true);
     try {
       const body: Record<string, unknown> = {
-        template_name: templateName.trim(),
+        template_name: templateName.trim().toUpperCase(),
         year: null,
         make: null,
         model: null,
       };
 
       for (const f of EDITABLE_FIELDS) {
-        body[f.key] = fieldValues[f.key] || null;
+        const val = fieldValues[f.key];
+        body[f.key] = val ? val.toUpperCase() : null;
       }
 
       const res = await fetch(`/api/saved-repairs/${template.id}`, {
@@ -109,8 +110,9 @@ export default function EditRepairModal({ isOpen, onClose, template, onSaved }: 
               <textarea
                 spellCheck={true}
                 value={fieldValues[f.key] || ''}
-                onChange={(e) => setFieldValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                onChange={(e) => setFieldValues((prev) => ({ ...prev, [f.key]: e.target.value.toUpperCase() }))}
                 rows={2}
+                style={{ textTransform: 'uppercase' }}
                 className="w-full p-2.5 font-data text-sm resize-none
                   bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg
                   text-[var(--text-primary)] placeholder-[var(--text-muted)]

@@ -42,8 +42,8 @@ export async function POST(request: Request) {
       id: user.id,
       email: user.email || '',
       username,
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
+      first_name: firstName.trim().toUpperCase(),
+      last_name: lastName.trim().toUpperCase(),
       location: location || null,
       position,
     };

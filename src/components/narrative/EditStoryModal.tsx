@@ -183,11 +183,11 @@ export default function EditStoryModal({
             spellCheck={true}
             value={blockText}
             onChange={(e) => {
-              setBlockText(e.target.value);
+              setBlockText(e.target.value.toUpperCase());
               autoResize(e.target);
             }}
             className={textareaBaseClass}
-            style={{ minHeight: '300px', maxHeight: '60vh', resize: 'none' }}
+            style={{ minHeight: '300px', maxHeight: '60vh', resize: 'none', textTransform: 'uppercase' }}
           />
         </div>
       ) : (
@@ -201,11 +201,11 @@ export default function EditStoryModal({
               spellCheck={true}
               value={concern}
               onChange={(e) => {
-                setConcern(e.target.value);
+                setConcern(e.target.value.toUpperCase());
                 autoResize(e.target);
               }}
               className={textareaBaseClass}
-              style={{ minHeight: '150px', maxHeight: '60vh', resize: 'none' }}
+              style={{ minHeight: '150px', maxHeight: '60vh', resize: 'none', textTransform: 'uppercase' }}
             />
           </div>
           <div className="mb-5">
@@ -217,11 +217,11 @@ export default function EditStoryModal({
               spellCheck={true}
               value={cause}
               onChange={(e) => {
-                setCause(e.target.value);
+                setCause(e.target.value.toUpperCase());
                 autoResize(e.target);
               }}
               className={textareaBaseClass}
-              style={{ minHeight: '150px', maxHeight: '60vh', resize: 'none' }}
+              style={{ minHeight: '150px', maxHeight: '60vh', resize: 'none', textTransform: 'uppercase' }}
             />
           </div>
           <div className="mb-5">
@@ -233,11 +233,11 @@ export default function EditStoryModal({
               spellCheck={true}
               value={correction}
               onChange={(e) => {
-                setCorrection(e.target.value);
+                setCorrection(e.target.value.toUpperCase());
                 autoResize(e.target);
               }}
               className={textareaBaseClass}
-              style={{ minHeight: '150px', maxHeight: '60vh', resize: 'none' }}
+              style={{ minHeight: '150px', maxHeight: '60vh', resize: 'none', textTransform: 'uppercase' }}
             />
           </div>
         </>

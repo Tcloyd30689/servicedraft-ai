@@ -83,11 +83,12 @@ export default function SavedRepairsModal({ isOpen, onClose }: SavedRepairsModal
     setIsSavingNew(true);
     try {
       const body: Record<string, unknown> = {
-        template_name: newName.trim(),
+        template_name: newName.trim().toUpperCase(),
         story_type: newStoryType,
       };
       for (const f of CORE_FIELDS) {
-        body[f.key] = newFields[f.key] || null;
+        const val = newFields[f.key];
+        body[f.key] = val ? val.toUpperCase() : null;
       }
 
       const res = await fetch('/api/saved-repairs', {
@@ -134,10 +135,11 @@ export default function SavedRepairsModal({ isOpen, onClose }: SavedRepairsModal
     setIsSavingEdit(true);
     try {
       const body: Record<string, unknown> = {
-        template_name: editName.trim(),
+        template_name: editName.trim().toUpperCase(),
       };
       for (const f of CORE_FIELDS) {
-        body[f.key] = editFields[f.key] || null;
+        const val = editFields[f.key];
+        body[f.key] = val ? val.toUpperCase() : null;
       }
 
       const res = await fetch(`/api/saved-repairs/${id}`, {
@@ -233,8 +235,9 @@ export default function SavedRepairsModal({ isOpen, onClose }: SavedRepairsModal
                   <input
                     type="text"
                     value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
+                    onChange={(e) => setNewName(e.target.value.toUpperCase())}
                     placeholder="e.g. Brake Pad Replacement"
+                    style={{ textTransform: 'uppercase' }}
                     className="w-full px-3 py-2 text-sm font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
                   />
                 </div>
@@ -267,9 +270,10 @@ export default function SavedRepairsModal({ isOpen, onClose }: SavedRepairsModal
                     <textarea
                       spellCheck={true}
                       value={newFields[f.key] || ''}
-                      onChange={(e) => setNewFields((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                      onChange={(e) => setNewFields((prev) => ({ ...prev, [f.key]: e.target.value.toUpperCase() }))}
                       rows={2}
                       placeholder={`Enter ${f.label.toLowerCase()}...`}
+                      style={{ textTransform: 'uppercase' }}
                       className="w-full px-3 py-2 text-sm font-data resize-none bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
                     />
                   </div>
@@ -426,7 +430,8 @@ export default function SavedRepairsModal({ isOpen, onClose }: SavedRepairsModal
                                   <input
                                     type="text"
                                     value={editName}
-                                    onChange={(e) => setEditName(e.target.value)}
+                                    onChange={(e) => setEditName(e.target.value.toUpperCase())}
+                                    style={{ textTransform: 'uppercase' }}
                                     className="w-full px-3 py-2 text-sm font-data bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
                                   />
                                 </div>
@@ -438,8 +443,9 @@ export default function SavedRepairsModal({ isOpen, onClose }: SavedRepairsModal
                                     <textarea
                                       spellCheck={true}
                                       value={editFields[f.key] || ''}
-                                      onChange={(e) => setEditFields((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                                      onChange={(e) => setEditFields((prev) => ({ ...prev, [f.key]: e.target.value.toUpperCase() }))}
                                       rows={2}
+                                      style={{ textTransform: 'uppercase' }}
                                       className="w-full px-3 py-2 text-sm font-data resize-none bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent-hover)] transition-colors"
                                     />
                                   </div>
