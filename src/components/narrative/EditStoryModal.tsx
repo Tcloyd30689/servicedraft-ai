@@ -78,7 +78,7 @@ export default function EditStoryModal({
     return () => clearTimeout(timer);
   }, [isOpen, displayFormat, narrative, autoResize]);
 
-  // Debounced auto-save: fires 2s after last keystroke if content differs from original
+  // Debounced auto-save: fires 10s after last keystroke if content differs from original
   useEffect(() => {
     if (!isOpen || !onAutoSave) return;
 
@@ -123,7 +123,7 @@ export default function EditStoryModal({
       const ampm = hours >= 12 ? 'PM' : 'AM';
       const h12 = hours % 12 || 12;
       setAutoSavedAt(`${h12}:${minutes} ${ampm}`);
-    }, 2000);
+    }, 10000);
 
     return () => {
       if (autoSaveTimerRef.current) {

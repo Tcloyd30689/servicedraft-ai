@@ -88,17 +88,20 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Compute next version
     const history: NarrativeHistoryEntry[] = Array.isArray(existing.action_history)
       ? existing.action_history
       : [];
+
+    const lastEntry = history.length > 0 ? history[history.length - 1] : null;
+    const isRollingAutoSave = action_type === 'auto_save' && lastEntry?.action === 'auto_save';
+
     const maxVersion = history.reduce((max, e) => Math.max(max, e.version || 0), 0);
-    const nextVersion = maxVersion + 1;
+    const versionForEntry = isRollingAutoSave ? (lastEntry!.version) : maxVersion + 1;
 
     const now = new Date().toISOString();
     const newEntry: NarrativeHistoryEntry = {
       action: action_type,
-      version: nextVersion,
+      version: versionForEntry,
       at: now,
       narrative_text: narrative.block_narrative,
       concern: narrative.concern,
@@ -106,25 +109,9 @@ export async function PATCH(
       correction: narrative.correction,
     };
 
-    // Try RPC first, fall back to read-modify-write
-    let rpcFailed = false;
-    try {
-      const { error: rpcError } = await supabase.rpc('append_narrative_history', {
-        p_narrative_id: id,
-        p_entry: newEntry,
-      });
-      if (rpcError) {
-        console.warn('append_narrative_history RPC unavailable, falling back:', rpcError.message);
-        rpcFailed = true;
-      }
-    } catch {
-      console.warn('append_narrative_history RPC call failed, using fallback');
-      rpcFailed = true;
-    }
-
-    if (rpcFailed) {
-      // Read-modify-write fallback
-      const updatedHistory = [...history, newEntry];
+    if (isRollingAutoSave) {
+      // Replace the last auto_save entry in-place — skip the RPC path since it always appends.
+      const updatedHistory = [...history.slice(0, -1), newEntry];
       const { error: updateError } = await supabase
         .from('narratives')
         .update({
@@ -138,29 +125,66 @@ export async function PATCH(
         .eq('id', id);
 
       if (updateError) {
-        console.error('Fallback update failed:', updateError.message);
+        console.error('Rolling auto_save update failed:', updateError.message);
         return NextResponse.json({ error: updateError.message }, { status: 500 });
       }
     } else {
-      // RPC handled action_history + updated_at; update the narrative fields
-      const { error: updateError } = await supabase
-        .from('narratives')
-        .update({
-          concern: narrative.concern,
-          cause: narrative.cause,
-          correction: narrative.correction,
-          full_narrative: narrative.block_narrative,
-          updated_at: now,
-        })
-        .eq('id', id);
+      // Non-rolling path: try RPC first, fall back to read-modify-write
+      let rpcFailed = false;
+      try {
+        const { error: rpcError } = await supabase.rpc('append_narrative_history', {
+          p_narrative_id: id,
+          p_entry: newEntry,
+        });
+        if (rpcError) {
+          console.warn('append_narrative_history RPC unavailable, falling back:', rpcError.message);
+          rpcFailed = true;
+        }
+      } catch {
+        console.warn('append_narrative_history RPC call failed, using fallback');
+        rpcFailed = true;
+      }
 
-      if (updateError) {
-        console.error('Field update after RPC failed:', updateError.message);
-        return NextResponse.json({ error: updateError.message }, { status: 500 });
+      if (rpcFailed) {
+        // Read-modify-write fallback
+        const updatedHistory = [...history, newEntry];
+        const { error: updateError } = await supabase
+          .from('narratives')
+          .update({
+            action_history: updatedHistory,
+            concern: narrative.concern,
+            cause: narrative.cause,
+            correction: narrative.correction,
+            full_narrative: narrative.block_narrative,
+            updated_at: now,
+          })
+          .eq('id', id);
+
+        if (updateError) {
+          console.error('Fallback update failed:', updateError.message);
+          return NextResponse.json({ error: updateError.message }, { status: 500 });
+        }
+      } else {
+        // RPC handled action_history + updated_at; update the narrative fields
+        const { error: updateError } = await supabase
+          .from('narratives')
+          .update({
+            concern: narrative.concern,
+            cause: narrative.cause,
+            correction: narrative.correction,
+            full_narrative: narrative.block_narrative,
+            updated_at: now,
+          })
+          .eq('id', id);
+
+        if (updateError) {
+          console.error('Field update after RPC failed:', updateError.message);
+          return NextResponse.json({ error: updateError.message }, { status: 500 });
+        }
       }
     }
 
-    return NextResponse.json({ success: true, version: nextVersion });
+    return NextResponse.json({ success: true, version: versionForEntry });
   } catch (err) {
     console.error('PATCH /api/narratives/[id] error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

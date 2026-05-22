@@ -220,6 +220,63 @@ export default function NarrativeDetailModal({
         </div>
       </div>
 
+      {/* Update with Repair button — only for diagnostic_only narratives */}
+      {narrative.story_type === 'diagnostic_only' && (
+        <div className="mb-4">
+          <Button
+            size="fullWidth"
+            onClick={() => setShowUpdateModal(true)}
+            className="flex items-center justify-center gap-2"
+          >
+            <ArrowUpCircle size={16} />
+            UPDATE NARRATIVE WITH REPAIR
+          </Button>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="mb-6 flex flex-wrap gap-3">
+        <Button
+          variant="secondary"
+          size="medium"
+          onClick={handleCopy}
+          className="flex items-center gap-2"
+        >
+          <Copy size={15} />
+          COPY
+        </Button>
+        <Button
+          variant="secondary"
+          size="medium"
+          onClick={handleOpenPdf}
+          disabled={isExporting}
+          className="flex items-center gap-2"
+        >
+          <ExternalLink size={15} />
+          {isOpeningPdf ? 'OPENING...' : 'VIEW / PRINT / DOWNLOAD'}
+        </Button>
+        <Button
+          variant="secondary"
+          size="medium"
+          onClick={handleDownloadDocx}
+          disabled={isExporting}
+          className="flex items-center gap-2"
+        >
+          <FileText size={15} />
+          {isGeneratingDocx ? 'DOCX...' : 'WORD'}
+        </Button>
+        <Button
+          variant="secondary"
+          size="medium"
+          onClick={() => setShowEmailModal(true)}
+          disabled={isExporting}
+          className="flex items-center gap-2"
+        >
+          <Mail size={15} />
+          EMAIL
+        </Button>
+      </div>
+
       {/* Version History — only show if 2+ entries */}
       {sortedHistory.length > 1 && (
         <div className="mb-4">
@@ -317,63 +374,6 @@ export default function NarrativeDetailModal({
           </div>
         </div>
       )}
-
-      {/* Update with Repair button — only for diagnostic_only narratives */}
-      {narrative.story_type === 'diagnostic_only' && (
-        <div className="mb-4">
-          <Button
-            size="fullWidth"
-            onClick={() => setShowUpdateModal(true)}
-            className="flex items-center justify-center gap-2"
-          >
-            <ArrowUpCircle size={16} />
-            UPDATE NARRATIVE WITH REPAIR
-          </Button>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex flex-wrap gap-3">
-        <Button
-          variant="secondary"
-          size="medium"
-          onClick={handleCopy}
-          className="flex items-center gap-2"
-        >
-          <Copy size={15} />
-          COPY
-        </Button>
-        <Button
-          variant="secondary"
-          size="medium"
-          onClick={handleOpenPdf}
-          disabled={isExporting}
-          className="flex items-center gap-2"
-        >
-          <ExternalLink size={15} />
-          {isOpeningPdf ? 'OPENING...' : 'VIEW / PRINT / DOWNLOAD'}
-        </Button>
-        <Button
-          variant="secondary"
-          size="medium"
-          onClick={handleDownloadDocx}
-          disabled={isExporting}
-          className="flex items-center gap-2"
-        >
-          <FileText size={15} />
-          {isGeneratingDocx ? 'DOCX...' : 'WORD'}
-        </Button>
-        <Button
-          variant="secondary"
-          size="medium"
-          onClick={() => setShowEmailModal(true)}
-          disabled={isExporting}
-          className="flex items-center gap-2"
-        >
-          <Mail size={15} />
-          EMAIL
-        </Button>
-      </div>
 
       <EmailExportModal
         isOpen={showEmailModal}
