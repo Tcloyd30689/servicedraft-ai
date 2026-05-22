@@ -11,7 +11,19 @@
       "Bash(grep:*)",
       "Bash(npx next upgrade)",
       "Bash(npm install:*)",
-      "Bash(timeout 15 npm run dev:*)"
+      "Bash(timeout 15 npm run dev:*)",
+      "Bash(git revert:*)",
+      "Bash(git status:*)",
+      "Bash(node -e:*)",
+      "Bash(cd:*)",
+      "Bash(find:*)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__list_tables",
+      "mcp__claude_ai_Supabase__get_advisors",
+      "Bash(GIT_COMMITTER_NAME=\"Tyler Cloyd\" GIT_COMMITTER_EMAIL=\"Tcloyd30689@users.noreply.github.com\" git commit:*)",
+      "Bash(git reset:*)",
+      "mcp__claude_ai_Supabase__execute_sql"
     ]
   }
 }
