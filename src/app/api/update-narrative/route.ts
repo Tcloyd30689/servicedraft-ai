@@ -28,6 +28,13 @@ CRITICAL RULES:
 - The concern and cause sections should be nearly identical to the originals (the diagnostic findings haven't changed)
 - The correction section should now describe the COMPLETED repair in past tense
 
+MANDATORY OUTPUT RULES (apply to EVERY narrative, no exceptions):
+1. IMPLIED FIRST PERSON VOICE. Write from the technician's perspective but NEVER use first-person pronouns (I, ME, MY, WE, OUR) and NEVER refer to THE TECHNICIAN. Technician actions are written verb-first in past tense. Correct: SCANNED VEHICLE AND FOUND DTC P0300 STORED. PERFORMED CYLINDER BALANCE TEST. Incorrect: I SCANNED THE VEHICLE or THE TECHNICIAN SCANNED THE VEHICLE. The ONLY exception is the customer's reported concern, which stays in standard form, e.g. CUSTOMER STATES VEHICLE STALLS AT IDLE.
+2. INCLUSION FIDELITY. Every piece of information the user provides MUST appear in the narrative, technical or not, even if it seems minor or unusual, because it was provided intentionally. Reproduce all technical values EXACTLY as given: numbers, units, voltages, resistances, amperages, pressures, temperatures, frequencies, terminal numbers, connector IDs, circuit numbers, pin numbers, wire colors, diagnostic trouble codes, and specification values are copied verbatim. NEVER round, paraphrase, summarize, or omit a provided value.
+3. NO UNNECESSARY ELABORATION. The provided input is the CEILING for facts and the FLOOR for content: include everything given, invent no additional facts, and do not over-explain simple statements. The only language you may add is what is required to complete the narrative's structure, such as supplying the most probable cause when none was stated. Do not stretch a straightforward statement into multiple sentences. Narrative depth must scale to the complexity of the job. A simple, cut-and-dry repair gets a short, direct narrative.
+4. NO DASHES AS PUNCTUATION. Do not use dashes to join clauses, set off phrases, or connect thoughts. Use commas and periods instead. Hyphens are permitted ONLY inside legitimate part numbers, component names, and codes exactly as provided (for example O-RING, ANTI-LOCK, or part number 12345-678).
+5. NO PARENTHETICAL DEFINITIONS. Do not use parentheses to define or expand abbreviations or codes. Never write PCM (POWERTRAIN CONTROL MODULE) or P0300 (RANDOM MISFIRE). Use standard abbreviations bare, and when a code's meaning belongs in the story, weave it inline naturally, for example FOUND DTC P0300 STORED FOR RANDOM CYLINDER MISFIRE. Parentheses may appear only if they were part of the user's provided data.
+
 RESPONSE FORMAT:
 Respond with ONLY a valid JSON object:
 {
@@ -131,6 +138,13 @@ ${repairLines.join('\n')}
     if (!parsed.block_narrative || !parsed.concern || !parsed.cause || !parsed.correction) {
       throw new Error('Response missing required keys');
     }
+
+    // Enforce FULL CAPITALIZATION deterministically so a stray lowercase word
+    // from the model can never reach the narrative (the app requires all caps).
+    parsed.block_narrative = parsed.block_narrative.toUpperCase();
+    parsed.concern = parsed.concern.toUpperCase();
+    parsed.cause = parsed.cause.toUpperCase();
+    parsed.correction = parsed.correction.toUpperCase();
 
     return NextResponse.json(parsed);
   } catch (error) {

@@ -20,6 +20,12 @@ RULES:
 5. Preserve the overall structure and factual content while incorporating the suggested improvements.
 6. NEVER generate, fabricate, or include any document ID numbers, reference numbers, case numbers, claim numbers, or authorization numbers. Only include identification numbers from the original narrative.
 
+MANDATORY OUTPUT RULES (the corrected narrative you return must follow these, no exceptions):
+1. IMPLIED FIRST PERSON VOICE. Write from the technician's perspective but NEVER use first-person pronouns (I, ME, MY, WE, OUR) and NEVER refer to THE TECHNICIAN. Technician actions stay verb-first in past tense. The customer's reported concern stays in standard form, e.g. CUSTOMER STATES VEHICLE STALLS AT IDLE.
+2. STRICT FULL CAPITALIZATION. EVERY word must be uppercase with no exceptions, including short connector words such as AND, THE, OF, A, TO, IS, OR, IN, ON, FOR. Never leave a single word in lowercase.
+3. NO DASHES AS PUNCTUATION. Do not use dashes to join clauses, set off phrases, or connect thoughts, and do not hyphenate compound words. Write VEHICLE WIDE not VEHICLE-WIDE, WARM UP not WARM-UP, REAL TIME not REAL-TIME, UNDER TEMPERATURE not UNDER-TEMPERATURE. Use commas, periods, or spaces instead. Hyphens are permitted ONLY inside legitimate part numbers, component or product names, and codes exactly as provided (for example O-RING, ANTI-LOCK, DEX-COOL, or part number 12345-678).
+4. NO PARENTHETICAL DEFINITIONS. Do not use parentheses to define or expand abbreviations or codes. Never write PCM (POWERTRAIN CONTROL MODULE) or P0300 (RANDOM MISFIRE). Use standard abbreviations bare, and weave a code's meaning inline naturally. Parentheses may appear only if they were part of the original narrative's provided data.
+
 RESPONSE FORMAT:
 You must respond with ONLY a valid JSON object. No additional text, no markdown formatting, no code fences. Just the raw JSON.
 
@@ -88,6 +94,13 @@ ${editsFormatted}`;
     if (!parsed.block_narrative || !parsed.concern || !parsed.cause || !parsed.correction) {
       throw new Error('Response missing required keys');
     }
+
+    // Enforce FULL CAPITALIZATION deterministically so a stray lowercase word
+    // from the model can never reach the narrative (the app requires all caps).
+    parsed.block_narrative = parsed.block_narrative.toUpperCase();
+    parsed.concern = parsed.concern.toUpperCase();
+    parsed.cause = parsed.cause.toUpperCase();
+    parsed.correction = parsed.correction.toUpperCase();
 
     return NextResponse.json(parsed);
   } catch (error: unknown) {
