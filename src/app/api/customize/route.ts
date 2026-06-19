@@ -123,6 +123,13 @@ ${customizationBlock}`;
       throw new Error('Response missing required keys');
     }
 
+    // Enforce FULL CAPITALIZATION deterministically so a stray lowercase word
+    // from the model can never reach the narrative (the app requires all caps).
+    parsed.block_narrative = parsed.block_narrative.toUpperCase();
+    parsed.concern = parsed.concern.toUpperCase();
+    parsed.cause = parsed.cause.toUpperCase();
+    parsed.correction = parsed.correction.toUpperCase();
+
     return NextResponse.json(parsed);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
