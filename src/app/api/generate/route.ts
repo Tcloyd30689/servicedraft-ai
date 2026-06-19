@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateWithGemini, parseJsonResponse } from '@/lib/gemini/client';
-import { DIAGNOSTIC_ONLY_SYSTEM_PROMPT, REPAIR_COMPLETE_SYSTEM_PROMPT } from '@/constants/prompts';
+import { DIAGNOSTIC_ONLY_SYSTEM_PROMPT, REPAIR_COMPLETE_SYSTEM_PROMPT, NARRATIVE_STYLE_MODIFIERS } from '@/constants/prompts';
 import { rateLimit } from '@/lib/rateLimit';
 import { logTokenUsage } from '@/lib/usageLogger';
 
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { compiledDataBlock, storyType } = await request.json();
+    const { compiledDataBlock, storyType, narrativeStyle } = await request.json();
 
     if (!compiledDataBlock || !storyType) {
       return NextResponse.json(
@@ -61,10 +61,22 @@ export async function POST(request: Request) {
       );
     }
 
-    const systemPrompt =
+    // Narrative style: validate against the three allowed values and default to
+    // manufacturer_warranty when missing or invalid. The frontend does not send
+    // this field yet, so generation must safely default.
+    const ALLOWED_NARRATIVE_STYLES = ['customer_pay', 'extended_warranty', 'manufacturer_warranty'];
+    const selectedStyle: string =
+      typeof narrativeStyle === 'string' && ALLOWED_NARRATIVE_STYLES.includes(narrativeStyle)
+        ? narrativeStyle
+        : 'manufacturer_warranty';
+
+    const baseSystemPrompt =
       storyType === 'diagnostic_only'
         ? DIAGNOSTIC_ONLY_SYSTEM_PROMPT
         : REPAIR_COMPLETE_SYSTEM_PROMPT;
+
+    // Append the selected narrative style modifier onto the base system prompt.
+    const systemPrompt = `${baseSystemPrompt}\n\n${NARRATIVE_STYLE_MODIFIERS[selectedStyle]}`;
 
     const userPrompt =
       storyType === 'diagnostic_only'
