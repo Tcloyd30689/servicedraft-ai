@@ -15,9 +15,7 @@ interface CreateTrackerData {
   cause?: string;
   correction?: string;
   customization?: {
-    length: string;
-    tone: string;
-    detail: string;
+    narrative_style: string;
     custom_instructions: string;
   };
 }
@@ -28,9 +26,7 @@ interface UpdateTrackerData {
   cause?: string;
   correction?: string;
   customization?: {
-    length: string;
-    tone: string;
-    detail: string;
+    narrative_style: string;
     custom_instructions: string;
   };
   export_type?: string;

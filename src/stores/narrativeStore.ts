@@ -24,10 +24,10 @@ export interface NarrativeState {
   narrative: NarrativeData | null;
   displayFormat: 'block' | 'ccc';
 
+  // Narrative style (chosen on the input page, persists across generations)
+  narrativeStyle: 'customer_pay' | 'extended_warranty' | 'manufacturer_warranty';
+
   // Customization
-  lengthSlider: 'short' | 'standard' | 'detailed';
-  toneSlider: 'warranty' | 'standard' | 'customer_friendly';
-  detailSlider: 'concise' | 'standard' | 'additional';
   customInstructions: string;
 
   // Generation tracking — increments when new generation is requested
@@ -49,9 +49,7 @@ const initialState: NarrativeState = {
   compiledDataBlock: '',
   narrative: null,
   displayFormat: 'ccc',
-  lengthSlider: 'standard',
-  toneSlider: 'standard',
-  detailSlider: 'standard',
+  narrativeStyle: 'manufacturer_warranty',
   customInstructions: '',
   generationId: 0,
   isSaved: true, // true initially (no narrative to protect yet)
@@ -145,18 +143,8 @@ export function useNarrativeStore() {
     notifyListeners();
   }, []);
 
-  const setLengthSlider = useCallback((val: NarrativeState['lengthSlider']) => {
-    globalState = { ...globalState, lengthSlider: val };
-    notifyListeners();
-  }, []);
-
-  const setToneSlider = useCallback((val: NarrativeState['toneSlider']) => {
-    globalState = { ...globalState, toneSlider: val };
-    notifyListeners();
-  }, []);
-
-  const setDetailSlider = useCallback((val: NarrativeState['detailSlider']) => {
-    globalState = { ...globalState, detailSlider: val };
+  const setNarrativeStyle = useCallback((val: NarrativeState['narrativeStyle']) => {
+    globalState = { ...globalState, narrativeStyle: val };
     notifyListeners();
   }, []);
 
@@ -168,9 +156,6 @@ export function useNarrativeStore() {
   const resetCustomization = useCallback(() => {
     globalState = {
       ...globalState,
-      lengthSlider: 'standard',
-      toneSlider: 'standard',
-      detailSlider: 'standard',
       customInstructions: '',
     };
     notifyListeners();
@@ -181,9 +166,7 @@ export function useNarrativeStore() {
       ...globalState,
       narrative: null,
       displayFormat: 'ccc',
-      lengthSlider: 'standard',
-      toneSlider: 'standard',
-      detailSlider: 'standard',
+      // narrativeStyle intentionally preserved — the user's style choice persists across generations
       customInstructions: '',
       generationId: globalState.generationId + 1,
       isSaved: true,
@@ -235,9 +218,7 @@ export function useNarrativeStore() {
       },
       compiledDataBlock: '', // Not needed — narrative already generated
       displayFormat: 'ccc',
-      lengthSlider: 'standard',
-      toneSlider: 'standard',
-      detailSlider: 'standard',
+      // narrativeStyle intentionally preserved — persists across the repair-update flow
       customInstructions: '',
       generationId: globalState.generationId + 1,
       isSaved: false,
@@ -256,9 +237,7 @@ export function useNarrativeStore() {
     setNarrative,
     setNarrativeWithSavedId,
     setDisplayFormat,
-    setLengthSlider,
-    setToneSlider,
-    setDetailSlider,
+    setNarrativeStyle,
     setCustomInstructions,
     resetCustomization,
     clearForNewGeneration,

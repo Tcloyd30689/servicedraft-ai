@@ -15,12 +15,19 @@ import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import NarrativeDisplay from '@/components/narrative/NarrativeDisplay';
-import CustomizationPanel from '@/components/narrative/CustomizationPanel';
+import CustomizationPanel, { type RefineAction } from '@/components/narrative/CustomizationPanel';
 import ProofreadResults from '@/components/narrative/ProofreadResults';
 import EditStoryModal from '@/components/narrative/EditStoryModal';
 import ShareExportModal from '@/components/narrative/ShareExportModal';
 import Modal from '@/components/ui/Modal';
-import type { NarrativeData } from '@/stores/narrativeStore';
+import type { NarrativeData, NarrativeState } from '@/stores/narrativeStore';
+
+// Narrative style options for the on-page style switcher (STEP 8).
+const STYLE_SWITCHER_OPTIONS: { value: NarrativeState['narrativeStyle']; label: string }[] = [
+  { value: 'customer_pay', label: 'Customer Pay' },
+  { value: 'extended_warranty', label: 'Extended Warranty' },
+  { value: 'manufacturer_warranty', label: 'Manufacturer Warranty' },
+];
 
 interface ParsedIssue {
   issue: string;
@@ -41,6 +48,7 @@ export default function NarrativePage() {
     state,
     setNarrative,
     setDisplayFormat,
+    setNarrativeStyle,
     resetCustomization,
     resetAll,
     markSaved,
@@ -49,7 +57,7 @@ export default function NarrativePage() {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [isCustomizing, setIsCustomizing] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
   const [isProofreading, setIsProofreading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isApplyingEdits, setIsApplyingEdits] = useState(false);
@@ -106,6 +114,7 @@ export default function NarrativePage() {
           correction: nd.correction,
           full_narrative: nd.block_narrative,
           story_type: state.storyType,
+          narrative_style: state.narrativeStyle,
         }),
       });
 
@@ -145,7 +154,7 @@ export default function NarrativePage() {
       markSaved(currentSavedId);
       return currentSavedId;
     }
-  }, [state.narrative, state.roNumber, state.fieldValues, state.storyType, user, markSaved]);
+  }, [state.narrative, state.roNumber, state.fieldValues, state.storyType, state.narrativeStyle, user, markSaved]);
 
   // Generate narrative on mount if we have compiled data but no narrative yet
   const generateNarrative = useCallback(async () => {
@@ -162,6 +171,7 @@ export default function NarrativePage() {
         body: JSON.stringify({
           compiledDataBlock: state.compiledDataBlock,
           storyType: state.storyType,
+          narrativeStyle: state.narrativeStyle,
         }),
       });
 
@@ -196,9 +206,7 @@ export default function NarrativePage() {
         cause: data.cause,
         correction: data.correction,
         customization: {
-          length: state.lengthSlider,
-          tone: state.toneSlider,
-          detail: state.detailSlider,
+          narrative_style: state.narrativeStyle,
           custom_instructions: state.customInstructions || '',
         },
       });
@@ -212,7 +220,7 @@ export default function NarrativePage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [state.compiledDataBlock, state.storyType, state.roNumber, state.fieldValues, state.lengthSlider, state.toneSlider, state.detailSlider, state.customInstructions, setNarrative, setTrackerId, autoSaveNarrative]);
+  }, [state.compiledDataBlock, state.storyType, state.roNumber, state.fieldValues, state.narrativeStyle, state.customInstructions, setNarrative, setTrackerId, autoSaveNarrative]);
 
   useEffect(() => {
     // Redirect if no data to work with — allow through if narrative already exists (repair update flow)
@@ -280,8 +288,11 @@ export default function NarrativePage() {
     setIssueDescriptions([]);
   }, []);
 
-  // Regenerate — re-runs API with original input
-  const handleRegenerate = async () => {
+  // Regenerate — re-runs API with original input.
+  // Accepts an optional style override so the on-page style switcher (STEP 8) can
+  // regenerate at a freshly-chosen style without waiting for the store snapshot to refresh.
+  const handleRegenerate = async (styleOverride?: NarrativeState['narrativeStyle']) => {
+    const styleForBody = styleOverride ?? state.narrativeStyle;
     setIsRegenerating(true);
     setProofreadData(null);
     setGenerationError(null);
@@ -294,6 +305,7 @@ export default function NarrativePage() {
         body: JSON.stringify({
           compiledDataBlock: state.compiledDataBlock,
           storyType: state.storyType,
+          narrativeStyle: styleForBody,
         }),
       });
 
@@ -320,9 +332,7 @@ export default function NarrativePage() {
           cause: data.cause,
           correction: data.correction,
           customization: {
-            length: state.lengthSlider,
-            tone: state.toneSlider,
-            detail: state.detailSlider,
+            narrative_style: styleForBody,
             custom_instructions: state.customInstructions || '',
           },
         });
@@ -344,30 +354,18 @@ export default function NarrativePage() {
     }
   };
 
-  // Customize — sends current narrative text to customize API
-  const handleCustomize = async () => {
+  // Refine — sends the CURRENTLY DISPLAYED narrative to the refine API for a
+  // single light-touch adjustment. For quick actions (more_detail/less_detail/
+  // simplify/expand) refineAction is sent; for 'custom' the guarded custom
+  // instruction is sent instead. The chosen narrativeStyle is always included.
+  const handleRefine = async (action: RefineAction) => {
     if (!state.narrative) return;
 
-    const { lengthSlider, toneSlider, detailSlider, customInstructions } = state;
-
-    // Check if any customization is actually set
-    if (
-      lengthSlider === 'standard' &&
-      toneSlider === 'standard' &&
-      detailSlider === 'standard' &&
-      !customInstructions.trim()
-    ) {
-      toast('Adjust at least one slider or add custom instructions before applying.', {
-        icon: '⚙️',
-      });
-      return;
-    }
-
-    setIsCustomizing(true);
+    setIsRefining(true);
     clearHighlights();
     dispatchActivity(0.7);
     try {
-      const res = await fetch('/api/customize', {
+      const res = await fetch('/api/refine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -375,32 +373,35 @@ export default function NarrativePage() {
           cause: state.narrative.cause,
           correction: state.narrative.correction,
           storyType: state.storyType,
-          lengthSlider: lengthSlider !== 'standard' ? lengthSlider : undefined,
-          toneSlider: toneSlider !== 'standard' ? toneSlider : undefined,
-          detailSlider: detailSlider !== 'standard' ? detailSlider : undefined,
-          customInstructions: customInstructions.trim() || undefined,
+          narrativeStyle: state.narrativeStyle,
+          refineAction: action !== 'custom' ? action : undefined,
+          customInstructions: action === 'custom' ? state.customInstructions.trim() : undefined,
           originalInputContext: state.compiledDataBlock || undefined,
         }),
       });
 
       if (!res.ok) throw new Error('API error');
 
-      const data: NarrativeData = await res.json();
-      setNarrative(data);
+      const data = await res.json();
+      const refined: NarrativeData = {
+        block_narrative: data.block_narrative,
+        concern: data.concern,
+        cause: data.cause,
+        correction: data.correction,
+      };
+      setNarrative(refined);
       setAnimateNarrative(true);
       setProofreadData(null);
 
-      // Fire-and-forget tracker update
+      // Fire-and-forget tracker update (keeps the existing 'customize' action for analytics continuity)
       if (state.trackerId) {
         updateTrackerAction(state.trackerId, 'customize', {
-          narrative_text: data.block_narrative,
-          concern: data.concern,
-          cause: data.cause,
-          correction: data.correction,
+          narrative_text: refined.block_narrative,
+          concern: refined.concern,
+          cause: refined.cause,
+          correction: refined.correction,
           customization: {
-            length: state.lengthSlider,
-            tone: state.toneSlider,
-            detail: state.detailSlider,
+            narrative_style: state.narrativeStyle,
             custom_instructions: state.customInstructions || '',
           },
         });
@@ -408,15 +409,34 @@ export default function NarrativePage() {
 
       logActivity('customize', { story_type: state.storyType || undefined });
 
-      // Auto-save after customization (silent)
-      autoSaveNarrative('customize', data)
-        .catch((err) => console.error('Auto-save on customize error:', err));
+      // Auto-save after refine (silent)
+      autoSaveNarrative('customize', refined)
+        .catch((err) => console.error('Auto-save on refine error:', err));
 
-      toast.success('Customization applied');
+      if (data.instructionRejected === true) {
+        toast('Custom instruction outside professional scope and was ignored.', { icon: '⚠️' });
+      } else {
+        toast.success('Story refined');
+      }
     } catch {
-      toast.error('Failed to customize narrative. Please try again.');
+      toast.error('Failed to refine narrative. Please try again.');
     } finally {
-      setIsCustomizing(false);
+      setIsRefining(false);
+    }
+  };
+
+  // Narrative style switcher (STEP 8) — the ONLY place a style change is allowed.
+  // Changing the style re-runs the normal generate flow at the new style. The
+  // Refine panel never changes the style on its own.
+  const handleStyleChange = (newStyle: NarrativeState['narrativeStyle']) => {
+    if (newStyle === state.narrativeStyle) return;
+    setNarrativeStyle(newStyle);
+    if (state.compiledDataBlock) {
+      // Regenerate at the new style (pass override — store snapshot hasn't refreshed yet)
+      handleRegenerate(newStyle);
+    } else {
+      // No original input to regenerate from (e.g. repair-update flow) — just record the choice
+      toast.success('Narrative style updated');
     }
   };
 
@@ -651,7 +671,7 @@ export default function NarrativePage() {
     return null;
   }
 
-  const isAnyLoading = isRegenerating || isCustomizing || isProofreading || isApplyingEdits;
+  const isAnyLoading = isRegenerating || isRefining || isProofreading || isApplyingEdits;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
@@ -668,7 +688,7 @@ export default function NarrativePage() {
               <Button
                 variant="secondary"
                 size="fullWidth"
-                onClick={handleRegenerate}
+                onClick={() => handleRegenerate()}
                 disabled={isAnyLoading}
                 className="flex items-center justify-center gap-2"
               >
@@ -685,7 +705,7 @@ export default function NarrativePage() {
               >
                 <span className="flex items-center gap-2">
                   <Settings size={16} className="text-[var(--accent-hover)]" />
-                  AI OUTPUT CUSTOMIZATION
+                  REFINE STORY
                 </span>
                 <span className="text-[var(--text-muted)] text-xs">
                   {showCustomization ? 'HIDE' : 'SHOW'}
@@ -700,8 +720,8 @@ export default function NarrativePage() {
                   className="mt-4"
                 >
                   <CustomizationPanel
-                    onApply={handleCustomize}
-                    isLoading={isCustomizing}
+                    onRefine={handleRefine}
+                    isLoading={isRefining}
                   />
                 </motion.div>
               )}
@@ -794,9 +814,9 @@ export default function NarrativePage() {
                 </div>
               )}
 
-              {isCustomizing && (
+              {isRefining && (
                 <div className="flex items-center justify-center py-12">
-                  <LoadingSpinner size="medium" message="Applying customization settings..." />
+                  <LoadingSpinner size="medium" message="Refining narrative..." />
                 </div>
               )}
 
@@ -806,7 +826,7 @@ export default function NarrativePage() {
                 </div>
               )}
 
-              {!isRegenerating && !isCustomizing && !isApplyingEdits && (
+              {!isRegenerating && !isRefining && !isApplyingEdits && (
                 <>
                   <NarrativeDisplay
                     narrative={state.narrative}
@@ -819,6 +839,31 @@ export default function NarrativePage() {
                 </>
               )}
             </LiquidCard>
+
+            {/* Narrative Style switcher — separate from the Refine panel.
+                Changing the style regenerates the story at the new style. */}
+            <div className="mt-4">
+              <label className="block text-[var(--text-muted)] text-xs font-medium mb-1.5">
+                NARRATIVE STYLE
+              </label>
+              <div className="flex bg-[var(--bg-input)] rounded-lg border border-[var(--accent-border)] overflow-hidden max-w-md">
+                {STYLE_SWITCHER_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handleStyleChange(opt.value)}
+                    disabled={isAnyLoading || isSaving}
+                    className={`flex-1 py-1.5 px-2 text-[11px] font-medium transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                      state.narrativeStyle === opt.value
+                        ? 'bg-[var(--accent-hover)] text-white shadow-[0_0_10px_var(--accent-30)]'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-10)]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Bottom Action Buttons */}
             <div className="flex flex-wrap gap-3 mt-4">

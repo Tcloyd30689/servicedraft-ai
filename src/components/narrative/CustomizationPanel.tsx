@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useNarrativeStore, type NarrativeState } from '@/stores/narrativeStore';
+import { useNarrativeStore } from '@/stores/narrativeStore';
 import Button from '@/components/ui/Button';
 import Textarea from '@/components/ui/Textarea';
 
@@ -21,119 +21,71 @@ function hasBlockedContent(text: string): boolean {
   return BLOCKED_PATTERNS.some((pattern) => pattern.test(text));
 }
 
-interface SliderOption<T extends string> {
-  value: T;
-  label: string;
-}
-
-const lengthOptions: SliderOption<NarrativeState['lengthSlider']>[] = [
-  { value: 'short', label: 'Short' },
-  { value: 'standard', label: 'No Change' },
-  { value: 'detailed', label: 'Extended' },
-];
-
-const toneOptions: SliderOption<NarrativeState['toneSlider']>[] = [
-  { value: 'warranty', label: 'Warranty' },
-  { value: 'standard', label: 'No Change' },
-  { value: 'customer_friendly', label: 'Customer Friendly' },
-];
-
-const detailOptions: SliderOption<NarrativeState['detailSlider']>[] = [
-  { value: 'concise', label: 'Concise' },
-  { value: 'standard', label: 'No Change' },
-  { value: 'additional', label: 'Additional Steps' },
-];
+export type RefineAction = 'more_detail' | 'less_detail' | 'simplify' | 'expand' | 'custom';
 
 interface CustomizationPanelProps {
-  onApply: () => void;
+  onRefine: (action: RefineAction) => void;
   isLoading: boolean;
 }
 
-function SegmentedControl<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  options: SliderOption<T>[];
-  value: T;
-  onChange: (val: T) => void;
-}) {
-  return (
-    <div className="mb-4">
-      <label className="block text-[var(--text-secondary)] text-sm font-medium mb-2">
-        {label}
-      </label>
-      <div className="flex bg-[var(--bg-input)] rounded-lg border border-[var(--accent-border)] overflow-hidden">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={`flex-1 py-2 px-2 text-xs font-medium transition-all duration-200 cursor-pointer ${
-              value === opt.value
-                ? 'bg-[var(--accent-hover)] text-white shadow-[0_0_10px_var(--accent-30)]'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-10)]'
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
+const REFINE_ACTIONS: { action: Exclude<RefineAction, 'custom'>; label: string }[] = [
+  { action: 'more_detail', label: 'More Detail' },
+  { action: 'less_detail', label: 'Less Detail' },
+  { action: 'simplify', label: 'Simplify' },
+  { action: 'expand', label: 'Expand' },
+];
 
 export default function CustomizationPanel({
-  onApply,
+  onRefine,
   isLoading,
 }: CustomizationPanelProps) {
-  const {
-    state,
-    setLengthSlider,
-    setToneSlider,
-    setDetailSlider,
-    setCustomInstructions,
-  } = useNarrativeStore();
+  const { state, setCustomInstructions } = useNarrativeStore();
 
   const [instructionsError, setInstructionsError] = useState('');
 
-  const handleApply = () => {
-    if (state.customInstructions.trim() && hasBlockedContent(state.customInstructions)) {
-      setInstructionsError('This input contains restricted content. Please rephrase your customization.');
+  const handleCustomApply = () => {
+    if (!state.customInstructions.trim()) {
+      setInstructionsError('Enter a custom instruction first.');
+      return;
+    }
+    // First-line client-side filter against obvious prompt-injection attempts.
+    // The /api/refine route enforces the same blocklist + a model scope contract.
+    if (hasBlockedContent(state.customInstructions)) {
+      setInstructionsError('This input contains restricted content. Please rephrase your instruction.');
       return;
     }
     setInstructionsError('');
-    onApply();
+    onRefine('custom');
   };
 
   return (
-    <div className="space-y-2">
-      <SegmentedControl
-        label="Length"
-        options={lengthOptions}
-        value={state.lengthSlider}
-        onChange={setLengthSlider}
-      />
+    <div className="space-y-4">
+      {/* One-tap refine actions */}
+      <div>
+        <label className="block text-[var(--text-secondary)] text-sm font-medium mb-2">
+          Quick Refine
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {REFINE_ACTIONS.map(({ action, label }) => (
+            <Button
+              key={action}
+              variant="secondary"
+              size="small"
+              className="w-full"
+              onClick={() => onRefine(action)}
+              disabled={isLoading}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+      </div>
 
-      <SegmentedControl
-        label="Tone"
-        options={toneOptions}
-        value={state.toneSlider}
-        onChange={setToneSlider}
-      />
-
-      <SegmentedControl
-        label="Detail Level"
-        options={detailOptions}
-        value={state.detailSlider}
-        onChange={setDetailSlider}
-      />
-
+      {/* Guarded custom instructions */}
       <div>
         <Textarea
           label="Custom Instructions"
-          placeholder="Add any specific instructions for rewriting the narrative..."
+          placeholder="Add a specific instruction for refining the narrative..."
           value={state.customInstructions}
           onChange={(e) => { setCustomInstructions(e.target.value); if (instructionsError) setInstructionsError(''); }}
           maxLength={100}
@@ -145,15 +97,16 @@ export default function CustomizationPanel({
         {instructionsError && (
           <p className="text-red-500 text-xs mt-1">{instructionsError}</p>
         )}
-      </div>
 
-      <Button
-        size="fullWidth"
-        onClick={handleApply}
-        disabled={isLoading}
-      >
-        {isLoading ? 'APPLYING...' : 'APPLY CUSTOMIZATION TO STORY'}
-      </Button>
+        <Button
+          size="fullWidth"
+          onClick={handleCustomApply}
+          disabled={isLoading}
+          className="mt-2"
+        >
+          {isLoading ? 'REFINING...' : 'APPLY CUSTOM INSTRUCTION'}
+        </Button>
+      </div>
     </div>
   );
 }

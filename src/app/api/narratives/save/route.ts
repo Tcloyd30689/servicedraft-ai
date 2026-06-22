@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       correction: body.correction,
       full_narrative: body.full_narrative,
       story_type: body.story_type,
+      narrative_style: body.narrative_style || 'manufacturer_warranty',
       action_history: [{
         action: 'generate',
         version: 1,
