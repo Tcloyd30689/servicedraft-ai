@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateWithGemini, parseJsonResponse } from '@/lib/gemini/client';
-import { PROOFREAD_SYSTEM_PROMPT, DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT } from '@/constants/prompts';
+import { PROOFREAD_SYSTEM_PROMPT, DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT, AUDIT_STYLE_MODIFIERS } from '@/constants/prompts';
+
+const VALID_AUDIT_STYLES = ['customer_pay', 'extended_warranty', 'manufacturer_warranty'];
 import { logTokenUsage } from '@/lib/usageLogger';
 
 interface RawProofreadResponse {
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { concern, cause, correction, storyType, year, make, model, originalInputContext } = await request.json();
+    const { concern, cause, correction, storyType, year, make, model, originalInputContext, narrativeStyle } = await request.json();
 
     if (!concern || !cause || !correction) {
       return NextResponse.json(
@@ -42,9 +44,19 @@ export async function POST(request: Request) {
 
     const isDiagnosticOnly = storyType === 'diagnostic_only';
 
-    const systemPrompt = isDiagnosticOnly
+    // Validate the requested audit style and default to manufacturer_warranty
+    // when missing or invalid (frontend not yet updated this sprint).
+    const auditStyle = VALID_AUDIT_STYLES.includes(narrativeStyle)
+      ? narrativeStyle
+      : 'manufacturer_warranty';
+
+    const baseSystemPrompt = isDiagnosticOnly
       ? DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT
       : PROOFREAD_SYSTEM_PROMPT;
+
+    // Append the selected audit style modifier so the AI judges the narrative
+    // against how it will be used (customer pay vs. extended vs. manufacturer).
+    const systemPrompt = baseSystemPrompt + '\n\n' + AUDIT_STYLE_MODIFIERS[auditStyle];
 
     const inputContextBlock = originalInputContext
       ? `\nORIGINAL INPUT CONTEXT (from input page — flag any mismatches between these facts and the narrative):\n---\n${originalInputContext}\n---\n`
