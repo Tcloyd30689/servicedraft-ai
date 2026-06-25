@@ -456,6 +456,7 @@ export default function NarrativePage() {
           cause: state.narrative.cause,
           correction: state.narrative.correction,
           storyType: state.storyType,
+          narrativeStyle: state.narrativeStyle,
           year: state.fieldValues['year'] || '',
           make: state.fieldValues['make'] || '',
           model: state.fieldValues['model'] || '',
