@@ -144,6 +144,45 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.01em;
 }
 
+/* Proofread result container glow — pulses in the audit's rating color.
+   Only applied (via the .proofread-glow classes) once review results are displayed. */
+@keyframes proofreadGlowPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 16px 1px var(--pg-color), 0 0 6px 0 var(--pg-color);
+  }
+  50% {
+    box-shadow: 0 0 32px 8px var(--pg-color), 0 0 14px 2px var(--pg-color);
+  }
+}
+.proofread-glow {
+  animation: proofreadGlowPulse 2.4s ease-in-out infinite;
+}
+.proofread-glow-pass {
+  --pg-color: rgba(22, 163, 74, 0.7);
+}
+.proofread-glow-review {
+  --pg-color: rgba(202, 138, 4, 0.7);
+}
+.proofread-glow-fail {
+  --pg-color: rgba(220, 38, 38, 0.7);
+}
+
+/* Re-run-audit icon button beside the result stamp — glows and slightly magnifies on hover */
+.audit-refresh-btn {
+  color: var(--accent-bright);
+  background-color: var(--accent-10);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.audit-refresh-btn:hover:not(:disabled) {
+  transform: scale(1.12);
+  background-color: var(--accent-20);
+  box-shadow: 0 0 14px 2px var(--accent-bright);
+}
+.audit-refresh-btn:active:not(:disabled) {
+  transform: scale(1.04);
+}
+
 /* Force dark backgrounds on form controls (overrides browser light-scheme defaults) */
 input,
 textarea,

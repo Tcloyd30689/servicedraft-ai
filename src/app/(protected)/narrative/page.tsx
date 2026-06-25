@@ -674,6 +674,22 @@ export default function NarrativePage() {
 
   const isAnyLoading = isRegenerating || isRefining || isProofreading || isApplyingEdits;
 
+  // Proofread rating presentation — drives the result stamp and the container's pulsing glow.
+  // Set only once results are displayed (not while reviewing), so the glow appears only after a review.
+  const proofreadRating = proofreadData && !isProofreading ? proofreadData.overall_rating : null;
+  const ratingStampColor =
+    proofreadRating === 'PASS' ? '#16a34a' : proofreadRating === 'NEEDS_REVIEW' ? '#ca8a04' : '#dc2626';
+  const ratingStampLabel =
+    proofreadRating === 'PASS' ? 'PASS' : proofreadRating === 'NEEDS_REVIEW' ? 'NEEDS REVIEW' : 'FAIL';
+  const ratingGlowClass =
+    proofreadRating === 'PASS'
+      ? 'proofread-glow proofread-glow-pass'
+      : proofreadRating === 'NEEDS_REVIEW'
+        ? 'proofread-glow proofread-glow-review'
+        : proofreadRating === 'FAIL'
+          ? 'proofread-glow proofread-glow-fail'
+          : '';
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <motion.div
@@ -729,36 +745,41 @@ export default function NarrativePage() {
             </LiquidCard>
 
             {/* Review & Proofread */}
-            <LiquidCard size="compact">
+            <LiquidCard size="compact" className={ratingGlowClass}>
               <div className="relative">
-                <Button
-                  variant="secondary"
-                  size="fullWidth"
-                  onClick={handleProofread}
-                  disabled={isAnyLoading}
-                  className="flex items-center justify-center gap-2"
-                >
-                  <Search size={16} />
-                  {isProofreading ? 'REVIEWING...' : 'REVIEW & PROOFREAD STORY'}
-                </Button>
-
-                {/* Highlight counter badge */}
-                {proofreadData && !isProofreading && (
-                  <span
-                    className="absolute -top-2 -right-2 text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
-                    style={{
-                      backgroundColor:
-                        proofreadData.overall_rating === 'PASS'
-                          ? '#16a34a'
-                          : proofreadData.overall_rating === 'NEEDS_REVIEW'
-                            ? '#ca8a04'
-                            : '#dc2626',
-                    }}
+                {proofreadRating ? (
+                  // After a review: the button becomes a large rating stamp with a re-run icon beside it
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="flex-1 rounded-[14px] py-3 px-4 text-center select-none"
+                      style={{ backgroundColor: ratingStampColor }}
+                    >
+                      <span className="text-2xl font-extrabold text-black tracking-[0.15em]">
+                        {ratingStampLabel}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleProofread}
+                      disabled={isAnyLoading}
+                      title="Re-run review"
+                      aria-label="Re-run review"
+                      className="audit-refresh-btn shrink-0 flex items-center justify-center h-12 w-12 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw size={20} />
+                    </button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="fullWidth"
+                    onClick={handleProofread}
+                    disabled={isAnyLoading}
+                    className="flex items-center justify-center gap-2"
                   >
-                    {proofreadData.flagged_issues.length === 0
-                      ? 'PASS'
-                      : `${proofreadData.flagged_issues.length} issue${proofreadData.flagged_issues.length !== 1 ? 's' : ''}`}
-                  </span>
+                    <Search size={16} />
+                    {isProofreading ? 'REVIEWING...' : 'REVIEW & PROOFREAD STORY'}
+                  </Button>
                 )}
               </div>
 

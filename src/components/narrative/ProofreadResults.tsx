@@ -21,12 +21,6 @@ interface ProofreadResultsProps {
   onSelectionChange?: (selectedIndices: number[]) => void;
 }
 
-const ratingConfig = {
-  PASS: { color: 'bg-green-600', textColor: 'text-green-400', label: 'PASS' },
-  NEEDS_REVIEW: { color: 'bg-yellow-600', textColor: 'text-yellow-400', label: 'NEEDS REVIEW' },
-  FAIL: { color: 'bg-red-600', textColor: 'text-red-400', label: 'FAIL' },
-};
-
 export default function ProofreadResults({
   data,
   animate = false,
@@ -74,17 +68,10 @@ export default function ProofreadResults({
     setCheckedEdits(new Array(data.suggested_edits.length).fill(newState));
   };
 
-  const rating = ratingConfig[data.overall_rating];
-
   return (
     <div className="space-y-4">
-      {/* Rating Badge */}
-      <div className="flex items-center gap-3">
-        <span className={`${rating.color} text-white text-xs font-bold px-3 py-1 rounded-full`}>
-          {rating.label}
-        </span>
-        <span className="font-data text-[var(--text-secondary)] text-sm">{data.summary}</span>
-      </div>
+      {/* Audit summary — Inter for readability. The rating is shown by the result stamp above. */}
+      <p className="font-data text-[var(--text-secondary)] text-sm leading-relaxed">{data.summary}</p>
 
       {/* Flagged Issues */}
       <div>
@@ -92,7 +79,7 @@ export default function ProofreadResults({
           Flagged Issues
         </h4>
         <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-3 min-h-[60px]">
-          <p className="font-data text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">
+          <p className="text-[var(--text-primary)] text-sm whitespace-pre-wrap leading-relaxed">
             {animate ? issuesText.displayText : (
               data.flagged_issues.length > 0
                 ? data.flagged_issues.map((item, i) => `${i + 1}. ${item.issue}`).join('\n')
@@ -138,7 +125,7 @@ export default function ProofreadResults({
                       accentColor: 'var(--accent-hover)',
                     }}
                   />
-                  <span className="font-data text-[var(--text-primary)] text-sm leading-relaxed">
+                  <span className="text-[var(--text-primary)] text-sm leading-relaxed">
                     {i + 1}. {edit}
                   </span>
                 </label>

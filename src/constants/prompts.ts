@@ -346,7 +346,7 @@ Respond with ONLY a valid JSON object. No additional text, no markdown, no code 
     "Specific, constructive fix for issue 2"
   ],
   "overall_rating": "PASS | NEEDS_REVIEW | FAIL",
-  "summary": "One sentence that names the style and story type reviewed and gives the overall assessment"
+  "summary": "One plain sentence giving the overall assessment of the narrative for its intended purpose"
 }
 
 RULES:
@@ -354,7 +354,7 @@ RULES:
 - If the narrative is solid for its style and type, return empty arrays and a PASS rating.
 - Rating scale (apply your style lens's disposition): PASS = ready for its purpose; NEEDS_REVIEW = usable but would benefit from the suggested improvements; FAIL = significant problems that would undermine the narrative's purpose for its audience.
 - Be specific and constructive in every suggestion: say exactly what to change and why it helps for this audience. Never suggest inventing identifiers or numbers.
-- The summary must reflect the actual style and story type (for example, Reviewed as a customer-pay repair-complete narrative — the account is clear and consistent.).`;
+- The summary is a single plain sentence assessing the narrative for its purpose. Do NOT begin it with "Reviewed as" and do NOT restate the narrative style or story type; just give the assessment (for example, The account is clear, consistent, and well documented to support the claim.).`;
 
 export function buildProofreadSystemPrompt(
   narrativeStyle: string | null | undefined,
