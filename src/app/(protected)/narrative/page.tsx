@@ -677,18 +677,22 @@ export default function NarrativePage() {
   // Proofread rating presentation — drives the result stamp and the container's pulsing glow.
   // Set only once results are displayed (not while reviewing), so the glow appears only after a review.
   const proofreadRating = proofreadData && !isProofreading ? proofreadData.overall_rating : null;
-  const ratingStampColor =
+  const ratingBorder =
     proofreadRating === 'PASS' ? '#16a34a' : proofreadRating === 'NEEDS_REVIEW' ? '#ca8a04' : '#dc2626';
+  const ratingStampBg =
+    proofreadRating === 'PASS'
+      ? 'rgba(22, 163, 74, 0.8)'
+      : proofreadRating === 'NEEDS_REVIEW'
+        ? 'rgba(202, 138, 4, 0.82)'
+        : 'rgba(220, 38, 38, 0.8)';
+  const ratingGlow =
+    proofreadRating === 'PASS'
+      ? 'rgba(22, 163, 74, 0.65)'
+      : proofreadRating === 'NEEDS_REVIEW'
+        ? 'rgba(202, 138, 4, 0.65)'
+        : 'rgba(220, 38, 38, 0.65)';
   const ratingStampLabel =
     proofreadRating === 'PASS' ? 'PASS' : proofreadRating === 'NEEDS_REVIEW' ? 'NEEDS REVIEW' : 'FAIL';
-  const ratingGlowClass =
-    proofreadRating === 'PASS'
-      ? 'proofread-glow proofread-glow-pass'
-      : proofreadRating === 'NEEDS_REVIEW'
-        ? 'proofread-glow proofread-glow-review'
-        : proofreadRating === 'FAIL'
-          ? 'proofread-glow proofread-glow-fail'
-          : '';
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
@@ -744,30 +748,52 @@ export default function NarrativePage() {
               )}
             </LiquidCard>
 
-            {/* Review & Proofread */}
-            <LiquidCard size="compact" className={ratingGlowClass}>
+            {/* Review & Proofread — wrapped so the container can pulse-glow in the rating color */}
+            <motion.div
+              className="rounded-[23px]"
+              animate={
+                proofreadRating
+                  ? {
+                      boxShadow: [
+                        `0 0 16px 2px ${ratingGlow}`,
+                        `0 0 34px 9px ${ratingGlow}`,
+                        `0 0 16px 2px ${ratingGlow}`,
+                      ],
+                    }
+                  : { boxShadow: '0 0 0px 0px rgba(0,0,0,0)' }
+              }
+              transition={
+                proofreadRating
+                  ? { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
+                  : { duration: 0.3 }
+              }
+            >
+            <LiquidCard size="compact" className={proofreadRating ? 'shadow-none hover:shadow-none' : ''}>
               <div className="relative">
                 {proofreadRating ? (
-                  // After a review: the button becomes a large rating stamp with a re-run icon beside it
+                  // After a review: the button becomes a translucent rating stamp with a re-run icon beside it
                   <div className="flex items-center gap-2">
                     <div
-                      className="flex-1 rounded-[14px] py-3 px-4 text-center select-none"
-                      style={{ backgroundColor: ratingStampColor }}
+                      className="flex-1 rounded-[14px] py-1.5 px-4 text-center select-none backdrop-blur-sm border"
+                      style={{ backgroundColor: ratingStampBg, borderColor: ratingBorder }}
                     >
                       <span className="text-2xl font-extrabold text-black tracking-[0.15em]">
                         {ratingStampLabel}
                       </span>
                     </div>
-                    <button
+                    <motion.button
                       type="button"
                       onClick={handleProofread}
                       disabled={isAnyLoading}
                       title="Re-run review"
                       aria-label="Re-run review"
-                      className="audit-refresh-btn shrink-0 flex items-center justify-center h-12 w-12 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+                      whileHover={{ scale: 1.12, boxShadow: '0 0 14px 2px var(--accent-bright)' }}
+                      whileTap={{ scale: 1.04 }}
+                      className="shrink-0 flex items-center justify-center h-10 w-10 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ color: 'var(--accent-bright)', backgroundColor: 'var(--accent-10)' }}
                     >
-                      <RefreshCw size={20} />
-                    </button>
+                      <RefreshCw size={18} />
+                    </motion.button>
                   </div>
                 ) : (
                   <Button
@@ -824,6 +850,7 @@ export default function NarrativePage() {
                 </motion.div>
               )}
             </LiquidCard>
+            </motion.div>
           </div>
 
           {/* Right Panel — Narrative Display */}
