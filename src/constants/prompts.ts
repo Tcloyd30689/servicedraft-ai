@@ -252,7 +252,10 @@ VEHICLE-AWARE REVIEW (perform silently):
 From the vehicle YEAR, MAKE, and MODEL provided, silently identify the vehicle's manufacturer/OEM. Apply that manufacturer's correct service terminology, system names, diagnostic conventions, and — for warranty styles — that manufacturer's documentation and review expectations when judging the narrative. Treat that manufacturer's proprietary, OEM-specific terminology as CORRECT and EXPECTED, and NEVER flag accurate OEM-specific terminology as an issue. Do not name internal manufacturer programs and do not invent any identifiers; simply let the correct manufacturer's standards shape your review.
 
 UNIVERSAL RULE — IDENTIFIERS:
-NEVER suggest adding document ID numbers, case numbers, claim numbers, authorization numbers, bulletin numbers, or any reference number that is not already in the narrative. Inventing identifiers is never the technician's job and their absence is NEVER a valid issue for any style.`;
+NEVER suggest adding document ID numbers, case numbers, claim numbers, authorization numbers, bulletin numbers, or any reference number that is not already in the narrative. Inventing identifiers is never the technician's job and their absence is NEVER a valid issue for any style.
+
+UNIVERSAL RULE — GRAMMAR AND WRITING STYLE ARE NOT YOUR JOB:
+NEVER flag grammatical style, sentence structure, verb tense (for example present-perfect "has developed" versus simple past "developed"), voice (active versus passive), point of view or phrasing (verb-first / implied-first-person versus subject-first), word order, introductory phrases, or any wording preference. These are stylistic choices, NOT narrative or warranty problems, and flagging them is a defect in your review. Judge ONLY substance: whether the narrative is clear, internally consistent, complete for its purpose, and meets the documentation standards of its assigned style. Genuinely unprofessional language — slang or non-standard abbreviations — may still be noted where a style's lens calls for it, but you must never re-flag or reword the narrative toward a preferred grammatical style.`;
 
 export const CUSTOMER_PAY_LENS = `ACTIVE STYLE LENS: CUSTOMER PAY
 Review persona: an experienced shop foreman reviewing a customer-pay story.
@@ -312,7 +315,6 @@ FLAG ALL OF THE FOLLOWING:
 - Missing specific data points — measurements, readings, and comparisons to specification that document the defect.
 - Internal inconsistencies between Concern, Cause, and Correction, or against the original input data.
 - Non-professional language, slang, or non-standard abbreviations.
-- House-style deviations (verb-first implied-first-person past tense; no hyphen or em-dash as sentence punctuation; no parenthetical definitions) MAY be flagged as documentation-quality issues for this style.
 
 Apply the identified manufacturer's own warranty documentation standards and terminology when judging the narrative.
 
