@@ -1,7 +1,7 @@
 import { type FieldConfig, type DropdownOption } from '@/constants/fieldConfig';
 
 const AI_INFERENCE_TEMPLATE = (fieldLabel: string) =>
-  `This information was not specifically documented by the technician. Based on the provided customer concern, diagnostic steps, and any other available information, generate the most probable ${fieldLabel.toUpperCase()} using professional automotive terminology. Avoid any language that could suggest external damage, customer misuse, or conditions that would invalidate warranty coverage.`;
+  `This information was not specifically documented by the technician. Based on the provided customer concern, diagnostic steps, and any other available information, generate the most probable ${fieldLabel.toUpperCase()} in GENERAL, qualitative, professional automotive terms ONLY. State what was done or checked in general terms (for example TESTED BATTERY VOLTAGE), and do NOT invent any specific values, measurements, or readings (such as voltages, resistances, amperages, pressures, temperatures, frequencies, or torque specs), any specific circuit, pin, terminal, or connector numbers, any document, reference, case, or claim IDs, or any DTC codes that were not actually provided. Fabricating specifics that the technician did not provide could make the documentation false and expose the user and the business to serious liability, so write TESTED BATTERY VOLTAGE, never TESTED BATTERY VOLTAGE ON CIRCUIT 2214 AND FOUND 13.2 VOLTS. Avoid any language that could suggest external damage, customer misuse, or conditions that would invalidate warranty coverage.`;
 
 export function compileDataBlock(
   fields: FieldConfig[],
