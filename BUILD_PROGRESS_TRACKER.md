@@ -3300,3 +3300,86 @@ Previous auth loading fix attempts (commits de85135 through 199b4ef) were revert
 ---
 
 *— End of Build Progress Tracker —*
+
+---
+
+Sprint W-0 — Worktree & Protocol Setup (2026-08-05) — v1.3.1-beta
+
+First sprint of the 13-sprint Master Update Batch. Creates an isolated update workspace so the
+remaining 12 sprints can be built and tested locally without ever touching the live site's
+working folder, and writes the shared protocol file those sprints depend on.
+
+- [x] **Step 0 — Starting-state guard** — all three checks passed before any work began:
+  branch was `main`, `APP_VERSION` was exactly `v1.3.0-beta`, and both `Sprint G-1` and `AX-4`
+  returned 0 hits in this tracker (confirming no earlier update batch was partially applied).
+
+- [x] **Task 1 — Worktree created**
+  - `git worktree add ../servicedraft-ai-updates -b updates-2026-08` off `main` @ `49e444e`
+  - Absolute path: `C:\Users\Tyler\Desktop\SERVICEDRAFT.AI LOCAL REPO\ServiceDraft.Ai CODEBASE\servicedraft-ai-updates`
+  - `.env.local` copied in manually (gitignored, so the worktree does not inherit it).
+    All 11 keys present, including `TEST_ACCOUNT_EMAIL` / `TEST_ACCOUNT_PASSWORD`.
+
+- [x] **Task 2 — Dependencies installed in the worktree**
+  - `npm install` — 468 packages, clean
+  - `npm install -D playwright` — added `playwright ^1.62.1` to devDependencies
+  - `npx playwright install chromium` — **SUCCEEDED** (Chrome Headless Shell 151.0.7922.34,
+    114.5 MiB, plus winldd 1007). No fallback to non-visual QA is required; the vision-QA tier
+    is fully available for every remaining sprint in this batch.
+
+- [x] **Task 3 — `scripts/qa-shot.mjs` created** (vision-QA screenshot helper)
+  - Parses `.env.local` manually via line split — no dotenv dependency
+  - Launches Playwright chromium headless; args: `<url-or-path> <output-filename>`, plus
+    optional `--login`, `--wait=ms`, `--width=px`, `--height=px`
+  - Bare paths resolve against `http://localhost:3011` (overridable via `QA_BASE_URL`)
+  - With `--login` and both test credentials present: visits `/login`, waits for the form to
+    replace the auth-checking spinner, fills `#email` and `#password` (selectors verified
+    against `src/app/(auth)/login/page.tsx` — the shared `Input` component forwards `id` to the
+    real `<input>`), submits `form button[type="submit"]`, and waits for the URL to leave
+    `/login` before navigating to the target
+  - Saves a full-page PNG into `qa-screens/`, creating the folder if missing
+  - Fails gracefully with a plain-English message and non-zero exit for every failure mode:
+    missing args, playwright package absent, chromium binary absent, dev server down, login
+    failure, missing credentials (warns and captures logged-out instead)
+  - Also de-mangles Git Bash / MSYS leading-slash path rewriting, so both `login` and `/login`
+    work regardless of which shell a QA verifier subagent uses
+  - `qa-screens/` appended to `.gitignore` (additive edit — nothing removed)
+
+- [x] **Task 4 — `SPRINT_PROTOCOL.md` created** in the worktree root, with six sections that
+  govern every remaining sprint: (1) Workspace Guard, (2) Sequence Guard, (3) Hard Safety
+  Rules, (4) Team Model — orchestrator / scouts / builders / mandatory QA-vision verifier,
+  (5) Wrap-Up, (6) Context Discipline.
+
+- [x] **Task 5 — Verified**
+  - `npx tsc --noEmit` — zero errors
+  - `npm run build` — zero errors, all routes compiled (run twice: once before the version
+    bump, once after)
+  - `scripts/qa-shot.mjs` smoke-tested live against `npm run dev -- -p 3011`: captured
+    `qa-screens/w0-login.png` (logged out) and `qa-screens/w0-main-menu.png` (with `--login`).
+    Both PNGs were read back and visually inspected — correct violet theming, logo, wave
+    background, no layout breakage. The graceful-failure path was also confirmed by running
+    the script with no dev server up.
+
+**Files changed:** `scripts/qa-shot.mjs` (new), `SPRINT_PROTOCOL.md` (new), `.gitignore`
+(additive), `package.json` (playwright devDependency + version), `package-lock.json`,
+`src/lib/version.ts`, `BUILD_PROGRESS_TRACKER.md`
+
+**Files NOT changed:** No auth/session/signup/cookie files, no `useAuth.ts`, no `middleware.ts`,
+no `/api/me`, no Stripe code, no RLS policies, no database migrations, no SQL run against
+Supabase, no deletions of any kind. Nothing was pushed; the commit is local on `updates-2026-08`.
+
+**⚠️ DISCOVERY — QA test account profile is incomplete.** Logging in as `TEST_ACCOUNT_EMAIL`
+succeeds, but the account has no `username` set, so the login page's own routing sends it to
+`/signup?step=2` ("Complete Your Profile") instead of `/main-menu`. Any protected route
+captured with `--login` will therefore show the signup step-2 screen rather than the intended
+page. This does not affect logged-out screenshots. Not fixed here — doing so would require
+touching signup/auth flow or writing to the database, both prohibited by this batch's rules.
+**Tyler is completing that account's profile himself as of this sprint (2026-08-05).** Once
+done, `--login` captures will land on the real target route and no code change is needed. If a
+later sprint sees a `--login` screenshot showing "Complete Your Profile", the account regressed
+or the credentials point somewhere else — check that before assuming the sprint's UI is broken.
+
+**Discovery — middleware deprecation notice.** The dev server logs: *"The `middleware` file
+convention is deprecated. Please use `proxy` instead."* (Next.js 16.2.1). `src/middleware.ts`
+is a PROTECTED file and was not touched. Flagging only so it is a known, deliberate deferral
+rather than a surprise later.
+

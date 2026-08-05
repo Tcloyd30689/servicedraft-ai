@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# vision-QA screenshots (scripts/qa-shot.mjs output)
+qa-screens/
