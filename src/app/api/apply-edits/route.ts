@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { concern, cause, correction, suggestedEdits } = await request.json();
+    const { concern, cause, correction, suggestedEdits, storyType } = await request.json();
 
     if (!concern || !cause || !correction) {
       return NextResponse.json(
@@ -69,6 +69,15 @@ export async function POST(request: Request) {
       .map((edit: string, i: number) => `${i + 1}. ${edit}`)
       .join('\n');
 
+    // Diagnostic-only narratives state a RECOMMENDED repair that has not happened yet.
+    // Applying an edit must never flip the Correction into completed-repair tense.
+    // Framed as a constraint on HOW the selected edits are applied, not as an extra edit,
+    // so it does not conflict with the system prompt's "no additional changes" rule.
+    const tenseBlock =
+      storyType === 'diagnostic_only'
+        ? `\n\nDIAGNOSTIC ONLY TENSE PRESERVATION (ABSOLUTE — this is a constraint on HOW the edits above are applied, not an additional edit):\nThis narrative is DIAGNOSTIC ONLY. The repair has NOT been performed. The CORRECTION section states a RECOMMENDED repair and MUST remain in recommended, pre-repair tense after the selected edits are applied. Keep wording such as RECOMMENDED REPLACING or RECOMMEND PERFORMING, and NEVER convert it to REPLACED, PERFORMED, INSTALLED, REPAIRED, or any wording that states or implies the repair was carried out. Never add repair verification, post-repair road test, or any claim that the repair corrected the concern. If a selected edit would seem to require completed-repair wording, apply the substance of that edit while keeping the recommendation tense. Diagnostic, inspection, and access work that WAS actually performed stays in past tense as normal.`
+        : '';
+
     const userPrompt = `Apply ONLY the following selected edits to this warranty narrative. These are the specific edits the user chose to apply. Make these corrections while keeping the narrative professional and audit-compliant. Do not make any other changes beyond what is listed below.
 
 CURRENT NARRATIVE:
@@ -81,7 +90,7 @@ CORRECTION: ${correction}
 ---
 
 SELECTED EDITS TO APPLY:
-${editsFormatted}`;
+${editsFormatted}${tenseBlock}`;
 
     const geminiResult = await generateWithGemini(APPLY_EDITS_SYSTEM_PROMPT, userPrompt, 8192);
     const parsed = parseJsonResponse<NarrativeResponse>(geminiResult.text);

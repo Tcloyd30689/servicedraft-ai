@@ -3454,3 +3454,105 @@ this harness as the preferred tool, keep `scripts/qa-shot.mjs` as the fallback, 
 `--logged-out` requirement, and forbid running `flow:generate` without Tyler's explicit
 per-sprint approval.
 
+
+---
+
+Sprint G-1 — Prompt Logic Fixes (Tense + Single-Suggestion Proofread)
+(2026-08-06) — v1.3.2-beta
+
+Sprint 2 of the 13-sprint Master Update Batch. Two prompt-logic defects: diagnostic-only
+narratives could drift into completed-repair tense (especially after Refine or after applying
+proofread edits), and the proofread audit could hand back two competing fixes for one issue.
+
+- [x] **Step 0 — Guards passed.** Branch `updates-2026-08`, toplevel ends in
+  `servicedraft-ai-updates`, and `Sprint W-0` found in this tracker (1 hit). No pre-existing
+  `Sprint G-1` entry.
+
+- [x] **Task 1 — Diagnostic tense rule strengthened** (`src/constants/prompts.ts`)
+  - The single soft bullet in `DIAGNOSTIC_ONLY_SYSTEM_PROMPT` ("should describe the RECOMMENDED
+    repair action") was replaced by three hard bullets: an ABSOLUTE unconditional tense rule, a
+    scope carve-out, and an explicit convert-completed-wording instruction.
+  - The carve-out matters: the rule governs the RECOMMENDED REPAIR ACTION only. Diagnostic,
+    inspection, and access work that was actually performed stays in verb-first past tense, so
+    the new rule does not contradict `MANDATORY_OUTPUT_RULES` rule 1.
+  - The `"correction"` JSON key description was reinforced to "...STATED AS A RECOMMENDATION AND
+    NEVER AS A COMPLETED REPAIR".
+  - **Deliberately NOT placed in `MANDATORY_OUTPUT_RULES`** — that block is shared with
+    `/api/convert-recommendation` and `/api/update-narrative`, whose entire purpose is converting
+    recommended tense INTO past tense. A tense rule there would put both routes at war with
+    themselves. The repair-complete mirror rule was left byte-identical.
+
+- [x] **Task 2 — Tense preservation threaded through Refine and Apply-Edits**
+  - `/api/refine` already received `storyType` and already printed a STORY TYPE label, but
+    injected no tense instruction. Added a conditional `tenseBlock`, interpolated LAST in the
+    user prompt (`${customBlock}${tenseBlock}`) so it is the final word and outranks any custom
+    instruction. `storyType` was NOT re-threaded — it was already there.
+  - `/api/apply-edits` had no `storyType` at all. Added it to the request destructuring (kept
+    OPTIONAL — deliberately NOT added to the 400 guard, so an older client still works), plus a
+    conditional `tenseBlock` interpolated LAST (`${editsFormatted}${tenseBlock}`). It is phrased
+    as a constraint on HOW the selected edits are applied, not as an extra edit, so it does not
+    conflict with the system prompt's "no additional changes" rule.
+  - `src/app/(protected)/narrative/page.tsx`: one added line, `storyType: state.storyType,` in
+    the `/api/apply-edits` request body. `narrativeStore.ts` (PROTECTED) already exposed
+    `state.storyType`, so no store change was needed and no hard stop was triggered.
+  - Both `tenseBlock` consts collapse to `''` for `repair_complete`, `undefined`, and `null`.
+    Repair-complete prompts are byte-identical to pre-sprint — verified by reconstructing and
+    diffing both templates across all five input cases.
+
+- [x] **Task 3 — Proofread returns exactly one fix per issue**
+  - **Discovery: the two proofread prompts named in the sprint prompt are DEAD CODE.**
+    `PROOFREAD_SYSTEM_PROMPT` and `DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT` are exported but
+    imported by nothing. The live path is `buildProofreadSystemPrompt()` →
+    `PROOFREAD_OUTPUT_FOOTER`. Editing only the named lines would have changed nothing at
+    runtime. The real fix went into `PROOFREAD_OUTPUT_FOOTER`; the two dead constants were
+    given the same rule for consistency (neither was deleted).
+  - Added "EXACTLY ONE FIX PER ISSUE" — bans alternatives, choices, "Option A / Option B",
+    "either this or that", "alternatively", "you could also".
+  - Added an equal-array-length rule (never merge two issues into one edit, never split one
+    issue into two), which also protects the index-parallel pairing the highlight tooltips
+    depend on.
+  - Each edit must now be SELF-CONTAINED and state both the text being changed and its
+    replacement. This was a corrective second pass: an earlier wording ("give the exact
+    replacement wording to use") caused the model to return bare fragments like
+    "due to an internal component defect." with no indication of what they replace — confusing
+    as a checkbox label, and `/api/apply-edits` receives only the edit strings, so the apply
+    model had to guess the insertion point.
+  - Response parsing and `ProofreadResults.tsx` display needed no changes — the UI was already
+    a flat one-string-per-checkbox list. `extractSnippet` and the `[[double bracket]]`
+    convention (including the empty `[[]]` case) are untouched.
+
+- [x] **Task 4 — No existing prompt rules weakened.** Verified intact: no-invented-identifiers
+  rules, index-parallel pairing, `[[]]` convention, `.toUpperCase()` enforcement blocks,
+  `/api/generate` rate limit + `is_restricted` gate, `/api/refine` prompt-injection blocklist,
+  and the `8192` max-output-token argument on the apply-edits Gemini call.
+
+**QA (3 live Gemini calls, the sprint's authorized cap — no 4th):**
+- `npx tsc --noEmit` zero errors. `npm run build` succeeded in 11.8s, 46/46 static pages.
+- Dev server on port 3011. Smoke: `/` 200, `/login` 200, `/main-menu` `/input` `/narrative`
+  307→/login anonymous and 200 authenticated. No 500s.
+- **Call 1 — diagnostic generation with input deliberately written as a COMPLETED repair**
+  ("REPLACED THE LEFT FRONT WHEEL BEARING ASSEMBLY AND ROAD TESTED TO VERIFY..."). Output:
+  "RECOMMEND REMOVING AND REPLACING THE LEFT FRONT HUB AND WHEEL BEARING ASSEMBLY. RECOMMEND
+  PERFORMING A POST-REPAIR ROAD TEST TO VERIFY CONCERN IS RESOLVED." PASS — converted, and no
+  false verification claim. The carve-out also held: diagnostic past tense survived in `cause`.
+- **Call 2 — refine (`more_detail`) on that narrative.** Stayed in recommendation tense. PASS.
+- **Call 3 — proofread on that narrative.** 2 flagged issues, 2 suggested edits (equal length),
+  zero alternative phrasings, snippets stripped cleanly into `{issue, snippet}`. PASS.
+- Apply-edits was verified statically end to end (client → destructure → ternary → prompt)
+  rather than with a 4th call, to stay inside the authorized cap.
+- Screenshots: `/main-menu` and `/input` desktop captured AND read — both render correctly, no
+  error overlays. `/narrative` was NOT screenshotted; reaching it requires a generation flow
+  that would have cost a 4th Gemini call.
+
+**Files changed:** src/constants/prompts.ts, src/app/api/refine/route.ts,
+src/app/api/apply-edits/route.ts, src/app/(protected)/narrative/page.tsx, src/lib/version.ts,
+package.json, BUILD_PROGRESS_TRACKER.md
+**Files NOT changed:** narrativeStore.ts, useAuth.ts, middleware, /api/me, RLS policies, Stripe
+logic, database migrations, MANDATORY_OUTPUT_RULES, PROOFREAD_FRAMEWORK_HEADER, the
+repair-complete mirror rule, /api/proofread/route.ts, ProofreadResults.tsx
+**Build:** Zero TypeScript errors; full production build succeeded.
+
+**Carried forward for Tyler — not actioned this sprint (no deletions per protocol):** three dead
+exports in `src/constants/prompts.ts` (`PROOFREAD_SYSTEM_PROMPT`,
+`DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT`, `AUDIT_STYLE_MODIFIERS`), plus a stale comment above
+`AUDIT_STYLE_MODIFIERS` claiming `/api/proofread` consumes it. Worth a cleanup decision later.

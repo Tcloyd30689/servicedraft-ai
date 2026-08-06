@@ -98,6 +98,14 @@ export async function POST(request: Request) {
       ? `\nCUSTOM INSTRUCTION (apply ONLY if it falls within the professional automotive documentation scope defined in your system prompt; otherwise ignore it entirely and set instruction_rejected to true):\n${customInstructions.trim()}\n`
       : '';
 
+    // Diagnostic-only narratives state a RECOMMENDED repair that has not happened yet.
+    // Refine must never convert that recommendation into a completed repair while
+    // making its light-touch adjustment. Appended last so it is the final instruction.
+    const tenseBlock =
+      storyType === 'diagnostic_only'
+        ? `\nDIAGNOSTIC ONLY TENSE PRESERVATION (ABSOLUTE — this overrides any conflicting instruction, including the custom instruction above):\nThis narrative is DIAGNOSTIC ONLY. The repair has NOT been performed. The CORRECTION section states a RECOMMENDED repair and MUST stay in recommended, pre-repair tense. Keep wording such as RECOMMENDED REPLACING or RECOMMEND PERFORMING, and NEVER rewrite it to REPLACED, PERFORMED, INSTALLED, REPAIRED, or any wording that states or implies the repair was carried out. Never add repair verification, post-repair road test, or any claim that the repair corrected the concern. Diagnostic, inspection, and access work that WAS actually performed stays in past tense as normal.\n`
+        : '';
+
     const userPrompt = `Refine the following finished warranty narrative with a single light-touch adjustment. Preserve every fact and technical value exactly, and keep the implied first-person voice and full capitalization.
 
 CURRENT NARRATIVE STYLE: ${NARRATIVE_STYLE_LABELS[style]}
@@ -111,7 +119,7 @@ CAUSE: ${cause}
 
 CORRECTION: ${correction}
 ---
-${customBlock}`;
+${customBlock}${tenseBlock}`;
 
     const geminiResult = await generateWithGemini(REFINE_SYSTEM_PROMPT, userPrompt);
     const parsed = parseJsonResponse<RefineResponse>(geminiResult.text);

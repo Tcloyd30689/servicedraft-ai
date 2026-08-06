@@ -517,6 +517,7 @@ export default function NarrativePage() {
           cause: state.narrative.cause,
           correction: state.narrative.correction,
           suggestedEdits: selectedEdits,
+          storyType: state.storyType,
         }),
       });
 
