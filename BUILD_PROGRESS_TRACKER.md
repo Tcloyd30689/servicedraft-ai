@@ -3383,3 +3383,74 @@ convention is deprecated. Please use `proxy` instead."* (Next.js 16.2.1). `src/m
 is a PROTECTED file and was not touched. Flagging only so it is a known, deliberate deferral
 rather than a surprise later.
 
+
+---
+
+QA SCREENSHOT HARNESS — TOOLING (no app changes) — 2026-08-05
+
+Tooling-only task. **No application source code, no `src/`, no database, and no version
+number were changed.** Tyler explicitly authorized skipping the MANDATORY VERSION BUMP RULE
+for this task because no application behavior changes. Version stays at `v1.3.1-beta`.
+
+**Where it lives:** `servicedraft-qa`, a SIBLING of the repo folders —
+`C:\Users\Tyler\Desktop\SERVICEDRAFT.AI LOCAL REPO\ServiceDraft.Ai CODEBASE\servicedraft-qa`.
+It is deliberately **outside every git repository** (the parent folder is not a repo, verified
+with `git rev-parse --show-toplevel`) and is **not tracked by git**. Nothing in it is ever
+committed. It has its own `package.json` with only `playwright` and `dotenv` as devDependencies,
+so the app's own dependency tree is untouched by it.
+
+**Authentication:** it logs in with `TEST_ACCOUNT_EMAIL` and `TEST_ACCOUNT_PASSWORD` read at
+runtime from the worktree's `.env.local` via `APP_DIR`. No credentials are stored in the harness
+folder. Point it at a different worktree with `APP_DIR="...\servicedraft-ai" npm run shot`.
+
+**Contents:**
+- `config.mjs` — resolves APP_DIR, loads `.env.local` through dotenv, throws a plain-English
+  error if either credential is missing, and auto-detects the dev server (probes port 3011
+  first per SPRINT_PROTOCOL, then 3000; `BASE_URL` overrides and is never second-guessed)
+- `login.mjs` — logs in, caches the session to `.auth/state.json`, prints `LOGIN OK — session
+  saved`. On failure it writes `login-failure.png` and prints the URL plus any visible error
+  text. Explicitly detects the "bounced to /signup" case and explains it means the test
+  account's profile is incomplete.
+- `shot.mjs` — reuses the cached session, re-logs-in automatically if it is stale, captures
+  full-page PNGs at **desktop 1440×900 and mobile 390×844**, waits for network idle plus a
+  settle delay (framer-motion entrance animations), writes to
+  `shots/<YYYY-MM-DD_HHMM>/<route>__<desktop|mobile>.png`, and prints the URL each route
+  actually landed on so redirects are obvious. `--logged-out` skips the session.
+- `flow-generate.mjs` — drives the real input form to reach `/narrative` (which redirects to
+  `/input` unless store state exists). Reads the app's own `src/constants/fieldConfig.ts` at
+  runtime to derive field IDs and placeholders rather than hardcoding selectors, so it adapts
+  if fields change. Tags every free-text field `QA BOT TEST`. **Requires a typed `yes`
+  confirmation — it makes a real Gemini API call and writes real production database rows.**
+- `README.md` — written for a non-programmer.
+
+**Smoke test result (against `npm run dev -- -p 3011` in this worktree):**
+- `npm run login` → `LOGIN OK — session saved`, landed on `/main-menu`. The test account's
+  profile was completed by Tyler earlier the same day, which resolved the W-0 finding that
+  logins were being bounced to `/signup?step=2`.
+- `npm run shot` → **12/12 screenshots written**, no zero-byte files, run folder
+  `shots/2026-08-05_1812`. The `main-menu` desktop capture was read back and visually
+  inspected: correct violet theming, logo, particle background, Main Menu card with
+  Generate New Story / User Dashboard / Log Out, and the NavBar version label reading
+  `v1.3.1-beta`. The `input` mobile capture was also inspected and confirms a correct
+  390px-wide stacked layout.
+- `npm run shot -- --logged-out /login /signup` → 4/4 captured with no redirects.
+- `flow-generate.mjs` was **written but deliberately NOT run** — it would have made a real
+  Gemini call and written real rows to the live database, which was outside what this task
+  authorized. It is unproven end-to-end; its selectors were verified by reading the source
+  and confirmed against the captured input-page screenshots.
+
+**Discovery — logged-in sessions hide the auth screens.** With a valid session the app
+correctly redirects `/login` and `/signup` to `/main-menu`, so those two screens are
+uncapturable in a normal run. A `--logged-out` flag was added to `shot.mjs` for this. Any
+sprint touching login or signup UI must use it or it will silently screenshot the main menu.
+
+**Discovery — the QA account is role `user`.** The main-menu capture shows only Generate New
+Story and User Dashboard, with no Owner or Team Dashboard button. `/admin` and `/team-dashboard`
+therefore cannot be visually QA'd with these credentials; a test account with `owner` or
+`admin` role would be needed for those screens.
+
+**`SPRINT_PROTOCOL.md` Section 4(d) updated** (additive) to point the QA-vision verifier at
+this harness as the preferred tool, keep `scripts/qa-shot.mjs` as the fallback, document the
+`--logged-out` requirement, and forbid running `flow:generate` without Tyler's explicit
+per-sprint approval.
+

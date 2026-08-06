@@ -98,11 +98,34 @@ One subagent that performs the following **in order**:
 - **(a)** Run `npx tsc --noEmit` and `npm run build`. **Zero errors required.**
 - **(b)** Start the dev server: `npm run dev -- -p 3011`
 - **(c)** Smoke-check the sprint's key routes over HTTP — status codes and obvious error text.
-- **(d)** If `scripts/qa-shot.mjs` and Playwright are available, capture full-page
-  screenshots of the sprint's touched screens into `qa-screens/` — **including logged-in
-  screens** when `TEST_ACCOUNT_EMAIL` and `TEST_ACCOUNT_PASSWORD` exist in `.env.local` —
-  then **READ the screenshots** and visually inspect them against the sprint's definition
-  of done (layout, theming, obvious breakage).
+- **(d)** Capture full-page screenshots of the sprint's touched screens — **including
+  logged-in screens** when `TEST_ACCOUNT_EMAIL` and `TEST_ACCOUNT_PASSWORD` exist in
+  `.env.local` — then **READ the screenshots** and visually inspect them against the
+  sprint's definition of done (layout, theming, obvious breakage). Two tools exist;
+  **prefer the first**:
+
+  1. **`servicedraft-qa` harness** (preferred) — a standalone folder that is a *sibling*
+     of the worktree, outside the repo and never committed:
+     `..\servicedraft-qa`. It reuses a cached login session, captures **desktop
+     (1440×900) and mobile (390×844)** in one pass, writes to a timestamped run folder,
+     and prints the URL each route actually landed on so redirects are never silent.
+     ```bash
+     cd ../servicedraft-qa
+     npm run shot                                  # default route list
+     npm run shot -- /dashboard /input             # specific routes
+     npm run shot -- --logged-out /login /signup   # signed-out screens
+     ```
+     A logged-in session redirects `/login` and `/signup` to `/main-menu`, so those two
+     screens can **only** be captured with `--logged-out`.
+     `npm run flow:generate` reaches the `/narrative` screen, which cannot be visited
+     directly — **but it makes a real Gemini call and writes real database rows, so do
+     NOT run it without Tyler's explicit say-so for that sprint.**
+
+  2. **`scripts/qa-shot.mjs`** (fallback) — lives inside the worktree, single viewport,
+     logs in fresh each time, writes to `qa-screens/`. Fine for a quick one-off shot.
+
+  If neither is available, fall back to non-visual checks and **say so explicitly** in
+  the sprint report rather than implying the UI was seen.
 - **(e)** Adversarially review the **full git diff** against the sprint contract, hunting
   for omissions and regressions.
 - **(f)** **Directly fix small issues** it finds (typos, styling, obvious one-file bugs).
