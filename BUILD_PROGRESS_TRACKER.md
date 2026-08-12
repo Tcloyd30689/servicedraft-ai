@@ -3556,3 +3556,145 @@ repair-complete mirror rule, /api/proofread/route.ts, ProofreadResults.tsx
 exports in `src/constants/prompts.ts` (`PROOFREAD_SYSTEM_PROMPT`,
 `DIAGNOSTIC_ONLY_PROOFREAD_SYSTEM_PROMPT`, `AUDIT_STYLE_MODIFIERS`), plus a stale comment above
 `AUDIT_STYLE_MODIFIERS` claiming `/api/proofread` consumes it. Worth a cleanup decision later.
+
+---
+
+Sprint G-2 — Export Name + Email Modal & Body Overhaul
+**Status:** [x] COMPLETE (2026-08-12) — v1.3.3-beta — Master Update Batch, sprint 3 of 13 (branch `updates-2026-08`, worktree `servicedraft-ai-updates`, local commit only, NOT pushed)
+
+Three connected upgrades built in dependency order: a shared "F. Lastname" name formatter applied
+to the document exports, a full redesign of the email export modal, and a properly branded email body.
+
+**Task 1 — Name on document exports.**
+- NEW `src/lib/formatUserName.ts` — `formatUserName(first, last)` → `"F. LASTNAME"`. Handles both
+  names, first only, last only, neither, null/undefined, and whitespace-only. Only the INITIAL is
+  force-uppercased; the last name passes through exactly as stored, because `EditProfileModal`
+  saves names uppercase and title-casing would corrupt names like `MCDONALD` → `Mcdonald`.
+- `ExportPayload` gained an OPTIONAL `preparedBy?: string` (optional keeps every existing caller
+  and both export routes backward-compatible).
+- Rendered as a right-column "Prepared By:" block in `/api/export-pdf` and `/api/export-docx`,
+  styled to match the existing "Repair Order #:" block (11pt bold underlined heading + 11pt value,
+  right-aligned). Omitted entirely when the name is empty, matching the existing conditional-omit
+  convention for blank vehicle fields.
+- SCOPE CORRECTION — the sprint prompt assumed three render surfaces (Print / PDF / DOCX). There are
+  only TWO. `buildPrintHtml` does not exist in `src/` (it survives only in stale docs) and there is
+  no `window.print()` anywhere. The "VIEW / PRINT / DOWNLOAD" button POSTs to `/api/export-pdf` and
+  opens the returned blob in a new tab — the user prints from the browser PDF viewer. **Print IS
+  the PDF**, so fixing the PDF header delivered the Print view too. No third divergent renderer was
+  created to satisfy the prompt wording.
+- PDF LAYOUT FIX (latent bug, would have caused a collision): the header bottom edge was computed
+  as `y = fieldY + 8` — from the LEFT column only. That was safe purely because the left column
+  happened to be taller. Adding a right-column block broke the assumption, so it is now
+  `y = Math.max(fieldY, rightColY) + 8`. Verified by parsing the real PDF content stream:
+  with a name, `Prepared By:` y=39, name y=45, `REPAIR NARRATIVE` y=61 — a ~9.6mm clear gap.
+  With `preparedBy` empty, `Math.max` still returns 35, byte-identical to the old behavior.
+- Threaded via a new `senderShortName` prop: `narrative/page.tsx` → `ShareExportModal`, and
+  `dashboard/page.tsx` → `NarrativeHistory` → `NarrativeDetailModal`. Resolved client-side from the
+  `useAuth()` profile already in scope at both roots — no new DB queries, no server-side profile
+  fetch, nothing auth-adjacent touched. Existing full-name `senderName` prop left intact throughout.
+
+**Task 2 — Email modal redesign (`EmailExportModal.tsx`).**
+- Title "Email Narrative" centered and enlarged (`text-xl` → `text-2xl`). Achieved by no longer
+  passing `title` to the shared `Modal`, then rendering an own centered `<h2>` — `ui/Modal.tsx` is
+  used by 17 components and was deliberately NOT modified.
+- Recipient model split: `emails: string[]` (index 0 doubling as the input) became `recipients`
+  (the committed list) plus a single `manualEntry`. Exactly ONE empty manual input, always. The
+  added-recipient list renders at the TOP under the title, bare on the modal background with no
+  card, each with a remove (x). Enter commits; a pending uncommitted entry is also committed on
+  SEND so a typed address is never silently dropped.
+- "Add Another Recipient" and "Select From Contacts" removed entirely. With no way to reopen a
+  collapsed panel, the Saved Contacts container is now always visible.
+- "Select Contacts" → "SAVED CONTACTS" at `text-sm`; the inline "New Contact" trigger under the old
+  title removed; contacts now in a 2-column grid (`grid-cols-1 sm:grid-cols-2`, collapsing on
+  mobile); a single click adds a contact immediately — checkboxes, `selectedContactEmails`,
+  `toggleContactSelection` and the "Add Selected" step are gone. "Cancel"/"Add Selected" replaced by
+  "+ NEW CONTACT" (existing inline add-contact form) and "EDIT SAVED CONTACTS" (existing
+  `dashboard/ContactsModal.tsx` CRUD, re-fetching contacts on close). That button row was moved OUT
+  of the `contactsList.length > 0` branch so it survives the empty state.
+- Subject line converted from a read-only preview to an EDITABLE input with a title matching Saved
+  Contacts. Pre-fills `Repair Narrative From {F. Lastname} - R.O.# {roNumber} - {YEAR MAKE MODEL}`
+  with HYPHEN separators (the old preview used em-dashes) and drops empty segments cleanly. Seeded
+  into state on open, so an unedited prefill is exactly what sends.
+- Send now POSTs `subject`, the FORMATTED `senderName`, `narrative_style`, and `story_type` on top of
+  the existing `to` / `narrative` / `displayFormat` / `vehicleInfo`.
+- Contacts CRUD preserved and rewired, never rewritten: `/api/contacts` fetch, `handleSaveNewContact`
+  with its `notes` field, force-uppercase on name+notes (email correctly NOT uppercased), optimistic
+  insert + `localeCompare` re-sort with no refetch, `MAX_RECIPIENTS = 10` and its toast, duplicate
+  prevention and the "(already added)" disabled affordance, loading spinner, empty state, fetch-
+  failure toast, per-field error clearing.
+- framer-motion parity with `ContactsModal`: `AnimatePresence mode="popLayout"` plus `layout` on list
+  items, height expand/collapse on the new-contact form, shared `Button` variants for hover/tap.
+
+**Task 3 — Email body (`/api/send-email` + `buildEmailHtml`/`buildPlainTextEmail`).**
+- The posted `subject` is used as-is; `buildSubjectLine()` was KEPT as the fallback for a blank or
+  absent subject.
+- New intro line above the header: "{F. Lastname} has sent you a repair narrative for the
+  {YEAR MAKE MODEL}." Built by one shared helper used by BOTH the HTML and plain-text builders so
+  they cannot drift, with four graceful degradations (name+vehicle / name only / vehicle only /
+  neither). Passed through `escapeHtml()` — `senderName` is client-supplied and unsanitized by the
+  route, so this is the injection boundary; verified with a hostile-input probe.
+- New centered CTA footer: the logo wrapped in `<a href="https://servicedraft.ai" target="_blank">`,
+  a one-line CTA, a text link, and the existing "Generated by ServiceDraft.AI" attribution KEPT.
+  Nested tables + inline styles only (Outlook-safe). Logo keeps its 2.09:1 native ratio at 105x50 and
+  keeps the hardcoded production URL — `NEXT_PUBLIC_APP_URL` was deliberately NOT used, because every
+  existing consumer falls back to `window.location.origin` / `http://localhost:3000`, which would
+  email a broken localhost image from a dev send.
+- Plain-text twin kept in sync: same intro line, same CTA as a bare URL, existing "Sent by" and
+  "Generated by" tails retained.
+- `narrative_style` and `story_type` are accepted as documented OPTIONAL members of
+  `SendEmailRequest`. They are deliberately not rendered — no copy was invented for them and no
+  DB/activity logging was added (this route has never logged, and adding it was out of scope).
+- ALL existing validation and error handling verified intact: 401 auth, 500 missing RESEND_API_KEY,
+  400 no recipients, 400 >10 recipients, 400 invalid address, 400 missing narrative, 500 Resend
+  error, 500 catch-all, 200 `{ success, sentTo }`, `from: noreply@servicedraft.ai`, and
+  `replyTo: user.email || undefined`.
+
+**QA:** `npx tsc --noEmit` zero errors. `npm run build` SUCCEEDED, exit 0, 46/46 static pages — the
+documented ~1hr Turbopack hang did not reproduce this run. `npx eslint src` = 28 problems, all
+pre-existing in untouched files; ZERO new errors or warnings in the 12 changed files. Dev server on
+port 3011, clean compile. Smoke: `/` 200, `/login` 200, `/dashboard` `/main-menu` `/input` 307 to
+/login anonymous (correct). Screenshots: 20 captured at desktop 1440x900 AND mobile 390x844 and READ
+— dashboard, narrative detail modal, email modal initial, email modal with recipients added, contacts
+manager stacked, post-Escape, contacts 2-column grid, and after a single-click add. Every Task 2 spec
+item visually verified PASS. Additionally: `formatUserName` executed against 14 real cases; four real
+PDFs and a DOCX generated and their content streams parsed to prove the header geometry; the email
+HTML rendered and screenshotted. NO email was sent (`/api/send-email` was blocked at the route level
+in the test browser) and `flow:generate` was NOT run — both forbidden this sprint.
+
+**QA data limitation (stated plainly):** the QA account has 0 saved narratives and 0 saved contacts.
+Rather than generate test data, the `/api/narratives` and `/api/contacts` GET responses were stubbed
+IN THE TEST BROWSER ONLY. The real component tree rendered for real (the subject line resolved a real
+profile to "Q. BOT"), but the data behind it was mocked. Nothing was written to the database. The
+`/narrative` to `ShareExportModal` path was verified by code reading only, since `/narrative` cannot
+be visited directly; the dashboard path exercises the identical `EmailExportModal` component.
+
+**Files changed (12):** src/lib/formatUserName.ts (NEW), src/lib/exportUtils.ts,
+src/app/api/export-pdf/route.ts, src/app/api/export-docx/route.ts, src/app/api/send-email/route.ts,
+src/components/narrative/EmailExportModal.tsx, src/components/narrative/ShareExportModal.tsx,
+src/components/dashboard/NarrativeDetailModal.tsx, src/components/dashboard/NarrativeHistory.tsx,
+src/app/(protected)/narrative/page.tsx, src/app/(protected)/dashboard/page.tsx,
+src/types/database.ts (additive optional `narrative_style?: string | null` on `Narrative`),
+plus src/lib/version.ts, package.json, BUILD_PROGRESS_TRACKER.md.
+
+**Files NOT changed:** useAuth.ts, middleware.ts, /api/me, Stripe, narrativeStore.ts,
+ThemeProvider.tsx, ui/Modal.tsx, ui/Button.tsx, RLS policies, database migrations. No SQL run.
+Nothing deleted.
+
+**Carried forward for Tyler — NOT actioned this sprint:**
+1. **A single Escape closes the entire modal stack.** `ui/Modal.tsx` attaches a document-level
+   `keydown` listener per open modal with no stack awareness, so every open modal onClose fires
+   at once. On `/dashboard`, Escape from the email modal also closes `NarrativeDetailModal`. PROVEN
+   PRE-EXISTING — it reproduces with the contacts manager never opened; this sprint only makes it
+   more visible by adding a third layer. The correct fix is a modal stack in `ui/Modal.tsx` so only
+   the topmost handles Escape, which changes global Escape semantics for 17 components including the
+   signup flow — too broad to regression-test inside this sprint. Deferred by decision.
+2. **Nested-modal backdrop dimming.** `ContactsModal` backdrop is `z-[200]`, below the email
+   modal container `z-[210]`, so the email modal is not dimmed behind the manager. Judged cosmetic
+   and not visually broken; mitigated with `pointer-events-none` on the email modal body while the
+   manager is open. A real fix needs a `zIndex`/`level` prop on `ui/Modal.tsx`.
+3. **`CURRENT STATUS` at the top of this tracker is stale** (still reads v1.3.0-beta). This batch
+   SPRINT_PROTOCOL Section 5 specifies append-to-END entries only, and sprints G-0/G-1 followed that,
+   so it was left alone rather than rewritten. Worth one cleanup pass at the end of the batch.
+4. **Name casing.** `formatUserName` emits `"J. SMITH"`, not `"J. Smith"`, because profile names are
+   stored uppercase. Title-casing was rejected as it would corrupt `MCDONALD` to `Mcdonald`. Say the
+   word if you want the title-cased form and accept that trade-off.

@@ -20,6 +20,9 @@ interface ShareExportModalProps {
   trackerId?: string | null;
   vehicleInfo?: { year?: string; make?: string; model?: string; roNumber?: string };
   senderName?: string;
+  senderShortName?: string;
+  storyType?: 'diagnostic_only' | 'repair_complete' | null;
+  narrativeStyle?: string | null;
   onBeforeExport?: () => Promise<void>;
 }
 
@@ -31,6 +34,9 @@ export default function ShareExportModal({
   trackerId,
   vehicleInfo,
   senderName,
+  senderShortName,
+  storyType,
+  narrativeStyle,
   onBeforeExport,
 }: ShareExportModalProps) {
   const [isOpeningPdf, setIsOpeningPdf] = useState(false);
@@ -59,6 +65,7 @@ export default function ShareExportModal({
       model: vehicleInfo?.model || '',
       roNumber: vehicleInfo?.roNumber || '',
     },
+    preparedBy: senderShortName || '',
   });
 
   const handleCopy = async () => {
@@ -193,6 +200,9 @@ export default function ShareExportModal({
           roNumber: vehicleInfo?.roNumber || '',
         }}
         senderName={senderName || ''}
+        senderShortName={senderShortName}
+        storyType={storyType}
+        narrativeStyle={narrativeStyle}
       />
     </>
   );

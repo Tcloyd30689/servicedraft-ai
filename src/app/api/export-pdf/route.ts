@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { narrative, displayFormat, vehicleInfo } = await request.json();
+    const { narrative, displayFormat, vehicleInfo, preparedBy } = await request.json();
 
     if (!narrative) {
       return NextResponse.json({ error: 'No narrative data provided' }, { status: 400 });
@@ -109,15 +109,30 @@ export async function POST(request: NextRequest) {
     doc.setFont('helvetica', 'bold');
     textUnderline('Repair Order #:', rightColX, headerY, { align: 'right' });
 
+    let rightColY = headerY;
     const roNumber = vehicleInfo?.roNumber || '';
     if (roNumber) {
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
       doc.text(roNumber, rightColX, headerY + 12, { align: 'right' });
+      rightColY = headerY + 12;
     }
 
-    // Move y past the header section (logo height or field list, whichever is taller)
-    y = fieldY + 8;
+    // ── Right column: Prepared By ──
+    const preparedByName = (preparedBy || '').trim();
+    if (preparedByName) {
+      rightColY += 10;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      textUnderline('Prepared By:', rightColX, rightColY, { align: 'right' });
+      rightColY += 6;
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(preparedByName, rightColX, rightColY, { align: 'right' });
+    }
+
+    // Move y past the header section (taller of the two columns)
+    y = Math.max(fieldY, rightColY) + 8;
 
     // ══════════════════════════════════════════════
     // TITLE — "REPAIR NARRATIVE"

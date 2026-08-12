@@ -13,6 +13,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ProfileSection from '@/components/dashboard/ProfileSection';
 import EditProfileModal from '@/components/dashboard/EditProfileModal';
 import NarrativeHistory from '@/components/dashboard/NarrativeHistory';
+import { formatUserName } from '@/lib/formatUserName';
 import AppearanceModal from '@/components/dashboard/AppearanceModal';
 import SavedRepairsModal from '@/components/dashboard/SavedRepairsModal';
 import ContactsModal from '@/components/dashboard/ContactsModal';
@@ -165,7 +166,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Narrative History */}
-        <NarrativeHistory userId={user.id} senderName={[profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username || ''} />
+        <NarrativeHistory
+          userId={user.id}
+          senderName={[profile.first_name, profile.last_name].filter(Boolean).join(' ') || profile.username || ''}
+          senderShortName={formatUserName(profile.first_name, profile.last_name)}
+        />
 
         {/* Delete Account — hidden for owner role */}
         {profile.role !== 'owner' && (

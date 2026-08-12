@@ -55,6 +55,7 @@ interface NarrativeDetailModalProps {
   onClose: () => void;
   narrative: Narrative | null;
   senderName?: string;
+  senderShortName?: string;
 }
 
 export default function NarrativeDetailModal({
@@ -62,6 +63,7 @@ export default function NarrativeDetailModal({
   onClose,
   narrative,
   senderName,
+  senderShortName,
 }: NarrativeDetailModalProps) {
   const [isOpeningPdf, setIsOpeningPdf] = useState(false);
   const [isGeneratingDocx, setIsGeneratingDocx] = useState(false);
@@ -118,6 +120,7 @@ export default function NarrativeDetailModal({
       model: narrative.vehicle_model || '',
       roNumber: narrative.ro_number || '',
     },
+    preparedBy: senderShortName || '',
   });
 
   const handleCopy = async () => {
@@ -392,6 +395,9 @@ export default function NarrativeDetailModal({
           roNumber: narrative.ro_number || '',
         }}
         senderName={senderName || ''}
+        senderShortName={senderShortName}
+        storyType={narrative.story_type}
+        narrativeStyle={narrative.narrative_style ?? null}
       />
 
       <UpdateWithRepairModal

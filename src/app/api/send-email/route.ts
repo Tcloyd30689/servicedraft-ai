@@ -10,10 +10,22 @@ interface SendEmailRequest {
   displayFormat: 'block' | 'ccc';
   vehicleInfo: ExportVehicleInfo;
   senderName: string;
+  /** User-edited (or pre-filled) subject from the send modal. Falls back to buildSubjectLine() when blank or absent. */
+  subject?: string;
+  /**
+   * Posted by the send modal and accepted for contract completeness.
+   * Neither field changes the email copy, so neither is read here.
+   */
+  narrative_style?: string | null;
+  story_type?: 'diagnostic_only' | 'repair_complete' | null;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Fallback subject line. Used only when the client omits `subject` or sends a
+ * blank one — the send modal normally supplies the (editable) subject.
+ */
 function buildSubjectLine(vehicleInfo: ExportVehicleInfo): string {
   const parts: string[] = [];
   if (vehicleInfo.year) parts.push(vehicleInfo.year);
@@ -49,7 +61,14 @@ export async function POST(request: Request) {
     }
 
     const body: SendEmailRequest = await request.json();
-    const { to, narrative, displayFormat, vehicleInfo, senderName } = body;
+    const {
+      to,
+      narrative,
+      displayFormat,
+      vehicleInfo,
+      senderName,
+      subject: requestSubject,
+    } = body;
 
     // Validate recipients
     if (!to || !Array.isArray(to) || to.length === 0) {
@@ -74,7 +93,9 @@ export async function POST(request: Request) {
     }
 
     const resend = new Resend(apiKey);
-    const subject = buildSubjectLine(vehicleInfo);
+    // Use the client-supplied subject as-is; buildSubjectLine is the fallback
+    // for older clients or a blank field.
+    const subject = (requestSubject || '').trim() || buildSubjectLine(vehicleInfo);
     const html = buildEmailHtml(narrative, displayFormat, vehicleInfo, senderName);
     const text = buildPlainTextEmail(narrative, displayFormat, vehicleInfo, senderName);
 

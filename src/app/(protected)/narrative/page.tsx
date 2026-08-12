@@ -8,6 +8,7 @@ import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateC
 import { logActivity } from '@/lib/activityLogger';
 import { createTrackerEntry, updateTrackerAction } from '@/lib/narrativeTracker';
 import { findHighlightRanges, type HighlightRange } from '@/lib/highlightUtils';
+import { formatUserName } from '@/lib/formatUserName';
 import { dispatchActivity } from '@/hooks/useActivityPulse';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -1000,6 +1001,9 @@ export default function NarrativePage() {
           roNumber: state.roNumber || '',
         }}
         senderName={[profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.username || ''}
+        senderShortName={formatUserName(profile?.first_name, profile?.last_name)}
+        storyType={state.storyType}
+        narrativeStyle={state.narrativeStyle}
         onBeforeExport={handleBeforeExport}
       />
 

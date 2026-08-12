@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { narrative, displayFormat, vehicleInfo } = await request.json();
+    const { narrative, displayFormat, vehicleInfo, preparedBy } = await request.json();
 
     if (!narrative) {
       return NextResponse.json({ error: 'No narrative data provided' }, { status: 400 });
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     const vMake = vehicleInfo?.make || '';
     const vModel = vehicleInfo?.model || '';
     const roNumber = vehicleInfo?.roNumber || '';
+    const preparedByName = (preparedBy || '').trim();
 
     // ══════════════════════════════════════════════
     // LOGO — document footer, right-aligned (bottom of every page)
@@ -137,6 +138,34 @@ export async function POST(request: NextRequest) {
         ],
         alignment: AlignmentType.RIGHT,
       }),
+      // "Prepared By:" bold underlined + name — omitted entirely when unavailable
+      ...(preparedByName
+        ? [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: 'Prepared By:',
+                  bold: true,
+                  underline: { type: UnderlineType.SINGLE },
+                  size: 22, // 11pt
+                  font: 'Arial',
+                }),
+              ],
+              alignment: AlignmentType.RIGHT,
+              spacing: { before: 200, after: 80 },
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: preparedByName,
+                  size: 22, // 11pt
+                  font: 'Arial',
+                }),
+              ],
+              alignment: AlignmentType.RIGHT,
+            }),
+          ]
+        : []),
     ];
 
     children.push(

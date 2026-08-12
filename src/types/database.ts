@@ -76,6 +76,8 @@ export interface Narrative {
   correction: string | null;
   full_narrative: string | null;
   story_type: 'diagnostic_only' | 'repair_complete';
+  /** Written by /api/narratives/save; optional because older rows predate the column. */
+  narrative_style?: string | null;
   action_history: NarrativeHistoryEntry[];
   created_at: string;
   updated_at: string;
