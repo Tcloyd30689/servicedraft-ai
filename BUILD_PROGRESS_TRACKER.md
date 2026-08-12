@@ -3698,3 +3698,114 @@ Nothing deleted.
 4. **Name casing.** `formatUserName` emits `"J. SMITH"`, not `"J. Smith"`, because profile names are
    stored uppercase. Title-casing was rejected as it would corrupt `MCDONALD` to `Mcdonald`. Say the
    word if you want the title-cased form and accept that trade-off.
+
+---
+
+Sprint G-2a — Modal Stacking Fix (Escape + z-index)
+**Status:** [x] COMPLETE (2026-08-12) — v1.3.4-beta — follow-up to Sprint G-2, carried-forward item #1 (branch `updates-2026-08`, worktree `servicedraft-ai-updates`, local commit only, NOT pushed)
+
+Fixes the pre-existing modal-stacking bug that Sprint G-2 QA found and deferred.
+
+**THE BUG.** Every full-screen overlay attached its OWN document-level `keydown` listener with
+no stack awareness, so a single Escape press fired EVERY open overlay onClose at once. On
+/dashboard, Escape inside EmailExportModal also closed the parent NarrativeDetailModal and dropped
+the user back to the bare dashboard. Two further defects in the same code:
+- Each overlay reset `document.body.style.overflow` in its own cleanup, so closing a NESTED overlay
+  restored page scrolling while its parent was still open.
+- `ui/Modal.tsx` hardcoded backdrop `z-[200]` / container `z-[210]` for every instance, so a nested
+  modal backdrop sat BELOW the modal it covered and failed to dim it.
+
+**SCOPE CORRECTION — three overlay implementations owned Escape, not one.** The task named only
+`ui/Modal.tsx`. Recon found the identical hand-rolled listener in `input/MyRepairsPanel.tsx` (which
+opens `EditRepairModal`, a ui/Modal, on top of itself) and `dashboard/ActivityDetailModal.tsx`.
+Fixing only `ui/Modal.tsx` would have left the same bug reproducible on the input page, so the fix
+was built as a shared primitive and wired into all three.
+
+**THE FIX.**
+- NEW `src/lib/overlayStack.ts` — a module-level open-overlay stack. `registerOverlay(id)`,
+  `unregisterOverlay(id)`, `isTopOverlay(id)`, `getOverlayDepth(id)`, `subscribeOverlays(listener)`.
+  Owns a body-scroll-lock refcount released only when the LAST overlay closes. Both mutators are
+  idempotent via membership guards, so React StrictMode double-invocation nets to one entry.
+- `ui/Modal.tsx` — Escape and backdrop click gated on `isTopOverlay`; z-index derived from stack
+  depth: backdrop `200 + (depth-1)*20`, container `210 + (depth-1)*20`. Depth is read through
+  `useSyncExternalStore` (the same external-store idiom `narrativeStore.ts` already uses) rather
+  than mirrored into React state — a synchronous `setState` inside an effect trips the
+  `react-hooks/set-state-in-effect` rule, which was caught and corrected during this sprint.
+- `input/MyRepairsPanel.tsx` and `dashboard/ActivityDetailModal.tsx` — joined the stack, Escape
+  gated on `isTopOverlay`, body-overflow handling handed to the refcount. Their own z-index scales
+  (40/50 and 120/130) left UNCHANGED, deliberately: they are meant to sit below ui/Modal.
+- `narrative/EmailExportModal.tsx` — removed the two workarounds G-2 had to add: the
+  `handleModalClose` guard and the `pointer-events-none` class on the modal body. QA proved the
+  z-index fix fully replaces them (`elementFromPoint` over the SEND EMAIL button now returns the
+  manager backdrop at z-240, and a click there produced zero requests to /api/send-email).
+
+**THE INVARIANT THAT MADE THIS SAFE.** For a SINGLE open overlay nothing changed — depth 1 keeps
+z-200/210 and still closes on Escape and on backdrop click. Only STACKS behave differently. That is
+what let a shared component with 17 consumers, including the PROTECTED signup flow, be changed
+without a protected-file edit and without a behavioural regression.
+
+**Caller contract documented in overlayStack.ts (two rules):** register from an effect depending
+ONLY on the open flag and id — never on `onClose`, since a re-registration would pop and re-push
+an overlay above its own child; and a nested overlay must open STRICTLY AFTER its parent, never in
+the same commit, because React runs effects bottom-up and would otherwise invert the stack. Every
+nested overlay in the app satisfies the second rule today (`showEmailModal`, `showContactsManager`
+and `editingTemplate` all start falsy and flip on a later user action).
+
+**QA — 103 assertions, 103 PASS.** `npx tsc --noEmit` exit 0. `npm run build` exit 0, compiled in
+15.1s, 46/46 static pages. `npx eslint src` = 28 problems, DELTA ZERO vs the measured pre-change
+baseline (the two findings in touched files — `Modal.tsx` `set-state-in-effect` on its pre-existing
+`setMounted`, and `MyRepairsPanel.tsx` unused `FileText` — were both confirmed present at HEAD
+before this work by linting the HEAD copies). Dev server clean, ZERO React warnings across ~100
+modal open/close cycles. 32 screenshots at 1440x900, 17 read and inspected.
+- TEST 1 two layers on /dashboard: one Escape closes EmailExportModal ONLY, NarrativeDetailModal
+  stays open. PASS.
+- TEST 2 three layers: measured z-indexes exactly 200/210, 220/230, 240/250; the manager backdrop
+  at 240 now visibly DIMS the email modal at 230; three Escapes peel the stack one layer at a time.
+  PASS.
+- TEST 3 /input: MyRepairsPanel 40/50 with EditRepairModal at 220/230; one Escape closes only the
+  edit modal, the panel stays open, panel z unchanged. PASS.
+- TEST 4 body-scroll refcount: hidden with two layers, STILL hidden after closing the top layer,
+  restored to "" only after the last closes. PASS.
+- TEST 5 single-modal regression, 55/55 across nine modals — dashboard Appearance/EditProfile/
+  SavedRepairs/Contacts, main-menu FAQ/Support/Terms, input SaveRepair, and the /signup Terms modal
+  in a fresh SIGNED-OUT context. Every one: exactly 200/210, Escape closes, backdrop click closes,
+  overflow restored. PASS.
+- TEST 6 ActivityDetailModal: 120/130 unchanged, Escape closes. PASS.
+- Extra adversarial: no stack leak on soft-navigate-away, on unmount-while-open, or on isOpen
+  flipping false; `getSnapshot` returns a stable primitive; the constant-0 server snapshot is safe
+  because the component returns null until `mounted`.
+- NO email sent (0 requests to /api/send-email), NO database writes (every non-GET /api call
+  hard-aborted in the test browser), `flow:generate` NOT run.
+
+**QA limitations (stated plainly):** the QA account has 0 narratives, 0 contacts and 0 saved
+repairs, so every list rendered against GET responses stubbed IN THE TEST BROWSER ONLY. The account
+is role `user`, so reaching ActivityDetailModal required rewriting only the `role` field of the real
+/api/me GET response in the browser — read-only, no file touched. `/signup` was opened but never
+submitted and no credentials were entered.
+
+**Files changed (5 + release):** src/lib/overlayStack.ts (NEW), src/components/ui/Modal.tsx,
+src/components/input/MyRepairsPanel.tsx, src/components/dashboard/ActivityDetailModal.tsx,
+src/components/narrative/EmailExportModal.tsx, plus src/lib/version.ts, package.json,
+BUILD_PROGRESS_TRACKER.md.
+
+**Files NOT changed:** useAuth.ts, middleware.ts, /api/me, Stripe, narrativeStore.ts,
+ThemeProvider.tsx, (auth)/signup/page.tsx, RLS policies, database migrations. No SQL run. Nothing
+deleted. No protected file was edited — signup behaviour was verified, not modified.
+
+**Carried forward for Tyler — NOT actioned:**
+1. **PreferencesPanel z-index collision.** `dashboard/PreferencesPanel.tsx` hardcodes `zIndex: 200`
+   and `201`, tying with ui/Modal depth-1 backdrop at 200. It has no Escape listener, so it was
+   deliberately left out of the stack — registering it would make it swallow Escape entirely. No
+   functional break today (a ui/Modal container at 210 still wins), but the tie is untidy.
+2. **Backdrop-click guard asymmetry.** ui/Modal gates backdrop click on `isTopOverlay`;
+   MyRepairsPanel and ActivityDetailModal do not. Unreachable — the top backdrop fully covers their
+   40/50 and 120/130 — so cosmetic only.
+3. **ActivityDetailModal at 120/130 sits below ui/Modal depth-1 at 210.** If it ever opened over a
+   ui/Modal it would own Escape while being visually buried. Its call sites (/admin,
+   /team-dashboard) are tab-gated against the other modals, so not reachable. Pre-existing property.
+4. **Dev-only:** a Fast Refresh that re-evaluates overlayStack.ts resets the module-level stack and
+   could strand `body.style.overflow = 'hidden'`. No production impact.
+5. **Cosmetic 200ms:** a closing nested modal drops to depth 1 for its fade-out, so its backdrop
+   briefly stops dimming the parent mid-fade. Arguably the desired reveal.
+6. **`CURRENT STATUS` at the top of this tracker remains stale** (reads v1.3.0-beta) — still
+   pending the end-of-batch cleanup pass noted in Sprint G-2.

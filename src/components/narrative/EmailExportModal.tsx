@@ -278,17 +278,10 @@ export default function EmailExportModal({
     }
   }
 
-  // While the contacts manager is stacked on top, Escape / backdrop dismiss
-  // belongs to the manager alone — swallow the close for this modal.
-  const handleModalClose = useCallback(() => {
-    if (showContactsManager) return;
-    onClose();
-  }, [showContactsManager, onClose]);
-
   return (
     <>
-      <Modal isOpen={isOpen} onClose={handleModalClose}>
-        <div className={`space-y-4 ${showContactsManager ? 'pointer-events-none' : ''}`}>
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <div className="space-y-4">
           {/* Title */}
           <h2 className="text-2xl font-semibold text-[var(--text-primary)] text-center -mt-2">
             Email Narrative
@@ -561,7 +554,8 @@ export default function EmailExportModal({
         </div>
       </Modal>
 
-      {/* Rendered AFTER the modal above so it paints on top at the shared z-index.
+      {/* Opens on top of this modal — ui/Modal stacks z-indexes by depth, so the
+          manager's backdrop dims this modal and Escape closes only the manager.
           Closing it re-fetches contacts so edits/deletions show up immediately. */}
       <ContactsModal
         isOpen={showContactsManager}

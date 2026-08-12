@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Wrench, FileText, Loader2, Trash2, Pencil, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
 import EditRepairModal from '@/components/input/EditRepairModal';
+import { registerOverlay, unregisterOverlay, isTopOverlay } from '@/lib/overlayStack';
 
 export interface SavedRepairTemplate {
   id: string;
@@ -40,6 +41,7 @@ interface MyRepairsPanelProps {
 
 export default function MyRepairsPanel({ isOpen, onClose, onLoadTemplate }: MyRepairsPanelProps) {
   const [mounted, setMounted] = useState(false);
+  const overlayId = useId();
   const [templates, setTemplates] = useState<SavedRepairTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -103,22 +105,29 @@ export default function MyRepairsPanel({ isOpen, onClose, onLoadTemplate }: MyRe
     return t.template_name.toLowerCase().includes(q);
   });
 
+  // Stack registration — also owns the body scroll lock, so opening
+  // EditRepairModal on top of this panel and closing it again no longer
+  // restores page scrolling while the panel is still open. Depends only on
+  // isOpen/overlayId so a changing onClose can never re-order the stack.
+  useEffect(() => {
+    if (!isOpen) return;
+    registerOverlay(overlayId);
+    return () => unregisterOverlay(overlayId);
+  }, [isOpen, overlayId]);
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      // Only the frontmost overlay closes — EditRepairModal stacks on top of
+      // this panel, and Escape used to close both at once.
+      if (e.key === 'Escape' && isTopOverlay(overlayId)) onClose();
     },
-    [onClose],
+    [overlayId, onClose],
   );
 
   useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-    };
+    if (!isOpen) return;
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, handleKeyDown]);
 
   if (!mounted) return null;

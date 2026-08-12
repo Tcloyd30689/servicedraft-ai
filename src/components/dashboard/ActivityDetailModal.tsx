@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { registerOverlay, unregisterOverlay, isTopOverlay } from '@/lib/overlayStack';
 import type { TrackerActionEntry } from '@/types/database';
 
 // ─── Color map for action type pills ──────────────────────────
@@ -85,6 +86,7 @@ interface ActivityDetailModalProps {
 
 export default function ActivityDetailModal({ isOpen, onClose, trackerId, fetchDetailFn }: ActivityDetailModalProps) {
   const [mounted, setMounted] = useState(false);
+  const overlayId = useId();
   const [data, setData] = useState<TrackerDetailData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,19 +137,24 @@ export default function ActivityDetailModal({ isOpen, onClose, trackerId, fetchD
     }
   }, [isOpen, trackerId, fetchDetail]);
 
-  // Escape key handler
+  // Stack registration — also owns the body scroll lock. Depends only on
+  // isOpen/overlayId so a changing onClose can never re-order the stack.
+  useEffect(() => {
+    if (!isOpen) return;
+    registerOverlay(overlayId);
+    return () => unregisterOverlay(overlayId);
+  }, [isOpen, overlayId]);
+
+  // Escape key handler — only the frontmost overlay closes, so one press can no
+  // longer collapse this modal together with anything stacked above it.
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && isTopOverlay(overlayId)) onClose();
     };
     document.addEventListener('keydown', handleKeyDown);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, onClose]);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, overlayId, onClose]);
 
   const toggleVersion = (version: number) => {
     setExpandedVersions((prev) => {
