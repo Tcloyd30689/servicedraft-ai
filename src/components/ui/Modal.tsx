@@ -35,6 +35,13 @@ interface ModalProps {
   title?: string;
   children: ReactNode;
   width?: string;
+  /**
+   * REPLACES the backdrop's paint utilities wholesale — it is not appended to a
+   * base string, because two competing `bg-black/*` utilities do not resolve
+   * reliably in Tailwind. The default is the exact literal every existing call
+   * site rendered before this prop existed, so omitting it changes nothing.
+   */
+  backdropClassName?: string;
 }
 
 export default function Modal({
@@ -43,6 +50,7 @@ export default function Modal({
   title,
   children,
   width = 'max-w-[850px]',
+  backdropClassName = 'bg-black/75 backdrop-blur-[10px]',
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
   const overlayId = useId();
@@ -106,7 +114,7 @@ export default function Modal({
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 bg-black/75 backdrop-blur-[10px]"
+            className={`fixed inset-0 ${backdropClassName}`}
             style={{ zIndex: backdropZ }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

@@ -62,6 +62,8 @@ export interface NarrativeHistoryEntry {
   concern?: string;
   cause?: string;
   correction?: string;
+  /** Narrative style in effect for this version. Absent on entries written before Sprint G-3. */
+  narrative_style?: string;
 }
 
 export interface Narrative {

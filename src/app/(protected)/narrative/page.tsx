@@ -92,10 +92,18 @@ export default function NarrativePage() {
   // Unified auto-save: INSERT on first save, PATCH on subsequent saves.
   // Accepts narrativeData directly to avoid stale closure issues when called
   // immediately after setNarrative() within the same async handler.
-  const autoSaveNarrative = useCallback(async (actionType: string, narrativeData?: NarrativeData): Promise<string | null> => {
+  // styleOverride lets a caller record a freshly-chosen style whose store snapshot
+  // hasn't refreshed yet (see handleStyleChange -> handleRegenerate). When omitted,
+  // the store's current style is recorded, so every call site gets a style for free.
+  const autoSaveNarrative = useCallback(async (
+    actionType: string,
+    narrativeData?: NarrativeData,
+    styleOverride?: NarrativeState['narrativeStyle'],
+  ): Promise<string | null> => {
     const nd = narrativeData || state.narrative;
     if (!nd || !user) return null;
 
+    const effectiveStyle = styleOverride ?? state.narrativeStyle;
     const currentSavedId = savedIdRef.current;
 
     if (!currentSavedId) {
@@ -115,7 +123,7 @@ export default function NarrativePage() {
           correction: nd.correction,
           full_narrative: nd.block_narrative,
           story_type: state.storyType,
-          narrative_style: state.narrativeStyle,
+          narrative_style: effectiveStyle,
         }),
       });
 
@@ -143,6 +151,7 @@ export default function NarrativePage() {
             cause: nd.cause,
             correction: nd.correction,
           },
+          narrative_style: effectiveStyle,
         }),
       });
 
@@ -341,8 +350,9 @@ export default function NarrativePage() {
 
       logActivity('regenerate', { story_type: state.storyType || undefined });
 
-      // Auto-save after regeneration (silent)
-      autoSaveNarrative('regenerate', data)
+      // Auto-save after regeneration (silent). Pass styleForBody, not the store
+      // value — on a style-switch regeneration the store snapshot is still stale.
+      autoSaveNarrative('regenerate', data, styleForBody)
         .catch((err) => console.error('Auto-save on regenerate error:', err));
 
       toast.success('Story regenerated');

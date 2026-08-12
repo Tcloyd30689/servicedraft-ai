@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
         concern: body.concern,
         cause: body.cause,
         correction: body.correction,
+        narrative_style: body.narrative_style || 'manufacturer_warranty',
       }],
       updated_at: now,
     };

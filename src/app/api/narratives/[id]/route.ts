@@ -9,6 +9,8 @@ interface NarrativeHistoryEntry {
   concern?: string;
   cause?: string;
   correction?: string;
+  /** Narrative style in effect for this version. Absent on entries written before Sprint G-3. */
+  narrative_style?: string;
 }
 
 export async function GET(
@@ -59,7 +61,7 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { action_type, narrative } = body as {
+    const { action_type, narrative, narrative_style } = body as {
       action_type: string;
       narrative: {
         block_narrative: string;
@@ -67,6 +69,8 @@ export async function PATCH(
         cause: string;
         correction: string;
       };
+      /** Optional — absent on pre-Sprint-G-3 clients; never an error. */
+      narrative_style?: string;
     };
 
     if (!action_type || !narrative) {
@@ -107,6 +111,7 @@ export async function PATCH(
       concern: narrative.concern,
       cause: narrative.cause,
       correction: narrative.correction,
+      ...(narrative_style ? { narrative_style } : {}),
     };
 
     if (isRollingAutoSave) {

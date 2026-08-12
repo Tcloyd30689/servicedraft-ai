@@ -3809,3 +3809,153 @@ deleted. No protected file was edited — signup behaviour was verified, not mod
    briefly stops dimming the parent mid-fade. Arguably the desired reveal.
 6. **`CURRENT STATUS` at the top of this tracker remains stale** (reads v1.3.0-beta) — still
    pending the end-of-batch cleanup pass noted in Sprint G-2.
+
+---
+
+Sprint G-3 — Version History Overhaul + Restore Version
+**Status:** [x] COMPLETE (2026-08-12) — v1.3.5-beta — sprint 4 of the 13-sprint Master Update Batch (branch `updates-2026-08`, worktree `servicedraft-ai-updates`, local commit only, NOT pushed)
+
+Two stages, built and verified in order. Stage A overhauled how version history displays;
+Stage B added restore-a-version on top of it.
+
+**SCOPE CORRECTION — the sprint prompt described the WRONG table.** The prompt stated that
+`narratives.action_history` entries carry `customization: { narrative_style, custom_instructions }`
+and that lightweight events (`proofread`, `export_print`, `export_pdf`) are stored there. Neither is
+true. Scouting found TWO `action_history` columns on two different tables:
+- `narratives.action_history` — typed `NarrativeHistoryEntry`, rendered by `dashboard/NarrativeDetailModal.tsx`.
+  Exactly seven fields: `action, version, at, narrative_text, concern, cause, correction`. NO
+  `customization`, NO `narrative_style`. EVERY entry is a full snapshot; no lightweight entries exist.
+- `narrative_tracker.action_history` — typed `TrackerActionEntry`, rendered by the ADMIN
+  `ActivityDetailModal.tsx`. THIS is the table that has `customization.narrative_style` and
+  lightweight `{at, action}` export/proofread markers.
+
+The sprint targeted the user-dashboard modal, so the first table was the real subject. The admin
+modal was left completely untouched.
+
+**CONSEQUENCE — task 1 could not be done from existing data.** `handleStyleChange`
+(`narrative/page.tsx`) calls the SAME `handleRegenerate` the plain Regenerate button calls, and both
+write `action: 'regenerate'` with byte-identical entries. Plain vs style regeneration was therefore
+indistinguishable. The row-level `narratives.narrative_style` column is no fallback either: it is
+written ONLY at INSERT and never updated by PATCH, so it goes stale after any style switch. The
+prompt's own fallback rule ("differentiate by whether narrative_style changed from the previous
+entry") presupposes a field that did not exist, so the style is now RECORDED on each entry as an
+additive optional JSON field. No schema change, no SQL, no migration — `action_history` is JSONB.
+
+**STAGE A — display + interaction.**
+- `types/database.ts` + the duplicate interface in `api/narratives/[id]/route.ts` — added optional
+  `narrative_style?: string` to `NarrativeHistoryEntry`, kept in sync.
+- `api/narratives/save/route.ts` — the first (`generate`) history entry now records
+  `narrative_style`, using the same `body.narrative_style || 'manufacturer_warranty'` expression the
+  row column already used, so entry and column agree and version 1 has a baseline to compare against.
+- `api/narratives/[id]/route.ts` — PATCH accepts an OPTIONAL `narrative_style` and attaches it to the
+  appended entry via conditional spread, never writing an explicit `undefined` key into JSONB. The
+  400 guard, the rolling `auto_save` in-place collapse, the `append_narrative_history` RPC-first path
+  with read-modify-write fallback, the exact column set, and every error status are unchanged. There
+  is still deliberately NO `action_type` whitelist, which is why `restore` needed zero route changes.
+- `narrative/page.tsx` — `autoSaveNarrative` gained an optional trailing `styleOverride`; resolves
+  `effectiveStyle = styleOverride ?? state.narrativeStyle` once and sends it on BOTH the INSERT and
+  PATCH branches. `handleRegenerate` passes its local `styleForBody`, NOT the store value — the store
+  snapshot has not refreshed when `handleStyleChange` calls it, so passing the store value would have
+  recorded the OLD style and mislabelled every style regeneration.
+- `dashboard/NarrativeDetailModal.tsx` — regeneration tag variants (`Regenerated - Customer Pay` /
+  `- Extended Warranty` / `- Manufacturer Warranty`) applied ONLY when this entry's style AND the
+  previous entry's (version-ascending) are both present AND differ; plain `Regenerated` in every
+  other case, including all legacy rows. Whole row is now the click target (`role="button"`,
+  `tabIndex`, `aria-expanded`, Enter/Space with `preventDefault` on Space) with the chevron demoted
+  to a non-interactive `<span aria-hidden>` — no nested `<button>`. Subtle accent-variable hover glow
+  on expandable rows only. Per-version Block/CCC toggle at the BOTTOM of each expanded version
+  (`versionFormats: Record<number, 'block'|'ccc'>`, default `ccc`). Lightweight entries (no snapshot
+  content) render as plain non-expandable markers whose clicks are a total no-op.
+- **CASING DECISION:** the prompt specified on-screen `REGENERATED - CUSTOMER PAY`. This is achieved
+  with the Tailwind `uppercase` utility on the pill, keeping the label map in Title Case. Hand-writing
+  SHOUTING strings into the map would have made `Regenerated` the only uppercase entry and broken the
+  unknown-action Title-Case fallback, which is preserved.
+- **INNER SCROLLBAR:** killed by removing `max-h-[250px] overflow-y-auto` from the snapshot box —
+  nothing else. `ui/Modal.tsx`'s `max-h-[90vh] overflow-y-auto` body wrapper is untouched and remains
+  the "outer modal may scroll" behaviour the prompt asked for.
+- Latent bug fixed: the map's React key was the array index while expansion is keyed by
+  `entry.version`; now keyed by version + timestamp.
+
+**STAGE B — restore.**
+- `ui/Modal.tsx` — ONE additive optional prop, `backdropClassName`, defaulting character-for-character
+  to the previous literal `bg-black/75 backdrop-blur-[10px]`, so all ~17 existing call sites render
+  identically. The whole segment is replaced rather than appended (two competing `bg-black/*`
+  utilities do not resolve reliably in Tailwind). z-index math, `isTopOverlay` gating, the body
+  wrapper, motion variants and the registration effect's dependency array are untouched.
+- NEW `dashboard/RestoreVersionModal.tsx` — stacks on top of the history modal at z 220/230 via the
+  existing Sprint G-2a overlay stack (zero stacking code written), over
+  `bg-black/90 backdrop-blur-[24px]`. Shows the version's narrative in the format the user was
+  viewing, then the standard export row mirroring NarrativeDetailModal's (COPY /
+  VIEW-PRINT-DOWNLOAD / WORD / EMAIL, pop-up-blocked detection and 60s `URL.revokeObjectURL`
+  preserved), then a clear RESTORE THIS VERSION confirm + CANCEL with a plain-English consequence line
+  and a pending state. Exports build their payload from the ENTRY (`narrative_text` mapped to
+  `block_narrative`), never from the current narrative. EMAIL nests a third modal at 240/250.
+- Restore persists through the EXISTING `PATCH /api/narratives/[id]` with `action_type: 'restore'`.
+  The client sends ONLY the four narrative fields — never an `action_history` array — so the server
+  owns the append and history can never be rewritten or truncated. `auto_save` was deliberately
+  avoided as an action value, since it triggers the in-place replace of the last entry.
+- `NarrativeDetailModal` keeps a local `view` state seeded from the prop so the modal immediately
+  reflects the restored text, bumps a `historyRefresh` counter so the new `Restored` entry appears
+  without closing the modal (the fetch effect's `cancelled` race guard and silent-fail catch are
+  preserved), and calls a new optional `onRestored`. `NarrativeHistory.tsx` wires that to its existing
+  `fetchNarratives` callback — a ONE-LINE change, zero deletions.
+- `restore` added to both display maps: pill `#14b8a6` (teal, distinct from the existing palette) and
+  label `Restored`.
+
+**QA-VISION RESULTS — CLEAN.**
+- `npx tsc --noEmit` zero errors. `npm run build` COMPLETED, exit 0 (it did not hang this run).
+  `npm run lint`: 28 findings, ALL pre-existing, ZERO introduced — the sprint's own files produce no
+  lint output.
+- Dev server on 3011: `/` 200, `/login` 200, `/dashboard` signed-out 307 to `/login` (redirect
+  confirmed, not assumed). No compile errors, zero browser console/page errors across the flow.
+- Screenshots CAPTURED AND READ: real logged-in `/dashboard` desktop 1440x900 + mobile 390x844, plus
+  seven interaction shots — collapsed timeline (all pills uppercase, correct labels/colours),
+  keyboard-Enter expansion, a 14-paragraph narrative in Block with NO inner scrollbar, two versions
+  expanded with INDEPENDENT formats, the stacked restore modal over its heavy backdrop, its export
+  row + confirm, and Escape closing ONLY the front modal.
+- Empirically measured backdrop stack: z=200 rgba(0,0,0,.75) blur(10px), then z=220 rgba(0,0,0,.9)
+  blur(24px). DOM enumeration with a long narrative expanded found exactly ONE `overflow-y-auto`
+  element — the modal's own `max-h-[90vh]` wrapper.
+- All five label cases verified live, not just by reading: legacy to `Regenerated`; unchanged style to
+  `Regenerated`; changed style to `Regenerated - Customer Pay`; unrecognised style literal to plain
+  `Regenerated` (never raw snake_case); unknown action `foo_bar` to `Foo Bar`.
+- 15-point adversarial diff review: all PASS. No client sends `action_history`; rolling `auto_save`
+  and the RPC path intact; all three nested modal open flags start falsy; the `length > 1` gate,
+  version-ascending non-mutating sort, race guard and silent-fail preserved; no protected file
+  touched; no hardcoded colours in new UI beyond the one `ACTION_PILL_COLORS` hex.
+
+**QA limitation (stated plainly):** the QA account has ZERO saved narratives, so the version-history
+and restore UI were unreachable by navigation, and generating one was not authorised this sprint
+(`flow:generate` NOT run). The real components were therefore driven with intercepted READ responses
+(`GET /api/narratives`, `GET /api/narratives/:id`) carrying a synthetic 12-entry `action_history`,
+IN THE TEST BROWSER ONLY. A hard guard aborted every non-GET to `/api/narratives`, and the RESTORE
+confirm button was never clicked. No database rows were read or written. The restore round-trip was
+therefore verified by code review of the request path, not by a live write.
+
+**Files changed (8 + release):** src/types/database.ts, src/app/api/narratives/save/route.ts,
+src/app/api/narratives/[id]/route.ts, src/app/(protected)/narrative/page.tsx,
+src/components/ui/Modal.tsx, src/components/dashboard/NarrativeDetailModal.tsx,
+src/components/dashboard/RestoreVersionModal.tsx (NEW), src/components/dashboard/NarrativeHistory.tsx,
+plus src/lib/version.ts, package.json, BUILD_PROGRESS_TRACKER.md.
+
+**Files NOT changed:** useAuth.ts, middleware.ts, /api/me, Stripe, narrativeStore.ts,
+ThemeProvider.tsx, both ActivityDetailModal.tsx files, RLS policies, database migrations. No SQL run.
+Nothing deleted. `action_history` WRITE behaviour is unchanged except the appended `restore` action.
+
+**Carried forward for Tyler — NOT actioned:**
+1. **The stale `narratives.narrative_style` column.** PATCH never updates it, so after a style switch
+   the row still reports the ORIGINAL style. `EmailExportModal` consumes it. Out of scope here (the
+   fix now lives on the history entries instead), but the column is still wrong and worth a sprint.
+2. **`TrackerActionEntry.customization` is mistyped.** It declares `{length, tone, detail,
+   custom_instructions}` but `narrativeTracker.ts` actually writes `{narrative_style,
+   custom_instructions}`, so the ADMIN ActivityDetailModal's length/tone/detail checks are
+   permanently dead for all new rows. Pre-existing; untouched.
+3. **Restoring a Block-only entry writes empty C/C/C.** An entry that recorded only `narrative_text`
+   and no concern/cause/correction will write empty strings into those columns. The confirm dialog
+   warns the user, but a field-level guard would be the real fix.
+4. **Triplicated display helpers.** `formatActionLabel` / `ACTION_PILL_COLORS` / `formatTimestamp`
+   now exist in four places across the dashboard and admin modals with DIFFERENT key sets. Editing one
+   does not update the others. A consolidation must not change admin behaviour.
+5. **`/api/convert-recommendation` has zero callers** in `src/` — orphan route.
+6. **`CURRENT STATUS` at the top of this tracker remains stale** (reads v1.3.0-beta) — still pending
+   the end-of-batch cleanup pass noted in Sprints G-2 and G-2a.

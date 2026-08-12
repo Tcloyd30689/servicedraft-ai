@@ -320,6 +320,7 @@ export default function NarrativeHistory({ userId, senderName, senderShortName }
         narrative={selectedNarrative}
         senderName={senderName}
         senderShortName={senderShortName}
+        onRestored={fetchNarratives}
       />
     </LiquidCard>
   );
