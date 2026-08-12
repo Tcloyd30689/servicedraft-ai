@@ -3959,3 +3959,93 @@ Nothing deleted. `action_history` WRITE behaviour is unchanged except the append
 5. **`/api/convert-recommendation` has zero callers** in `src/` — orphan route.
 6. **`CURRENT STATUS` at the top of this tracker remains stale** (reads v1.3.0-beta) — still pending
    the end-of-batch cleanup pass noted in Sprints G-2 and G-2a.
+
+---
+
+Sprint G-3a — Live Generation + Restore Round-Trip Verification
+**Status:** [x] COMPLETE (2026-08-12) — no version bump (no application code changed; verification only)
+
+**SUPERSEDES the "QA limitation" paragraph in the Sprint G-3 entry above.** That paragraph said the
+restore round-trip had been verified by code review of the request path rather than by a live write,
+because the QA account had zero saved narratives and Gemini calls were not authorised. Tyler
+authorised real Gemini calls on 2026-08-12 (see the GEMINI CALL BUDGET rule now in
+SPRINT_PROTOCOL.md Section 4). The round-trip has now been verified **against real production data
+with a real write.** Everything below is measured, not reasoned.
+
+**GEMINI SPEND: 5 of the 10 authorised calls.**
+`/api/generate` x3 (initial, plain regenerate, style-switch regenerate), `/api/refine` x1,
+`/api/proofread` x1. Enforced in the request layer via `page.route(...)`, which aborts rather than
+overruns — not by bookkeeping. A first attempt failed before any call (0 spent) on a
+framer-motion form-render race. The `apply-edits` step did not fire (see FINDINGS), saving one call.
+The restore itself is a PATCH and costs nothing.
+
+**PRODUCTION ROWS WRITTEN — TYLER TO DELETE:**
+R.O. `QABOT-G3-01`, narrative id `20332d58-7b52-468c-b6a1-41fbb5e5fa08`, every free-text field
+tagged `QA BOT G3 TEST`. Also the associated `activity_log` / `api_usage_log` rows from 5 AI calls.
+**Nothing was deleted by the harness** — Section 3 forbids it.
+
+**LABEL MATRIX — verified on REAL entries, not fixtures.**
+Stored history: `v1 generate(manufacturer_warranty) | v2 regenerate(manufacturer_warranty) |
+v3 regenerate(customer_pay) | v4 customize(customer_pay)`. Rendered pills:
+
+| Version | Pill text | Verdict |
+|---|---|---|
+| 1 | `GENERATED` | correct |
+| 2 | `REGENERATED` — style unchanged, so NO style suffix | correct, this is the discriminator working |
+| 3 | `REGENERATED - CUSTOMER PAY` — style switched | correct |
+| 4 | `CUSTOMIZED` | correct |
+| 5 | `RESTORED` | correct (teal `#14b8a6`) |
+
+`text-transform: uppercase` confirmed computed on every pill, so the Title-Case label map plus the
+CSS `uppercase` utility does render the ALL-CAPS text the sprint specified. This also proves the
+Stage A data plumbing end-to-end: `narrative_style` is being written onto entries by the real
+regenerate path, including the `styleForBody` override that prevented the stale-store bug.
+
+**RESTORE ROUND-TRIP — restored v2 onto a narrative whose current text was v4. All assertions PASS:**
+- **(a) History preserved.** `JSON.stringify` of the 4 pre-existing entries is byte-identical to the
+  same-length prefix of the post-restore array. Nothing rewritten, nothing truncated.
+- **(b) Exactly one entry appended:** `action='restore'`, `version=5` (= previous max + 1).
+- **(c)** The new entry's `narrative_text` / `concern` / `cause` / `correction` equal v2's snapshot.
+- **(d)** The ROW's `full_narrative` / `concern` / `cause` / `correction` all now equal v2's snapshot.
+- **(e)** `updated_at` advanced 23:49:56Z -> 23:52:52Z.
+- **(f)** The row's text genuinely CHANGED from its pre-restore value — proves it was not a no-op.
+- The timeline refreshed **in place**: the `RESTORED` pill appeared without closing the modal, and
+  the parent history modal survived the restore.
+
+**OTHER CONTRACT ITEMS VERIFIED LIVE:**
+- **Stacking, measured from computed style:** z200 `rgba(0,0,0,.75)` + `blur(10px)` (history
+  backdrop), z210 container, z220 `rgba(0,0,0,.9)` + `blur(24px)` (restore backdrop), z230 container.
+  The heavier top backdrop fully obscures the parent — confirmed visually.
+- **Exports use the VERSION, not the current narrative.** Intercepted the `/api/export-pdf` POST from
+  inside the restore modal: `narrative.block_narrative` equals v2's `narrative_text` AND differs from
+  the row's then-current text. Both directions asserted.
+- **No inner scrollbar (task 4), measured properly.** With ALL versions expanded, the modal body
+  (`p-6 md:p-8 max-h-[90vh] overflow-y-auto rounded-[23px]`) scrolls at 2859px content in an 810px
+  viewport, and `realVerticalScrollersInsideBody` is **EMPTY**. Every snapshot box reports
+  `overflowY: visible`, no `max-h-`, and `scrollHeight === clientHeight` (no clipping).
+- Whole-row expansion works by **keyboard Enter** (`aria-expanded` flips to true); clicking the
+  Block/CCC toggle does NOT collapse the row.
+
+**FINDINGS — two, neither a Sprint G-3 defect:**
+1. **`apply-edits` never fired.** The `APPLY SELECTED EDITS` button was present and clicked, but no
+   `/api/apply-edits` request was made, so no `proofread_apply` entry exists. Most likely the
+   suggestion checkboxes default to unchecked and `handleApplyEdits` early-returns on an empty
+   selection. **Pre-existing behaviour, outside G-3's scope, not investigated further.** Worth a look
+   in a later sprint: a click that silently does nothing is a poor affordance.
+2. **A false-positive in the first QA assertion, now retracted.** An initial check reported "two
+   vertical scrollers in the modal". The second element was
+   `overflow-x-auto -mx-6 px-6` at `NarrativeHistory.tsx:257` — the saved-narratives LIST's
+   HORIZONTAL scroll wrapper, pre-existing since commit `68c11eb`, long before this sprint. CSS
+   forces computed `overflow-y` to `auto` on any element that sets `overflow-x`, and the check's
+   `closest()` scope was loose enough to catch a page element outside the modal. The precise
+   re-check (above) shows zero real inner vertical scrollers. **No app defect.**
+
+**Harness scripts** live in the `servicedraft-qa` sibling folder (outside the repo, never committed):
+`flow-g3-restore.mjs` (generation half, budget-enforced), `flow-g3-restore-only.mjs` (restore half,
+zero-Gemini, reusable against any existing narrative), `check-scroll.mjs`, `shot-restored-entry.mjs`,
+`debug-input.mjs`. The restore-only script is the reusable one — it re-verifies the whole round-trip
+on an existing row at no API cost.
+
+**Files changed in this follow-up:** `SPRINT_PROTOCOL.md` (the new GEMINI CALL BUDGET rule in
+Section 4) and this tracker entry. **No application code changed**, hence no version bump — the app
+remains at v1.3.5-beta as shipped by Sprint G-3.

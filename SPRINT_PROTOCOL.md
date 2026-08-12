@@ -118,8 +118,24 @@ One subagent that performs the following **in order**:
      A logged-in session redirects `/login` and `/signup` to `/main-menu`, so those two
      screens can **only** be captured with `--logged-out`.
      `npm run flow:generate` reaches the `/narrative` screen, which cannot be visited
-     directly — **but it makes a real Gemini call and writes real database rows, so do
-     NOT run it without Tyler's explicit say-so for that sprint.**
+     directly — **it makes real Gemini API calls and writes real rows to the production
+     database.**
+
+     **GEMINI CALL BUDGET — standing rule, authorised by Tyler on 2026-08-12.**
+     A sprint session may make **up to 10 real Gemini-consuming API calls** without
+     asking again. That budget covers every call to `/api/generate`, `/api/customize`,
+     `/api/refine`, `/api/proofread`, `/api/apply-edits`, `/api/update-narrative` and
+     `/api/convert-recommendation` — i.e. generation, review/audit/proofreading,
+     regeneration and AI customization.
+
+     Rules that come with the budget:
+     - **Count every call and report the tally** in the sprint report. Instrument the
+       test browser to abort rather than silently overrun.
+     - Going **above 10 in one session still requires Tyler's explicit say-so.**
+     - Tag every free-text field with an obvious marker (the harness uses
+       `QA BOT TEST`) so the resulting production rows are easy to spot.
+     - **Report the R.O. number(s) written** so Tyler can delete them.
+       **Never delete database rows yourself** — Section 3 forbids it.
 
   2. **`scripts/qa-shot.mjs`** (fallback) — lives inside the worktree, single viewport,
      logs in fresh each time, writes to `qa-screens/`. Fine for a quick one-off shot.
