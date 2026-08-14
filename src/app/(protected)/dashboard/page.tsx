@@ -133,6 +133,7 @@ export default function DashboardPage() {
         <ProfileSection
           profile={profile}
           onUpdate={() => setEditProfileOpen(true)}
+          hideUpdate={isQaTester(profile.role)}
         />
 
         {/* Appearance & Saved Repairs Buttons */}

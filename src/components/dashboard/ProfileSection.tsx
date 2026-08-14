@@ -17,9 +17,11 @@ interface ProfileData {
 interface ProfileSectionProps {
   profile: ProfileData;
   onUpdate: () => void;
+  /** Hides the UPDATE button (which opens profile edit + password change). Used for the read-only qa_tester role (Sprint G-4b). */
+  hideUpdate?: boolean;
 }
 
-export default function ProfileSection({ profile, onUpdate }: ProfileSectionProps) {
+export default function ProfileSection({ profile, onUpdate, hideUpdate }: ProfileSectionProps) {
   const fullName =
     profile.first_name || profile.last_name
       ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim()
@@ -58,10 +60,12 @@ export default function ProfileSection({ profile, onUpdate }: ProfileSectionProp
           </div>
         </div>
 
-        {/* Update Button */}
-        <Button variant="secondary" size="medium" onClick={onUpdate}>
-          UPDATE
-        </Button>
+        {/* Update Button — hidden for the read-only qa_tester role (it opens password change) */}
+        {!hideUpdate && (
+          <Button variant="secondary" size="medium" onClick={onUpdate}>
+            UPDATE
+          </Button>
+        )}
       </div>
     </LiquidCard>
   );

@@ -3132,13 +3132,16 @@ export default function AdminPage() {
                       <Copy size={20} />
                     </button>
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="medium"
-                    onClick={generateNewAccessCode}
-                  >
-                    Generate New Code
-                  </Button>
+                  {/* Generate hidden for the read-only qa_tester role (Sprint G-4b) */}
+                  {!readOnly && (
+                    <Button
+                      variant="secondary"
+                      size="medium"
+                      onClick={generateNewAccessCode}
+                    >
+                      Generate New Code
+                    </Button>
+                  )}
                 </div>
 
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-[var(--accent-5)] border border-[var(--accent-15)]">

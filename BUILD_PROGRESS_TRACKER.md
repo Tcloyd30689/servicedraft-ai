@@ -4210,3 +4210,48 @@ Tyler assigns it. Run a screenshot pass immediately after assignment.
   rendered silently mislabeled as a regular user.
 - The expanded user-detail rows on the Owner Dashboard print the raw role string
   (`['Role', user.role]`) — a qa_tester row shows literal `qa_tester` there. Cosmetic.
+
+---
+
+Sprint G-4b — QA Tester Permission Tightening (Password + Access Code)
+**Status:** [x] COMPLETE (2026-08-13) — v1.3.8-beta — follow-up to G-4a, requested by Tyler after his Phase 1 manual test pass (branch `updates-2026-08`, worktree `servicedraft-ai-updates`, local commit only, NOT pushed)
+
+Tyler completed manual testing of Sprints G-1→G-4a — **all tests passed** — and requested two
+further qa_tester restrictions found while testing as the bot:
+
+1. **User Dashboard UPDATE button hidden for qa_tester.** The button opens `EditProfileModal`,
+   whose Change Password tab calls `supabase.auth.updateUser({ password })` — i.e. the bot could
+   change its own password. `ProfileSection` gained an optional additive `hideUpdate?: boolean`
+   prop; the dashboard passes `hideUpdate={isQaTester(profile.role)}`. `ProfileSection` has
+   exactly one call site, so no other consumer is affected.
+   *Honest limitation:* the password change itself goes through the browser Supabase client
+   directly to Supabase Auth — there is no app API route to gate server-side, and adding one
+   would touch protected auth infrastructure. UI hiding fulfils the intent for a trusted
+   first-party bot; noted for the record.
+2. **"Generate New Code" hidden for qa_tester** in the Owner Dashboard Settings tab's Access
+   Code Management card (`{!readOnly && ...}`). The generator is purely client-side (random
+   string + toast telling the owner to update the Vercel `ACCESS_CODE` env var), so hiding the
+   button is a complete block — there is no server mutation to gate. The code display and Copy
+   button remain visible to qa_tester.
+
+**Files changed:** `src/components/dashboard/ProfileSection.tsx`,
+`src/app/(protected)/dashboard/page.tsx`, `src/app/(protected)/admin/page.tsx` (+ version files).
+Net +8 lines, purely additive conditional rendering; no gate logic or handlers changed.
+
+**QA results — includes the FIRST-EVER live qa_tester screenshot pass** (Tyler has assigned the
+role in production, closing G-4a's activation checklist): `tsc` clean; `npm run build` clean.
+Harness screenshots (desktop + mobile, all read): `/dashboard` as qa_tester shows NO UPDATE
+button, no Delete Account, both dashboard nav buttons; `/admin` loads with real data (16 users,
+621 narratives, G-4 style donut rendering) — no redirect, live-proving G-4a; `/team-dashboard`
+loads with team data, complete donut, cyan QA Tester badge + flask icon on the bot's row.
+Settings-tab change verified by JSX read (harness cannot click tabs). Diff review: purely
+additive, single ProfileSection call site confirmed, owner still sees Generate New Code.
+**0 Gemini calls.**
+
+**Phase 1 status:** G-1 through G-4b complete, manually tested by Tyler, and locally committed.
+This entry closes Phase 1 of 3 of the Master Update Batch. A `phase-1-release` branch/worktree
+is being cut from this commit for Tyler to push and merge.
+
+**Note for the future:** the admin donut screenshots caught Recharts' entrance animation
+mid-sweep (partial arc). Not a defect — but QA screenshot scripts should ideally wait ~1s after
+load before capturing charts.
