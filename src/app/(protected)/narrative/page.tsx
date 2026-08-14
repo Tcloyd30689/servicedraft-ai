@@ -20,6 +20,7 @@ import CustomizationPanel, { type RefineAction } from '@/components/narrative/Cu
 import ProofreadResults from '@/components/narrative/ProofreadResults';
 import EditStoryModal from '@/components/narrative/EditStoryModal';
 import ShareExportModal from '@/components/narrative/ShareExportModal';
+import { NarrativeFeedback } from '@/components/narrative/NarrativeFeedback';
 import Modal from '@/components/ui/Modal';
 import type { NarrativeData, NarrativeState } from '@/stores/narrativeStore';
 
@@ -215,6 +216,8 @@ export default function NarrativePage() {
         concern: data.concern,
         cause: data.cause,
         correction: data.correction,
+        raw_input: state.compiledDataBlock,
+        narrative_style: state.narrativeStyle,
         customization: {
           narrative_style: state.narrativeStyle,
           custom_instructions: state.customInstructions || '',
@@ -897,6 +900,13 @@ export default function NarrativePage() {
                     highlightActive={highlightActive}
                     issueDescriptions={issueDescriptions}
                   />
+                  {state.narrative && (
+                    <NarrativeFeedback
+                      trackerId={state.trackerId}
+                      storyType={state.storyType}
+                      narrativeStyle={state.narrativeStyle}
+                    />
+                  )}
                 </>
               )}
             </LiquidCard>

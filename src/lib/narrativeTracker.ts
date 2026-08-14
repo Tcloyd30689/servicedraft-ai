@@ -14,6 +14,9 @@ interface CreateTrackerData {
   concern?: string;
   cause?: string;
   correction?: string;
+  // Map to the live narrative_tracker.raw_input / narrative_tracker.narrative_style columns.
+  raw_input?: string;
+  narrative_style?: string;
   customization?: {
     narrative_style: string;
     custom_instructions: string;

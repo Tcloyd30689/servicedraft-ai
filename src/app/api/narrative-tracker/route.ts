@@ -29,6 +29,7 @@ export async function POST(request: Request) {
         const {
           ro_number, vehicle_year, vehicle_make, vehicle_model, story_type,
           full_narrative, concern, cause, correction, customization,
+          raw_input, narrative_style,
         } = body;
 
         if (!full_narrative) {
@@ -60,6 +61,8 @@ export async function POST(request: Request) {
             concern: concern || null,
             cause: cause || null,
             correction: correction || null,
+            raw_input: raw_input || null,
+            narrative_style: narrative_style || null,
             action_history: [initialEntry],
           })
           .select('id')

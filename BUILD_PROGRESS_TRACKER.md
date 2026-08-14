@@ -4255,3 +4255,84 @@ is being cut from this commit for Tyler to push and merge.
 **Note for the future:** the admin donut screenshots caught Recharts' entrance animation
 mid-sweep (partial arc). Not a defect — but QA screenshot scripts should ideally wait ~1s after
 load before capturing charts.
+
+---
+
+Sprint A-1 — Capture Layer + Thumbs Feedback
+**Status:** [x] COMPLETE (2026-08-14) — v1.3.9-beta — sprint 6 of 13 of the Master Update Batch, first sprint of Phase 2 (branch `updates-2026-08`, worktree `servicedraft-ai-updates`; Tyler authorized pushing this branch, never merged to main)
+
+Two additive features: (A) persist each generation's raw input and narrative style into the
+lifecycle tracker, and (B) a thumbs up/down feedback control beneath the generated narrative.
+
+**(A) CAPTURE LAYER.** `public.narrative_tracker` already had `raw_input` (text) and
+`narrative_style` (text) live in production — no migration was written or run. The two columns
+were plumbed end to end: `CreateTrackerData` in `src/lib/narrativeTracker.ts` gained
+`raw_input?` / `narrative_style?`; the `case 'create'` branch of
+`src/app/api/narrative-tracker/route.ts` destructures both and writes them in the insert;
+`NarrativeTrackerEntry` in `src/types/database.ts` gained both as `string | null`; and the
+`createTrackerEntry({...})` call on the narrative page now passes
+`raw_input: state.compiledDataBlock` and `narrative_style: state.narrativeStyle`. The existing
+fetch body already spread unknown fields, so no transport change was needed, and the
+`generateNarrative` dependency array already contained both values. Fire-and-forget is intact:
+both fields are optional and ride the existing swallowed-error path, so no new try/catch was
+added and a capture failure cannot break generation. The `case 'update'` branch was not touched.
+
+*Discovery:* `narrative_style` was already being persisted indirectly inside the `action_history`
+JSONB blob via `customization`, but never as a queryable column. That is exactly what this sprint
+fixes. `raw_input` had zero occurrences anywhere in the codebase before this sprint.
+
+**(B) FEEDBACK.** New `src/app/api/feedback/route.ts` (POST only) follows the `/api/contacts`
+auth pattern — cookie-based server client so RLS applies, no service-role key. It validates
+`rating` ∈ {up, down}, rejects comments over 500 chars with a 400, and treats an empty comment as
+null. The upsert is done MANUALLY — SELECT by (tracker_id, user_id) → UPDATE (setting
+`updated_at`) if found, else INSERT — deliberately NOT `.upsert({onConflict})`, because this batch
+forbids running SQL and a unique constraint on (tracker_id, user_id) could not be verified. Every
+query is scoped by `user_id`, so cross-user read/write is impossible.
+
+New `src/components/narrative/NarrativeFeedback.tsx` (named export) renders a compact
+"Was this helpful?" row with lucide `ThumbsUp`/`ThumbsDown`, mounted inside the narrative
+LiquidCard directly beneath `<NarrativeDisplay />` and gated on `state.narrative`, so it hides
+during regenerate/refine/apply-edits. Both thumbs are disabled until `state.trackerId` exists.
+A vote POSTs immediately (so the rating is captured even if no comment follows); thumbs-down also
+expands a 500-char optional textarea with a character counter and a SUBMIT button that works fine
+when left empty. Selected state renders visibly filled (`fill="currentColor"` + accent tint +
+glow). All colors are CSS variables — no hardcoded hex in new code.
+
+**Files changed:** `src/lib/narrativeTracker.ts`, `src/app/api/narrative-tracker/route.ts`,
+`src/types/database.ts`, `src/app/(protected)/narrative/page.tsx` (+ NEW
+`src/app/api/feedback/route.ts`, NEW `src/components/narrative/NarrativeFeedback.tsx`,
++ version files). No protected file touched, no migration, no SQL, no RLS change, nothing deleted.
+
+**QA results:** `npx tsc --noEmit` clean; `npm run build` clean (exit 0, 25.2s — no Turbopack
+hang this run), route manifest lists `ƒ /api/feedback`. `npm run lint` has 28 pre-existing
+problems in untouched files and ZERO in sprint code. Smoke: `/` 200, `/login` 200,
+`/input` `/narrative` `/dashboard` all 307→`/login`; unauthenticated POST `/api/feedback`
+returns 401 `{"error":"Unauthorized"}` (not 404 — route registered). Harness screenshots
+captured to `servicedraft-qa/shots/a1-feedback/` and READ (02, 03, 04, 05, 07, 08; 01 and 06
+captured but not read): thumbs visible directly under the CORRECTION block, one compact 36px
+row, theming tracks the user's chosen accent via `buildCssVars()`, layout holds at both
+1440×900 and 390×844. Interaction driven live — thumbs-down expands the textarea + SUBMIT,
+selected thumb renders filled, empty-comment submit works, switching down→up re-fills the up
+thumb and collapses the box. All four POSTs returned 200, proving both the INSERT path and the
+repeated UPDATE path of the manual upsert. **1 Gemini call** (budget 10; QA wrote a script that
+reuses one generation across all eight screenshots). **R.O. `QABOT-A1` written to production** —
+one `narrative_tracker` row, one `narrative_feedback` row (upserted 4×, final `rating='up'`),
+plus the usual `narratives` / `activity_log` / `api_usage_log` rows. Tyler can delete these; QA
+deleted nothing.
+
+**Known gaps, deliberately not fixed (candidates for a later sprint):**
+1. `src/app/api/feedback/route.ts` does not verify that `tracker_id` belongs to the caller. Not a
+   cross-user leak (every query is scoped by `user_id`), but a user could write their own feedback
+   row pointing at someone else's tracker UUID, skewing analytics. The obvious fix — a SELECT
+   against `narrative_tracker` — depends on RLS allowing users to read their own tracker rows,
+   which cannot be verified without querying the database, and this batch forbids that. Fixing it
+   blind risked 403-ing legitimate users, so it was left and reported instead.
+2. `NarrativeFeedback` does not load existing feedback on mount, so a previously-rated narrative
+   shows an unselected control. Out of the sprint contract.
+3. `whileHover` passes a CSS variable inside a composite `box-shadow` string; Framer Motion may
+   not interpolate it, so the hover glow may not animate. Copied verbatim from the existing house
+   idiom at `narrative/page.tsx:802` — changing it here would deviate from house style.
+
+**Note:** the pre-existing type drift on `TrackerActionEntry.customization` in
+`src/types/database.ts` (typed `{length, tone, detail, custom_instructions}` but written as
+`{narrative_style, custom_instructions}`) was left alone as out of scope, per its existing note.

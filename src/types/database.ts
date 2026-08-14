@@ -113,6 +113,8 @@ export interface NarrativeTrackerEntry {
   concern: string | null;
   cause: string | null;
   correction: string | null;
+  raw_input: string | null;
+  narrative_style: string | null;
   created_at: string;
   last_action_at: string;
   is_regenerated: boolean;
