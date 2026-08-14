@@ -4316,7 +4316,9 @@ selected thumb renders filled, empty-comment submit works, switching down→up r
 thumb and collapses the box. All four POSTs returned 200, proving both the INSERT path and the
 repeated UPDATE path of the manual upsert. **1 Gemini call** (budget 10; QA wrote a script that
 reuses one generation across all eight screenshots). **R.O. `QABOT-A1` written to production** —
-one `narrative_tracker` row, one `narrative_feedback` row (upserted 4×, final `rating='up'`),
+one `narrative_tracker` row, one `narrative_feedback` row (upserted 4×; QA reported the final
+rating as `up`, but a direct read of the table during Sprint A-2 showed `down` — the row count
+and upsert behaviour were correct, the reported final value was not),
 plus the usual `narratives` / `activity_log` / `api_usage_log` rows. Tyler can delete these; QA
 deleted nothing.
 
@@ -4336,3 +4338,115 @@ deleted nothing.
 **Note:** the pre-existing type drift on `TrackerActionEntry.customization` in
 `src/types/database.ts` (typed `{length, tone, detail, custom_instructions}` but written as
 `{narrative_style, custom_instructions}`) was left alone as out of scope, per its existing note.
+
+---
+
+Sprint A-2 — Surveys + Admin Insights Tab
+**Status:** [x] COMPLETE (2026-08-14) — v1.3.10-beta — sprint 7 of 13 of the Master Update Batch, Phase 2 (branch `updates-2026-08`, worktree `servicedraft-ai-updates`; branch pushed to origin per Tyler's authorization, never merged to main)
+
+Owner-authored survey questions with a polite user popup and recorded responses, plus the
+Insights tab shell on the Owner Dashboard that Sprint A-3 will fill out.
+
+**ADMIN API — `/api/admin/surveys` (NEW).** Owner-gated with the analytics route's inline
+`verifyAdmin()` copied verbatim, with ONE deliberate widening: analytics is GET-only so its
+helper returns just `{ userId }`, but this route mutates, so it also returns `role` (the shape
+used by `/api/admin/route.ts`). Without that, `qa_tester` could not be blocked from writing.
+GET lists every question (active and inactive, newest first) with `response_count` /
+`dismiss_count` aggregated **in JavaScript** — no raw SQL. POST creates; PATCH edits or toggles
+and writes ONLY the keys present in the body, so `{ id, is_active: false }` is a safe toggle that
+cannot blank the other columns. Validation: question_text max 500 chars, input_type is 'text' or
+'choice', options required for choice (max 10, each max 100 chars), display_chance an integer
+1-100. `qa_tester` may GET but receives 403 `Forbidden — qa_tester is read-only` on POST/PATCH.
+
+**USER API — `/api/surveys` (NEW).** GET returns at most ONE active question the caller has
+neither answered nor dismissed — the OLDEST eligible one, so the backlog drains oldest-first
+rather than starving behind newer questions — or `data: null`. It deliberately does NOT apply
+`display_chance`; it returns the value and the client rolls. POST records a response or a
+dismissal via the same MANUAL upsert used in Sprint A-1 (SELECT then UPDATE or INSERT, never
+`.upsert({onConflict})`, since a unique constraint cannot be verified without running SQL).
+
+*Architecture note worth keeping:* this route authenticates with the COOKIE client but does its
+data work with the SERVICE-ROLE client. Reason: `survey_questions` is global (not user-owned)
+data, and what its RLS policies permit for an ordinary user could not be verified without running
+SQL, which this batch forbids — a service-role read guarantees the feature works regardless. The
+compensating control is a hard scoping invariant: `user_id` comes from the verified session on
+every read and every write and is NEVER read from the request body. QA verified this by grepping
+for `body.user_id` (no hits) and by live-probing with a spoofed `user_id`, which was ignored.
+
+**ADMIN INSIGHTS TAB.** `admin/page.tsx` is 3,707 lines, so rather than inline a few hundred
+lines into it, the manager lives in `src/components/admin/SurveyManager.tsx` (matching the
+existing `components/admin/` folder) and the page edit is FIVE small hunks totalling +25/-2: a
+lucide `ClipboardList` import, the `SurveyManager` import, `| 'insights'` on the `TabKey` union,
+one tab descriptor before `settings`, and the panel block. The tab BUTTON needed no edit — the
+existing `tabs.map()` picks it up automatically. The panel carries a clearly-marked reserved
+comment block for Sprint A-3's analytics sections. Survey Manager shows the question list with
+status pills, input type, display chance, options, and answered/dismissed counts, plus create and
+edit modals with a dynamic options list. **Every mutation control is wrapped in
+`{!readOnly && ...}`** per the G-4a/G-4b convention, and the handlers additionally early-return on
+`readOnly` — defence in depth behind the API's own 403.
+
+**USER POPUP.** `src/components/narrative/SurveyPopup.tsx` (NEW) is a compact fixed
+bottom-right card — deliberately NOT a modal: no backdrop, no focus trap, no scroll lock. z-index
+150 places it above the nav (100/110) but BELOW `Modal` (200/210), so the unsaved-navigation guard
+still stacks over it and can never be blocked. Choice questions require an explicit SUBMIT rather
+than submitting on click, avoiding accidental one-click answers. Any malformed choice question
+(unknown input_type, or choice with empty options) falls back to the text input rather than
+rendering a dead popup. Silent on every API failure — `console.error` only, never an error toast.
+
+The trigger is wired into `handleSave` ONLY, immediately after its success toast. **It is
+explicitly NOT wired into `autoSaveNarrative`,** which is the shared save primitive behind EIGHT
+paths including debounced keystroke saves inside the edit modal — a trigger there would fire the
+popup constantly. `maybeShowSurvey()` cannot throw into or block `handleSave`: its only
+synchronous work is a ref read/write, and all network work runs in a detached, fully try/caught
+async IIFE. `hasAttemptedSurveyRef` flips BEFORE the first await, so exactly one attempt happens
+per page session even though the SAVE STORY button stays enabled after saving and repeat saves
+are expected.
+
+**Files changed:** NEW `src/app/api/admin/surveys/route.ts`, NEW `src/app/api/surveys/route.ts`,
+NEW `src/components/admin/SurveyManager.tsx`, NEW `src/components/narrative/SurveyPopup.tsx`,
+`src/types/database.ts` (+`SurveyQuestion`, +`SurveyResponse`),
+`src/app/(protected)/admin/page.tsx` (5 hunks), `src/app/(protected)/narrative/page.tsx`
+(4 hunks) (+ version files). No protected file touched, no migration, no SQL, no RLS change,
+nothing deleted. Sprint A-1's work in the narrative page survived intact and was visually
+re-confirmed.
+
+**QA results:** `tsc` clean; `npm run build` clean (12.5s, no Turbopack hang), manifest lists both
+`/api/admin/surveys` and `/api/surveys`; `npm run lint` shows the 28 pre-existing problems and
+ZERO new ones from sprint files. Unauthenticated: `/api/admin/surveys` 403
+`{"success":false,"error":"Unauthorized"}`, `/api/surveys` 401 `{"error":"Unauthorized"}`.
+**Logged in as the qa_tester bot — the key security check: GET 200 `{success:true,data:[]}`, POST
+403 and PATCH 403 both `Forbidden — qa_tester is read-only`, and the list count went 0 to 0,
+proving no row was created.** Screenshots read (5, desktop 1440x900 + mobile 390x844): the
+INSIGHTS tab button matches its siblings exactly, the panel renders with no horizontal overflow at
+either width, the empty state is on-theme, and a DOM probe of every button confirmed
+`New Question / Edit / Deactivate / Reactivate` are ALL ABSENT for qa_tester with only `Refresh`
+remaining. **0 Gemini calls** — QA drove the real form while intercepting only `/api/generate`
+and hard-blocking the other six AI routes (0 violations); the real `/api/surveys` was still hit
+and correctly returned `data: null`. Clicking SAVE STORY twice produced exactly ONE survey fetch,
+live-proving the once-per-session throttle. **R.O. `QABOT-A2-01` written to production** (one
+`narratives` row, one `narrative_tracker` row, activity_log rows) — Tyler can delete it; QA
+deleted nothing.
+
+**Bug found and fixed by QA during verification:** a literal `null` JSON body returned 500 instead
+of 400, because `typeof body.survey_id` throws when `body` is null. A non-indexable-body guard
+(`!body || typeof body !== 'object' || Array.isArray(body)`) was added in three places —
+`/api/surveys` POST and `/api/admin/surveys` POST + PATCH — and re-verified on the rebuilt bundle.
+
+**Known limitation, honestly stated:** the popup could NOT be demonstrated live. No survey
+questions exist yet, and the QA bot is `qa_tester`, which is read-only and cannot create one.
+Creating one via SQL was forbidden and creating one by mocking would have proved nothing, so it
+was left unshown. The popup was verified by code review plus a live trigger firing against the
+real endpoint. **To see it end to end, Tyler should log in as owner, create a question with
+display_chance 100, then generate and save a story.**
+
+**Two cosmetic notes, no action taken:** (1) the comment at `SurveyPopup.tsx:26-28` says z-150 is
+below the toast container, but `ToastProvider` uses zIndex 50 — the comment is wrong, though there
+is no practical impact since toasts are top-center and the popup is bottom-right. (2) the Refresh
+button renders its icon above the label rather than inline; QA confirmed this is PRE-EXISTING —
+the Teams panel's Refresh measures identically, because the shared `Button` does not flex its
+children. SurveyManager correctly matched the existing idiom, so it was left alone.
+
+**Correction to the Sprint A-1 entry above:** that entry stated the QA bot's `narrative_feedback`
+row ended at `rating='up'`. A direct read of the table during this sprint showed `down`. The row
+count and upsert behaviour were correct; the reported final value was not. Incidental data claims
+in QA self-reports are worth spot-checking.

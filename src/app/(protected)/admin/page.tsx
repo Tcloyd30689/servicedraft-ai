@@ -12,7 +12,7 @@ import {
   Database, Clock, Server, Download, Copy, Key, Globe, Info,
   UserCog, UserCheck, UserX, Crown, FlaskConical,
   AlertTriangle, DollarSign, Plus, Edit3, Eye, EyeOff, Shuffle,
-  Users as UsersIcon,
+  Users as UsersIcon, ClipboardList,
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -28,12 +28,13 @@ import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
 import ActivityDetailModal from '@/components/dashboard/ActivityDetailModal';
+import SurveyManager from '@/components/admin/SurveyManager';
 // TokenCalculator removed — replaced by live API Usage tracker
 
 // ─── Protected user — cannot be deleted or restricted ────────
 const PROTECTED_EMAIL = 'hvcadip@gmail.com';
 
-type TabKey = 'overview' | 'activity' | 'users' | 'analytics' | 'usage' | 'teams' | 'settings';
+type TabKey = 'overview' | 'activity' | 'users' | 'analytics' | 'usage' | 'teams' | 'insights' | 'settings';
 
 const TRACKER_FILTERS = [
   { value: 'all', label: 'All Actions' },
@@ -1177,6 +1178,7 @@ export default function AdminPage() {
     { key: 'analytics', label: 'Analytics', icon: BarChart3 },
     { key: 'usage', label: 'API Usage', icon: DollarSign },
     { key: 'teams', label: 'Teams', icon: UsersIcon },
+    { key: 'insights', label: 'Insights', icon: ClipboardList },
     { key: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -3089,6 +3091,25 @@ export default function AdminPage() {
                   ))}
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {activeTab === 'insights' && (
+            <motion.div
+              key="insights"
+              variants={tabVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="space-y-6"
+            >
+              <SurveyManager readOnly={readOnly} />
+
+              {/* ─── Reserved for Sprint A-3 analytics sections ───────────
+                  A-3 will add its analytics cards below the Survey Manager.
+                  Keep them as sibling <LiquidCard> blocks inside this
+                  space-y-6 container so spacing stays consistent. */}
             </motion.div>
           )}
 

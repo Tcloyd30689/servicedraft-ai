@@ -21,6 +21,7 @@ import ProofreadResults from '@/components/narrative/ProofreadResults';
 import EditStoryModal from '@/components/narrative/EditStoryModal';
 import ShareExportModal from '@/components/narrative/ShareExportModal';
 import { NarrativeFeedback } from '@/components/narrative/NarrativeFeedback';
+import SurveyPopup, { type SurveyQuestion } from '@/components/narrative/SurveyPopup';
 import Modal from '@/components/ui/Modal';
 import type { NarrativeData, NarrativeState } from '@/stores/narrativeStore';
 
@@ -84,7 +85,14 @@ export default function NarrativePage() {
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const [selectedEditIndices, setSelectedEditIndices] = useState<number[]>([]);
 
+  // Pending micro-survey question (null = nothing to show). Set only by the
+  // fire-and-forget trigger below, which runs at most once per page session.
+  const [surveyQuestion, setSurveyQuestion] = useState<SurveyQuestion | null>(null);
+
   const lastGenerationId = useRef(-1);
+
+  // One survey attempt per page session, even if SAVE STORY is clicked repeatedly.
+  const hasAttemptedSurveyRef = useRef(false);
 
   // Ref to track savedNarrativeId without stale closures
   const savedIdRef = useRef(state.savedNarrativeId);
@@ -565,6 +573,48 @@ export default function NarrativePage() {
     }
   };
 
+  // Micro-survey trigger — FIRE-AND-FORGET. It can never throw into handleSave
+  // and never blocks it: everything after the guard runs inside a detached async
+  // IIFE whose body is fully try/caught. Every failure path is silent (no toast,
+  // no error UI) — console.error only, and only for a thrown error.
+  //
+  // Attempts AT MOST ONCE per page session: the ref flips before the first await,
+  // so repeat SAVE STORY clicks (the button is not disabled after a save) cannot
+  // queue a second request.
+  //
+  // Deliberately wired to handleSave only — NOT to autoSaveNarrative, which is the
+  // shared save primitive behind eight paths (including debounced keystroke
+  // auto-saves) and would fire this constantly.
+  const maybeShowSurvey = useCallback(() => {
+    if (hasAttemptedSurveyRef.current) return;
+    hasAttemptedSurveyRef.current = true;
+
+    void (async () => {
+      try {
+        const response = await fetch('/api/surveys');
+        if (!response.ok) return;
+
+        const payload = (await response.json()) as {
+          data?: (SurveyQuestion & { display_chance?: number }) | null;
+        } | null;
+        const question = payload?.data;
+        if (!question) return;
+
+        // The server deliberately does NOT apply display_chance — we roll it here.
+        if (Math.random() * 100 >= (question.display_chance ?? 0)) return;
+
+        setSurveyQuestion({
+          id: question.id,
+          question_text: question.question_text,
+          input_type: question.input_type,
+          options: question.options ?? null,
+        });
+      } catch (err) {
+        console.error('Survey fetch failed:', err);
+      }
+    })();
+  }, []);
+
   // Manual save handler
   const handleSave = async () => {
     if (!state.narrative || !user) {
@@ -584,6 +634,9 @@ export default function NarrativePage() {
 
       logActivity('save', { story_type: state.storyType || undefined });
       toast.success('Story saved successfully');
+
+      // Fire-and-forget micro-survey — synchronous, never awaited, never throws.
+      maybeShowSurvey();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       console.error('Save story error:', err);
@@ -1082,6 +1135,9 @@ export default function NarrativePage() {
           </Button>
         </div>
       </Modal>
+
+      {/* Post-save micro-survey — non-blocking bottom-corner popup */}
+      <SurveyPopup question={surveyQuestion} onClose={() => setSurveyQuestion(null)} />
     </div>
   );
 }

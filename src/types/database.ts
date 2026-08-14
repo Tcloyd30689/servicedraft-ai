@@ -130,3 +130,23 @@ export interface NarrativeTrackerEntry {
   exported_at: string | null;
   action_history: TrackerActionEntry[];
 }
+
+export interface SurveyQuestion {
+  id: string;
+  question_text: string;
+  input_type: string;
+  options: string[] | null;
+  is_active: boolean;
+  display_chance: number;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface SurveyResponse {
+  id: string;
+  survey_id: string;
+  user_id: string;
+  response_value: string | null;
+  was_dismissed: boolean;
+  created_at: string;
+}
