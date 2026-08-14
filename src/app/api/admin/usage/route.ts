@@ -22,7 +22,8 @@ async function verifyOwner() {
     .eq('id', user.id)
     .single();
 
-  if (!profile || profile.role !== 'owner') return null;
+  // qa_tester: read-only owner-equivalent (Sprint G-4a)
+  if (!profile || (profile.role !== 'owner' && profile.role !== 'qa_tester')) return null;
   return { userId: user.id };
 }
 

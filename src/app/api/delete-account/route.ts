@@ -29,6 +29,19 @@ export async function POST() {
       );
     }
 
+    // qa_tester is a shared read-only QA account — it must never self-delete (Sprint G-4a).
+    const { data: callerProfile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    if (callerProfile?.role === 'qa_tester') {
+      return NextResponse.json(
+        { error: 'Forbidden — qa_tester accounts cannot be deleted from the app' },
+        { status: 403 },
+      );
+    }
+
     const svc = createServiceClient();
 
     // Delete user's narratives

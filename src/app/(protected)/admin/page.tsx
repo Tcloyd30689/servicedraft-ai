@@ -10,7 +10,7 @@ import {
   CreditCard, FileText, RefreshCw, Zap, Printer,
   CheckCircle, BookOpen, ShieldCheck, ArrowUp, ArrowDown,
   Database, Clock, Server, Download, Copy, Key, Globe, Info,
-  UserCog, UserCheck, UserX, Crown,
+  UserCog, UserCheck, UserX, Crown, FlaskConical,
   AlertTriangle, DollarSign, Plus, Edit3, Eye, EyeOff, Shuffle,
   Users as UsersIcon,
 } from 'lucide-react';
@@ -21,6 +21,7 @@ import {
 } from 'recharts';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { isQaTester, canViewOwnerSurfaces } from '@/lib/roles';
 // createClient removed — tracker data now fetched via admin API POST
 import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
@@ -106,7 +107,7 @@ interface AdminUser {
   position: string | null;
   subscription_status: 'active' | 'trial' | 'expired' | 'bypass';
   is_restricted: boolean;
-  role: 'user' | 'admin' | 'owner';
+  role: 'user' | 'admin' | 'owner' | 'qa_tester';
   created_at: string;
   narrative_count: number;
   last_active: string | null;
@@ -184,6 +185,7 @@ const ROLE_BADGE: Record<string, { bg: string; text: string; label: string }> = 
   owner: { bg: 'rgba(168,85,247,0.15)', text: '#a855f7', label: 'Owner' },
   admin: { bg: 'rgba(234,179,8,0.15)', text: '#eab308', label: 'Team Manager' },
   user: { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af', label: 'User' },
+  qa_tester: { bg: 'rgba(6,182,212,0.15)', text: '#06b6d4', label: 'QA Tester' },
 };
 
 type UserSortColumn = 'first_name' | 'last_name' | 'email' | 'position' | 'role' | 'created_at' | 'subscription_status' | 'narrative_count' | 'last_active';
@@ -233,6 +235,8 @@ const tabVariants = {
 export default function AdminPage() {
   const router = useRouter();
   const { profile, loading: authLoading } = useAuth();
+  // qa_tester sees everything the owner sees but may mutate nothing (Sprint G-4a)
+  const readOnly = isQaTester(profile?.role);
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
   // Tracker (Activity Log) state
@@ -336,7 +340,7 @@ export default function AdminPage() {
 
   // Redirect non-owner users
   useEffect(() => {
-    if (!authLoading && profile && profile.role !== 'owner') {
+    if (!authLoading && profile && !canViewOwnerSurfaces(profile.role)) {
       router.replace('/main-menu');
     }
   }, [authLoading, profile, router]);
@@ -383,7 +387,7 @@ export default function AdminPage() {
   }, [trackerPage, trackerSearch, trackerFilter, trackerSortBy, trackerSortAsc]);
 
   useEffect(() => {
-    if (activeTab === 'activity' && profile?.role === 'owner') {
+    if (activeTab === 'activity' && canViewOwnerSurfaces(profile?.role)) {
       fetchTrackerEntries();
     }
   }, [activeTab, profile, fetchTrackerEntries]);
@@ -458,7 +462,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'users' && profile?.role === 'owner' && users.length === 0 && !usersLoading) {
+    if (activeTab === 'users' && canViewOwnerSurfaces(profile?.role) && users.length === 0 && !usersLoading) {
       fetchUsers();
     }
   }, [activeTab, profile, users.length, usersLoading, fetchUsers]);
@@ -751,7 +755,7 @@ export default function AdminPage() {
   }, [analyticsRange]);
 
   useEffect(() => {
-    if ((activeTab === 'analytics' || activeTab === 'overview') && profile?.role === 'owner') {
+    if ((activeTab === 'analytics' || activeTab === 'overview') && canViewOwnerSurfaces(profile?.role)) {
       fetchAnalytics();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -787,7 +791,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'settings' && profile?.role === 'owner') {
+    if (activeTab === 'settings' && canViewOwnerSurfaces(profile?.role)) {
       fetchAccessCode();
     }
   }, [activeTab, profile, fetchAccessCode]);
@@ -917,7 +921,7 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'teams' && profile?.role === 'owner' && teams.length === 0 && !teamsLoading) {
+    if (activeTab === 'teams' && canViewOwnerSurfaces(profile?.role) && teams.length === 0 && !teamsLoading) {
       fetchTeams();
     }
   }, [activeTab, profile, teams.length, teamsLoading, fetchTeams]);
@@ -1079,7 +1083,7 @@ export default function AdminPage() {
   }, [usageRange]);
 
   useEffect(() => {
-    if (activeTab === 'usage' && profile?.role === 'owner') {
+    if (activeTab === 'usage' && canViewOwnerSurfaces(profile?.role)) {
       fetchUsageData();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1140,7 +1144,7 @@ export default function AdminPage() {
     );
   }
 
-  if (profile.role !== 'owner') {
+  if (!canViewOwnerSurfaces(profile.role)) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <LiquidCard size="spacious">
@@ -1842,6 +1846,7 @@ export default function AdminPage() {
                     </button>
                   </div>
                   <div className="ml-auto flex items-center gap-2">
+                    {!readOnly && (
                     <button
                       onClick={() => setShowCreateTeamModal(true)}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-[var(--accent-border)] text-[var(--text-secondary)] hover:border-[var(--accent-hover)] hover:text-[var(--accent-bright)] bg-[var(--bg-input)] transition-all cursor-pointer whitespace-nowrap"
@@ -1849,6 +1854,7 @@ export default function AdminPage() {
                       <Plus size={14} />
                       CREATE TEAM
                     </button>
+                    )}
                     <Button variant="ghost" size="small" onClick={fetchUsers} disabled={usersLoading}>
                       <RefreshCw size={16} className={usersLoading ? 'animate-spin' : ''} />
                       Refresh
@@ -1943,6 +1949,7 @@ export default function AdminPage() {
                                   >
                                     {user.role === 'owner' && <ShieldCheck size={12} />}
                                     {user.role === 'admin' && <Crown size={12} />}
+                                    {user.role === 'qa_tester' && <FlaskConical size={12} />}
                                     {roleBadge.label}
                                   </span>
                                 </td>
@@ -1987,6 +1994,8 @@ export default function AdminPage() {
                                         <ShieldCheck size={14} />
                                         Protected
                                       </span>
+                                    ) : readOnly ? (
+                                      <span className="text-[var(--text-muted)] text-xs italic">Read-only</span>
                                     ) : (
                                       <>
                                         {/* Password Reset */}
@@ -2964,10 +2973,12 @@ export default function AdminPage() {
                     <RefreshCw size={16} className={teamsLoading ? 'animate-spin' : ''} />
                     Refresh
                   </Button>
+                  {!readOnly && (
                   <Button variant="primary" size="small" onClick={() => setShowCreateTeam(true)}>
                     <Plus size={16} className="mr-1" />
                     New Team
                   </Button>
+                  )}
                 </div>
               </div>
 
@@ -3054,6 +3065,7 @@ export default function AdminPage() {
                           <Eye size={15} />
                           Members
                         </button>
+                        {!readOnly && (
                         <button
                           onClick={() => setEditingTeam({ ...t })}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--accent-10)] hover:text-[var(--accent-bright)] transition-all cursor-pointer"
@@ -3061,6 +3073,8 @@ export default function AdminPage() {
                           <Edit3 size={15} />
                           Edit
                         </button>
+                        )}
+                        {!readOnly && (
                         <button
                           onClick={() => handleToggleTeamActive(t)}
                           disabled={teamActionLoading}
@@ -3069,6 +3083,7 @@ export default function AdminPage() {
                           {t.is_active ? <EyeOff size={15} /> : <Eye size={15} />}
                           {t.is_active ? 'Deactivate' : 'Reactivate'}
                         </button>
+                        )}
                       </div>
                     </LiquidCard>
                   ))}
@@ -3667,6 +3682,7 @@ export default function AdminPage() {
                             style={{ background: mBadge.bg, color: mBadge.text }}
                           >
                             {m.role === 'admin' && <Crown size={10} />}
+                            {m.role === 'qa_tester' && <FlaskConical size={10} />}
                             {mBadge.label}
                           </span>
                         </td>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Sparkles, LayoutDashboard, LogOut, HelpCircle, MessageSquare, FileText, Shield, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { isQaTester, canViewOwnerSurfaces } from '@/lib/roles';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
@@ -138,8 +139,8 @@ export default function MainMenuPage() {
       onClick: () => router.push('/dashboard'),
       variant: 'secondary' as const,
     },
-    // Owner-level: Owner Dashboard button
-    ...(profile.role === 'owner'
+    // Owner-level: Owner Dashboard button (owner + qa_tester view parity)
+    ...(canViewOwnerSurfaces(profile.role)
       ? [{
           label: 'OWNER DASHBOARD',
           icon: <Shield size={20} />,
@@ -147,8 +148,8 @@ export default function MainMenuPage() {
           variant: 'secondary' as const,
         }]
       : []),
-    // Admin-level: Team Dashboard button
-    ...(profile.role === 'admin'
+    // Admin-level: Team Dashboard button (qa_tester also gets it; owner reaches it via /dashboard)
+    ...((profile.role === 'admin' || isQaTester(profile.role))
       ? [{
           label: 'TEAM DASHBOARD',
           icon: <Users size={20} />,

@@ -7,7 +7,7 @@ import {
   Shield, Users, Search, RefreshCw, Crown,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   ArrowUp, ArrowDown,
-  FileText, Activity, UserCog, UserMinus,
+  FileText, Activity, UserCog, UserMinus, FlaskConical,
   Share2, CheckCircle, TrendingUp, Layers,
 } from 'lucide-react';
 import {
@@ -16,6 +16,7 @@ import {
 } from 'recharts';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { canViewTeamSurfaces } from '@/lib/roles';
 import LiquidCard from '@/components/ui/LiquidCard';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -37,7 +38,7 @@ interface TeamMember {
   first_name: string | null;
   last_name: string | null;
   email: string;
-  role: 'user' | 'admin' | 'owner';
+  role: 'user' | 'admin' | 'owner' | 'qa_tester';
   position: string | null;
   narrative_count: number;
   last_active: string | null;
@@ -67,6 +68,7 @@ const ROLE_BADGE: Record<string, { bg: string; text: string; label: string }> = 
   owner: { bg: 'rgba(168,85,247,0.15)', text: '#a855f7', label: 'Owner' },
   admin: { bg: 'rgba(234,179,8,0.15)', text: '#eab308', label: 'Admin' },
   user: { bg: 'rgba(107,114,128,0.15)', text: '#9ca3af', label: 'User' },
+  qa_tester: { bg: 'rgba(6,182,212,0.15)', text: '#06b6d4', label: 'QA Tester' },
 };
 
 // ─── Activity Log Constants (Tracker-based) ──────────────
@@ -241,7 +243,7 @@ export default function TeamDashboardPage() {
   }, [profile?.team_id]);
 
   useEffect(() => {
-    if (profile && (profile.role === 'admin' || profile.role === 'owner')) {
+    if (profile && canViewTeamSurfaces(profile.role)) {
       fetchTeam();
     }
   }, [profile, fetchTeam]);
@@ -436,6 +438,11 @@ export default function TeamDashboardPage() {
   // Can the current user manage this member's role?
   const canManageRole = (member: TeamMember): { allowed: boolean; reason?: string } => {
     if (!profile) return { allowed: false };
+
+    // Only owner and admin may manage roles — qa_tester and any other role are read-only (Sprint G-4a)
+    if (profile.role !== 'owner' && profile.role !== 'admin') {
+      return { allowed: false, reason: 'Read-only role' };
+    }
 
     // Owner can do anything
     if (profile.role === 'owner') return { allowed: true };
@@ -981,6 +988,7 @@ export default function TeamDashboardPage() {
                                   style={{ background: roleBadge.bg, color: roleBadge.text }}
                                 >
                                   {member.role === 'admin' && <Crown size={10} />}
+                                  {member.role === 'qa_tester' && <FlaskConical size={10} />}
                                   {roleBadge.label}
                                 </span>
                               </div>
@@ -1136,6 +1144,7 @@ export default function TeamDashboardPage() {
                                     style={{ background: roleBadge.bg, color: roleBadge.text }}
                                   >
                                     {member.role === 'admin' && <Crown size={12} />}
+                                    {member.role === 'qa_tester' && <FlaskConical size={12} />}
                                     {roleBadge.label}
                                   </span>
                                 </td>
@@ -1233,6 +1242,7 @@ export default function TeamDashboardPage() {
                                           style={{ background: roleBadge.bg, color: roleBadge.text }}
                                         >
                                           {member.role === 'admin' && <Crown size={10} />}
+                                          {member.role === 'qa_tester' && <FlaskConical size={10} />}
                                           {roleBadge.label}
                                         </span>
                                       </div>

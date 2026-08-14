@@ -24,8 +24,9 @@ async function verifyAdmin() {
     .eq('id', user.id)
     .single();
 
-  if (!profile || profile.role !== 'owner') return null;
-  return { userId: user.id };
+  // qa_tester: read-only owner-equivalent (Sprint G-4a)
+  if (!profile || (profile.role !== 'owner' && profile.role !== 'qa_tester')) return null;
+  return { userId: user.id, role: profile.role as string };
 }
 
 export async function POST(request: Request) {
@@ -37,6 +38,20 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { action, ...params } = body;
+
+    // qa_tester is read-only: explicit allowlist, deny-by-default (Sprint G-4a).
+    const QA_READ_ONLY_ACTIONS = new Set([
+      'list_users',
+      'get_user_details',
+      'get_access_code',
+      'list_teams',
+      'list_tracker_entries',
+      'get_tracker_detail',
+    ]);
+    if (admin.role === 'qa_tester' && !QA_READ_ONLY_ACTIONS.has(action)) {
+      return NextResponse.json({ success: false, error: 'Forbidden — qa_tester is read-only' }, { status: 403 });
+    }
+
     const svc = createServiceClient();
 
     switch (action) {

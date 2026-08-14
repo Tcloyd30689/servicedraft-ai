@@ -4131,3 +4131,82 @@ only at INSERT (`api/narratives/save/route.ts`) and is **never updated by the PA
 `api/narratives/[id]/route.ts` attaches the style to the `action_history` entry but not to the row
 column. Both charts therefore show **style at original save time**, not the style a narrative was
 last regenerated into. This is already documented as a known issue earlier in this tracker.
+
+---
+
+Sprint G-4a — QA Tester Bot Role
+**Status:** [x] COMPLETE (2026-08-13) — v1.3.7-beta — approved mid-batch addition, follow-up to Sprint G-4's QA limitation (branch `updates-2026-08`, worktree `servicedraft-ai-updates`, local commit only, NOT pushed)
+
+Adds a fourth role, **`qa_tester`** — a read-only owner-equivalent for the QA screenshot bot.
+Explicitly approved by Tyler via the DOUBLE-CHECK PROTOCOL (category #5, loosening role guards)
+on 2026-08-13. `qa_tester` may VIEW everything the owner can view (Owner Dashboard all 7 tabs,
+Team Dashboard, all read-only admin/team API surfaces incl. the access code on Settings); it is
+DENIED every mutation: user deletes/edits/restrictions, role changes, subscription changes,
+password resets, team CRUD, team-member promotions/removals, and self-service account deletion.
+No database changes (`users.role` is unconstrained VARCHAR — but see the CHECK-constraint warning
+below).
+
+**Files changed (14 + version files):**
+- **NEW `src/lib/roles.ts`** — role helpers (`isQaTester`, `canViewOwnerSurfaces`,
+  `canViewTeamSurfaces`, `hasOwnerReadBreadth`), all taking `string`, all deny-by-default.
+  **Why it exists:** `useAuth.ts` (PROTECTED) declares its own `role: 'user'|'admin'|'owner'`
+  union, so `profile.role === 'qa_tester'` in a page fails tsc (TS2367). The helpers accept the
+  narrower union without error, letting every page gate on qa_tester with **zero protected-file
+  edits**. Do not "simplify" pages back to direct literal comparisons.
+- `src/types/database.ts` — union widened (non-protected type).
+- Server (7): `api/admin/route.ts` (verifyAdmin accepts qa_tester + returns role; new
+  `QA_READ_ONLY_ACTIONS` **allowlist** of exactly 6 read actions — deny-by-default, unknown or
+  future actions 403 for qa_tester), `api/admin/analytics` + `api/admin/usage` (gates widened to
+  `!== 'owner' && !== 'qa_tester'`), `api/teams` (GET all-teams branch), `api/teams/members`
+  (GET gate; admin own-team scoping untouched so qa_tester gets owner breadth),
+  `api/teams/activity` (GET gate; interior `=== 'admin'` narrowings untouched),
+  `api/delete-account` (**new deny** — the route previously had NO role check at all; qa_tester
+  now 403s before any deletion).
+- Client (5): `admin/page.tsx` (entry gates + all 6 fetch effects via `canViewOwnerSurfaces`;
+  `readOnly` mode replaces all six user-row mutating actions with a "Read-only" hint and hides
+  CREATE TEAM / New Team / team Edit / Deactivate; every modal-opening setter audited as
+  reachable only from hidden controls), `team-dashboard/page.tsx` (fetch effect widened; **fixed
+  a pre-existing `canManageRole` bug** — it fell through to `allowed: true` for ANY unrecognized
+  caller role when the target was a plain user, which would have leaked a live Promote button to
+  qa_tester or any future role; now allow-lists owner/admin first), `main-menu` (qa_tester gets
+  both dashboard buttons), `dashboard/page.tsx` (dashboard buttons; Delete Account hidden for
+  owner AND qa_tester, still shown for user/admin), `NavBar.tsx` (both dashboard links).
+- Role badge: cyan "QA Tester" entry in both `ROLE_BADGE` maps + `FlaskConical` icon beside the
+  existing Crown/ShieldCheck conditionals.
+
+**Deliberately NOT changed (safety assets):** every mutating server gate is byte-identical;
+`validRoles = ['user','admin']` in `teams/members` PUT still excludes qa_tester so admins cannot
+mint QA accounts; the team-dashboard entry deny-lists (`=== 'user'`) untouched; `useAuth.ts`,
+`middleware.ts`, `api/me`, Stripe, signup/auth all untouched.
+
+**QA results:** `tsc` clean; `npm run build` clean (no hang this run). Signed-out probes on all
+6 pages + 8 API endpoints: every gated endpoint 401/403, zero 500s, dev log clean. Logged-in
+regression with the role-'user' QA account (8 screenshots read, desktop + mobile): /dashboard
+normal **with Delete Account still present for a plain user**, /main-menu normal, /admin and
+/team-dashboard still redirect. 12-point adversarial gate audit all PASS — allowlist verified
+exact, no boolean slips (`&&` of negations, not `||`), no casts/@ts-ignore smuggled in, Sprint
+G-4 charts intact. **0 Gemini calls.**
+
+**⚠️ NOT VERIFIED (by design):** the live qa_tester experience — no account has the role until
+Tyler assigns it. Run a screenshot pass immediately after assignment.
+
+**➡️ TYLER'S CHECKLIST to activate (production, not this sprint — do in order):**
+1. **Verify no CHECK constraint on `public.users.role`** in the Supabase dashboard. Migration
+   file `004_admin_role_and_activity_log.sql` documents `CHECK (role IN ('user','admin'))`; it is
+   probably stale (owner exists in prod), but if the constraint is live, setting `qa_tester`
+   fails and removing it is a schema change requiring its own approval.
+2. Assign the role via **Supabase Table Editor** → `public.users` → QA account row →
+   `role = 'qa_tester'`. (The Owner Dashboard cannot do this — its role editor is a hardcoded
+   promote-to-admin/demote-to-user toggle.)
+3. Confirm the QA account has `subscription_status` = `active` or `bypass` and
+   `is_restricted = false`, or the paywall bounces it to `/signup?step=3` before any dashboard.
+4. Push + deploy this batch when ready, then run the screenshot harness against /admin and
+   /team-dashboard — the Sprint G-4 visual-verification gap closes at that point.
+
+**Discoveries worth knowing:**
+- The `admin` role label diverges between pages ("Team Manager" on the Owner Dashboard,
+  "Admin" on the Team Dashboard) — pre-existing, not fixed.
+- `ROLE_BADGE` misses fall back to the grey "User" badge, so before this sprint an unknown role
+  rendered silently mislabeled as a regular user.
+- The expanded user-detail rows on the Owner Dashboard print the raw role string
+  (`['Role', user.role]`) — a qa_tester row shows literal `qa_tester` there. Cosmetic.

@@ -39,7 +39,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (authUser.role !== 'owner' && authUser.role !== 'admin') {
+    // qa_tester: read-only owner-equivalent (Sprint G-4a)
+    if (authUser.role !== 'owner' && authUser.role !== 'admin' && authUser.role !== 'qa_tester') {
       return NextResponse.json({ error: 'Unauthorized — admin or owner only' }, { status: 403 });
     }
 

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Menu, Sun, Moon, Home, Edit3, FileText, LayoutDashboard, Users, Shield, LogOut } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
 import { useAuth } from '@/hooks/useAuth';
+import { canViewOwnerSurfaces, canViewTeamSurfaces } from '@/lib/roles';
 import { useNarrativeStore } from '@/stores/narrativeStore';
 import { cn } from '@/lib/utils';
 import { APP_VERSION } from '@/lib/version';
@@ -63,7 +64,7 @@ export default function NavBar() {
     '[html[data-accent=black]_&]:text-white',
   );
 
-  const isOwnerOrAdmin = profile?.role === 'owner' || profile?.role === 'admin';
+  const isOwnerOrAdmin = canViewTeamSurfaces(profile?.role);
 
   return (
     <nav className="fixed left-0 right-0 h-16 flex items-center px-6 bg-[var(--bg-nav)] backdrop-blur-[8px] border-b border-[var(--accent-20)] z-[100]" style={{ top: '100px' }}>
@@ -166,7 +167,7 @@ export default function NavBar() {
                   </Link>
                 )}
 
-                {profile?.role === 'owner' && (
+                {canViewOwnerSurfaces(profile?.role) && (
                   <Link
                     href="/admin"
                     onClick={() => setNavOpen(false)}

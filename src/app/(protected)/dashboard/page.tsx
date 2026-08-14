@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Palette, Wrench, Trash2, AlertTriangle, Shield, Users, BookUser } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { isQaTester, canViewOwnerSurfaces } from '@/lib/roles';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import LiquidCard from '@/components/ui/LiquidCard';
@@ -91,7 +92,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-[var(--text-primary)]">User Dashboard</h1>
           <div className="flex items-center gap-3">
-            {profile.role === 'owner' && (
+            {canViewOwnerSurfaces(profile.role) && (
               <motion.button
                 onClick={() => router.push('/admin')}
                 whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(245,158,11,0.4), 0 0 30px rgba(245,158,11,0.2)' }}
@@ -108,7 +109,7 @@ export default function DashboardPage() {
                 OWNER DASHBOARD
               </motion.button>
             )}
-            {profile.role === 'owner' && (
+            {canViewOwnerSurfaces(profile.role) && (
               <motion.button
                 onClick={() => router.push('/team-dashboard')}
                 whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(59,130,246,0.4), 0 0 30px rgba(59,130,246,0.2)' }}
@@ -172,8 +173,8 @@ export default function DashboardPage() {
           senderShortName={formatUserName(profile.first_name, profile.last_name)}
         />
 
-        {/* Delete Account — hidden for owner role */}
-        {profile.role !== 'owner' && (
+        {/* Delete Account — hidden for owner and read-only qa_tester roles */}
+        {!(profile.role === 'owner' || isQaTester(profile.role)) && (
           <div className="flex justify-center pt-4 pb-2">
             <button
               onClick={() => setShowDeleteConfirm(true)}

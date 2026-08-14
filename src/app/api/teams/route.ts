@@ -36,7 +36,8 @@ export async function GET() {
 
     const svc = createServiceClient();
 
-    if (authUser.role === 'owner') {
+    // qa_tester: read-only owner-equivalent (Sprint G-4a)
+    if (authUser.role === 'owner' || authUser.role === 'qa_tester') {
       // Owner sees all teams
       const { data: teams, error } = await svc
         .from('teams')
