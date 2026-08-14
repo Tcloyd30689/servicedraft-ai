@@ -64,6 +64,10 @@ export async function GET(request: NextRequest) {
       savedTemplatesRes,
       totalActivityRes,
       lastActivityRes,
+      styleCustomerPayRes,
+      styleExtendedWarrantyRes,
+      styleManufacturerWarrantyRes,
+      styleUnspecifiedRes,
     ] = await Promise.all([
       // 1. Total registered users
       svc.from('users').select('id', { count: 'exact', head: true }),
@@ -121,6 +125,22 @@ export async function GET(request: NextRequest) {
       svc.from('activity_log').select('created_at')
         .order('created_at', { ascending: false })
         .limit(1),
+
+      // 17. Narrative style — customer pay (all-time exact count)
+      svc.from('narratives').select('id', { count: 'exact', head: true })
+        .eq('narrative_style', 'customer_pay'),
+
+      // 18. Narrative style — extended warranty (all-time exact count)
+      svc.from('narratives').select('id', { count: 'exact', head: true })
+        .eq('narrative_style', 'extended_warranty'),
+
+      // 19. Narrative style — manufacturer warranty (all-time exact count)
+      svc.from('narratives').select('id', { count: 'exact', head: true })
+        .eq('narrative_style', 'manufacturer_warranty'),
+
+      // 20. Narrative style — unspecified / legacy rows (all-time exact count)
+      svc.from('narratives').select('id', { count: 'exact', head: true })
+        .is('narrative_style', null),
     ]);
 
     // 8. Aggregate activity by type (all-time) + compute specific totals
@@ -237,6 +257,14 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // 12b. Narrative style breakdown (all-time exact counts — cap-proof)
+    const narrativeStyles: Record<string, number> = {
+      customer_pay: styleCustomerPayRes.count ?? 0,
+      extended_warranty: styleExtendedWarrantyRes.count ?? 0,
+      manufacturer_warranty: styleManufacturerWarrantyRes.count ?? 0,
+      unspecified: styleUnspecifiedRes.count ?? 0,
+    };
+
     // 13. Subscription breakdown
     const subscriptionBreakdown: Record<string, number> = {
       active: 0,
@@ -284,6 +312,7 @@ export async function GET(request: NextRequest) {
         dailyNarratives,
         topUsers,
         storyTypes,
+        narrativeStyles,
         subscriptionBreakdown,
         usageOverTime,
         actionTypes: Array.from(allActionTypes),

@@ -4049,3 +4049,85 @@ on an existing row at no API cost.
 **Files changed in this follow-up:** `SPRINT_PROTOCOL.md` (the new GEMINI CALL BUDGET rule in
 Section 4) and this tracker entry. **No application code changed**, hence no version bump — the app
 remains at v1.3.5-beta as shipped by Sprint G-3.
+
+---
+
+Sprint G-4 — Narrative Style Distribution Charts
+**Status:** [x] COMPLETE (2026-08-13) — v1.3.6-beta — Master Update Batch sprint 5 of 13 (branch `updates-2026-08`, worktree `servicedraft-ai-updates`, local commit only, NOT pushed)
+
+Adds a "Narrative Style Distribution" donut chart to the Owner Dashboard Overview tab and a
+matching one to the Team Dashboard Overview tab, sourced from the existing
+`public.narratives.narrative_style` column. **No database changes** — the column was already
+in production.
+
+**Files changed (4 + version files):**
+1. `src/app/api/admin/analytics/route.ts` — four appended count queries + `narrativeStyles`
+   aggregate + new response key (all-time, platform-wide).
+2. `src/app/(protected)/admin/page.tsx` — `NARRATIVE_STYLE_LABELS` map,
+   `AnalyticsData.narrativeStyles`, the chart card on the Overview tab, and a matching
+   `NARRATIVE STYLE BREAKDOWN` section in the CSV export.
+3. `src/app/api/teams/activity/route.ts` — four appended **team-scoped** count queries +
+   `narrativeStyles` in **all three** stats returns.
+4. `src/app/(protected)/team-dashboard/page.tsx` — recharts import extended
+   (`PieChart, Pie, Cell, Legend`), `Layers` lucide icon, label + colour maps,
+   `TeamStats.narrativeStyles?`, and the chart card.
+5. `src/lib/version.ts` + `package.json` — v1.3.5-beta → v1.3.6-beta.
+
+**Key implementation decisions:**
+
+- **Exact counts, not a row tally.** Both endpoints use
+  `.select('id', { count: 'exact', head: true })` with `.eq('narrative_style', …)` rather than
+  fetching rows and tallying in JS. PostgREST caps row-returning selects at ~1000 by default, so
+  a tally would silently under-count on a large table and would visibly disagree with
+  `totalNarratives` (an exact count rendered on the same tab). **Note the pre-existing
+  `storyTypes` aggregation in the analytics route still uses an unbounded row fetch and carries
+  exactly this latent bug — left alone as out of scope, but worth a future sprint.**
+- **Null-safe via an explicit `unspecified` bucket.** `narrative_style` is nullable — rows
+  created before the column existed have NULL. Those are counted into an `unspecified` bucket so
+  the slices sum to the true total. The slice is filtered out of the chart whenever its count is
+  0, so it stays invisible on clean data.
+- **Team scoping** is enforced by `.in('user_id', memberIds)` on all four team queries, reusing
+  the route's existing member-resolution query. Membership is the scalar `users.team_id` — there
+  is no `team_members` junction table in this codebase.
+- **CSS variables only** in both new charts (`--accent-primary`, `--accent-hover`,
+  `--accent-bright`, `--text-muted`). QA confirmed `var()` resolves inside SVG `fill` attributes
+  in the target browser, so no slice renders black or invisible.
+- **Per-page card idiom respected.** The admin card uses the page's `<h3>` heading idiom; the
+  team card uses that page's uppercase `<p>` + right-aligned icon idiom. Copying one into the
+  other would have looked wrong.
+- **Percentage-only slice labels.** Slice labels render just the percentage; the legend carries
+  every style name in full and the tooltip carries name + count + percentage. Full names on the
+  slices truncated up to ~144px at 390px width, producing fragments like "ty 19%". This is a
+  deliberate deviation from the adjacent Story Type chart — the codebase already uses two
+  different label formats (`{name} {percent}%` at admin page L2446, `{name}: {value}` at L2504),
+  so there was no single convention to preserve.
+
+**Positional `Promise.all` hazard — handled.** Both modified routes destructure their
+`Promise.all` results **by position**. Inserting mid-list would silently misassign every
+downstream metric with no TypeScript error. All new bindings and queries were appended to the
+**end** of both lists in both routes; QA verified index-by-index alignment of every pre-existing
+entry.
+
+**QA results:** `npx tsc --noEmit` clean; `npm run build` clean (28.8s compile, 46/46 routes — no
+Turbopack hang this run). Dev server smoke-checked on :3011 — `/` 200, `/login` 200, `/admin` 307
+→ `/login` when signed out, `/team-dashboard` 200; no runtime or PostgREST errors in the server
+log. Nine adversarial diff checks all passed (Promise.all alignment ×2 routes, team scoping ×4
+queries, all three stats returns, owner gate byte-identical, no hex, empty state, null-safety,
+pure-insertion diff, scope). **0 Gemini API calls** — none were needed. No protected file touched;
+no SQL, migrations, or deletions.
+
+**⚠️ QA LIMITATION — carried forward.** The QA test account (`QA BOT`, position Technician) has
+neither `owner` nor `admin` role, so `/admin` redirects to `/main-menu` and `/team-dashboard`
+redirects to `/dashboard`. **Neither chart was screenshot on its real page while logged in.** QA
+substituted an isolated render of the verbatim chart JSX against the app's real CSS tokens
+(desktop 1440×900 and mobile 390×844) and confirmed rendering, label correctness, colour
+resolution, tooltips, legend, empty state and no mobile overflow. What remains unverified is the
+**live wiring** — that the two API routes return correct counts under a real owner/admin session.
+**Tyler should spot-check both dashboards once on an owner account.** Provisioning a role-capable
+QA account would close this gap for future sprints.
+
+**Discovery worth knowing (not fixed — out of scope):** `narratives.narrative_style` is written
+only at INSERT (`api/narratives/save/route.ts`) and is **never updated by the PATCH route** —
+`api/narratives/[id]/route.ts` attaches the style to the `action_history` entry but not to the row
+column. Both charts therefore show **style at original save time**, not the style a narrative was
+last regenerated into. This is already documented as a known issue earlier in this tracker.

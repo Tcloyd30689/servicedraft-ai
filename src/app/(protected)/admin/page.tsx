@@ -57,6 +57,13 @@ const ACTION_BORDER_COLORS: Record<string, string> = {
   login: '#6b7280',
 };
 
+const NARRATIVE_STYLE_LABELS: Record<string, string> = {
+  customer_pay: 'Customer Pay',
+  extended_warranty: 'Extended Warranty',
+  manufacturer_warranty: 'Manufacturer Warranty',
+  unspecified: 'Unspecified',
+};
+
 interface TrackerEntry {
   id: string;
   user_id: string;
@@ -162,6 +169,7 @@ interface AnalyticsData {
   dailyNarratives: Array<{ date: string; count: number }>;
   topUsers: Array<{ rank: number; name: string; position: string; count: number }>;
   storyTypes: Record<string, number>;
+  narrativeStyles: Record<string, number>;
   subscriptionBreakdown: Record<string, number>;
 }
 
@@ -842,6 +850,14 @@ export default function AdminPage() {
     });
     rows.push([]);
 
+    // Narrative Style Breakdown
+    rows.push(['NARRATIVE STYLE BREAKDOWN']);
+    rows.push(['Style', 'Count']);
+    Object.entries(analyticsData.narrativeStyles || {}).forEach(([style, count]) => {
+      rows.push([NARRATIVE_STYLE_LABELS[style] || style.replace(/_/g, ' '), String(count)]);
+    });
+    rows.push([]);
+
     // Activity by Type
     rows.push(['ACTIVITY BY TYPE']);
     rows.push(['Action', 'Count']);
@@ -1380,6 +1396,66 @@ export default function AdminPage() {
                     ) : (
                       <p className="text-[var(--text-muted)] text-base text-center py-8">No activity data.</p>
                     )}
+                  </LiquidCard>
+
+                  {/* Narrative Style Distribution */}
+                  <LiquidCard size="standard" className="!rounded-[16px]">
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">Narrative Style Distribution</h3>
+                    {(() => {
+                      const styleSlices = [
+                        { key: 'customer_pay', value: analyticsData.narrativeStyles?.customer_pay || 0, fill: 'var(--accent-primary)' },
+                        { key: 'extended_warranty', value: analyticsData.narrativeStyles?.extended_warranty || 0, fill: 'var(--accent-hover)' },
+                        { key: 'manufacturer_warranty', value: analyticsData.narrativeStyles?.manufacturer_warranty || 0, fill: 'var(--accent-bright)' },
+                        { key: 'unspecified', value: analyticsData.narrativeStyles?.unspecified || 0, fill: 'var(--text-muted)' },
+                      ];
+                      const total = styleSlices.reduce((sum, s) => sum + s.value, 0);
+                      if (total === 0) {
+                        return <p className="text-[var(--text-muted)] text-base text-center py-8">No narratives yet.</p>;
+                      }
+                      const pieData = styleSlices
+                        .filter((s) => s.value > 0)
+                        .map((s) => ({ name: NARRATIVE_STYLE_LABELS[s.key] || s.key, value: s.value, fill: s.fill }));
+                      return (
+                        <ResponsiveContainer width="100%" height={260}>
+                          <PieChart>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={100}
+                              paddingAngle={3}
+                              dataKey="value"
+                              // Percentage-only slice labels: the full style names are long
+                              // ("Manufacturer Warranty") and truncate badly at mobile widths.
+                              // The Legend below carries every name in full, and the tooltip
+                              // carries name + count + percentage.
+                              label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
+                              labelLine={false}
+                            >
+                              {pieData.map((entry, idx) => (
+                                <Cell key={idx} fill={entry.fill} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{
+                                background: 'var(--bg-elevated)',
+                                border: '1px solid var(--accent-30)',
+                                borderRadius: '8px',
+                                color: 'var(--text-primary)',
+                                fontSize: 13,
+                              }}
+                              formatter={(value) => typeof value === 'number'
+                                ? `${value} (${total > 0 ? ((value / total) * 100).toFixed(0) : '0'}%)`
+                                : String(value ?? '')}
+                            />
+                            <Legend
+                              wrapperStyle={{ color: 'var(--text-secondary)', fontSize: 13 }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      );
+                    })()}
                   </LiquidCard>
 
                   {/* System Health Indicators */}

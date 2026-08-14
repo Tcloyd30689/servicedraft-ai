@@ -8,10 +8,11 @@ import {
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   ArrowUp, ArrowDown,
   FileText, Activity, UserCog, UserMinus,
-  Share2, CheckCircle, TrendingUp,
+  Share2, CheckCircle, TrendingUp, Layers,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -58,6 +59,7 @@ interface TeamStats {
   totalProofreads: number;
   narrativesOverTime: Array<{ date: string; count: number }>;
   topActiveUsers: TopActiveUser[];
+  narrativeStyles?: Record<string, number>;
 }
 
 // ─── Role Badges ─────────────────────────────────────────
@@ -76,6 +78,21 @@ const ACTION_FILTERS = [
   { value: 'saved', label: 'Saved' },
   { value: 'exported', label: 'Exported' },
 ];
+
+// ─── Narrative style literal → display words (guarded: unknown literals fall back) ───
+const NARRATIVE_STYLE_LABELS: Record<string, string> = {
+  customer_pay: 'Customer Pay',
+  extended_warranty: 'Extended Warranty',
+  manufacturer_warranty: 'Manufacturer Warranty',
+  unspecified: 'Unspecified',
+};
+
+const NARRATIVE_STYLE_COLORS: Record<string, string> = {
+  customer_pay: 'var(--accent-primary)',
+  extended_warranty: 'var(--accent-hover)',
+  manufacturer_warranty: 'var(--accent-bright)',
+  unspecified: 'var(--text-muted)',
+};
 
 const TRACKER_PILL_COLORS: Record<string, string> = {
   regenerated: '#f59e0b',
@@ -848,6 +865,76 @@ export default function TeamDashboardPage() {
                       </div>
                     </LiquidCard>
                   </div>
+
+                  {/* Narrative Style Distribution — team-scoped donut */}
+                  <LiquidCard size="compact" className="!rounded-[16px] relative overflow-hidden">
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs sm:text-sm text-[var(--text-muted)] uppercase tracking-wider font-medium">Narrative Style Distribution</p>
+                        <Layers size={22} style={{ color: 'var(--accent-bright)', opacity: 0.6 }} />
+                      </div>
+                      {(() => {
+                        const styleCounts: Record<string, number> = {
+                          customer_pay: teamStats?.narrativeStyles?.customer_pay ?? 0,
+                          extended_warranty: teamStats?.narrativeStyles?.extended_warranty ?? 0,
+                          manufacturer_warranty: teamStats?.narrativeStyles?.manufacturer_warranty ?? 0,
+                          unspecified: teamStats?.narrativeStyles?.unspecified ?? 0,
+                        };
+                        const styleTotal = Object.values(styleCounts).reduce((sum, n) => sum + n, 0);
+                        if (styleTotal === 0) {
+                          return <p className="text-[var(--text-muted)] text-sm py-12 text-center">No narratives yet.</p>;
+                        }
+                        // Only render a slice when its count > 0 (keeps 'Unspecified' hidden with no legacy rows)
+                        const pieData = Object.entries(styleCounts)
+                          .filter(([, value]) => value > 0)
+                          .map(([key, value]) => ({
+                            name: NARRATIVE_STYLE_LABELS[key] || key,
+                            value,
+                            fill: NARRATIVE_STYLE_COLORS[key] || 'var(--text-muted)',
+                          }));
+                        return (
+                          <ResponsiveContainer width="100%" height={260}>
+                            <PieChart>
+                              <Pie
+                                data={pieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={60}
+                                outerRadius={100}
+                                paddingAngle={3}
+                                dataKey="value"
+                                // Percentage-only slice labels: the full style names are long
+                                // ("Manufacturer Warranty") and truncate badly at mobile widths.
+                                // The Legend below carries every name in full, and the tooltip
+                                // carries name + count + percentage.
+                                label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
+                                labelLine={false}
+                              >
+                                {pieData.map((entry, idx) => (
+                                  <Cell key={idx} fill={entry.fill} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                contentStyle={{
+                                  background: 'var(--bg-elevated)',
+                                  border: '1px solid var(--accent-30)',
+                                  borderRadius: '8px',
+                                  color: 'var(--text-primary)',
+                                  fontSize: 13,
+                                }}
+                                formatter={(value) => {
+                                  const n = value as number;
+                                  const pct = styleTotal > 0 ? ((n / styleTotal) * 100).toFixed(0) : '0';
+                                  return `${n} (${pct}%)`;
+                                }}
+                              />
+                              <Legend wrapperStyle={{ color: 'var(--text-secondary)', fontSize: 13 }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        );
+                      })()}
+                    </div>
+                  </LiquidCard>
 
                   {/* Team Info Card */}
                   {team.description && (

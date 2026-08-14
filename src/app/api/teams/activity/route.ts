@@ -61,6 +61,12 @@ export async function GET(request: Request) {
               totalProofreads: 0,
               narrativesOverTime: [],
               topActiveUsers: [],
+              narrativeStyles: {
+                customer_pay: 0,
+                extended_warranty: 0,
+                manufacturer_warranty: 0,
+                unspecified: 0,
+              },
             },
           });
         }
@@ -96,6 +102,12 @@ export async function GET(request: Request) {
             totalProofreads: 0,
             narrativesOverTime: [],
             topActiveUsers: [],
+            narrativeStyles: {
+              customer_pay: 0,
+              extended_warranty: 0,
+              manufacturer_warranty: 0,
+              unspecified: 0,
+            },
           },
         });
       }
@@ -113,12 +125,20 @@ export async function GET(request: Request) {
         { count: totalProofreads },
         { data: timelineRows },
         { data: narrativeRows },
+        { count: styleCustomerPay },
+        { count: styleExtendedWarranty },
+        { count: styleManufacturerWarranty },
+        { count: styleUnspecified },
       ] = await Promise.all([
         svc.from('narratives').select('id', { count: 'exact', head: true }).in('user_id', memberIds),
         svc.from('narrative_tracker').select('id', { count: 'exact', head: true }).in('user_id', memberIds).eq('is_exported', true),
         svc.from('narrative_tracker').select('id', { count: 'exact', head: true }).in('user_id', memberIds).eq('is_proofread', true),
         svc.from('narratives').select('created_at').in('user_id', memberIds).gte('created_at', windowStartIso),
         svc.from('narratives').select('user_id').in('user_id', memberIds),
+        svc.from('narratives').select('id', { count: 'exact', head: true }).in('user_id', memberIds).eq('narrative_style', 'customer_pay'),
+        svc.from('narratives').select('id', { count: 'exact', head: true }).in('user_id', memberIds).eq('narrative_style', 'extended_warranty'),
+        svc.from('narratives').select('id', { count: 'exact', head: true }).in('user_id', memberIds).eq('narrative_style', 'manufacturer_warranty'),
+        svc.from('narratives').select('id', { count: 'exact', head: true }).in('user_id', memberIds).is('narrative_style', null),
       ]);
 
       // Build a 30-day continuous timeline pre-filled with zeros, then bucket rows by YYYY-MM-DD
@@ -167,6 +187,14 @@ export async function GET(request: Request) {
         .sort((a, b) => b.count - a.count)
         .slice(0, 3);
 
+      // Team-scoped narrative style distribution ('unspecified' = legacy rows with a null column)
+      const narrativeStyles: Record<string, number> = {
+        customer_pay: styleCustomerPay ?? 0,
+        extended_warranty: styleExtendedWarranty ?? 0,
+        manufacturer_warranty: styleManufacturerWarranty ?? 0,
+        unspecified: styleUnspecified ?? 0,
+      };
+
       return NextResponse.json({
         success: true,
         stats: {
@@ -176,6 +204,7 @@ export async function GET(request: Request) {
           totalProofreads: totalProofreads ?? 0,
           narrativesOverTime,
           topActiveUsers,
+          narrativeStyles,
         },
       });
     }
