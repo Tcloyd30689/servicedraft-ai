@@ -150,3 +150,11 @@ export interface SurveyResponse {
   was_dismissed: boolean;
   created_at: string;
 }
+
+export interface InsightReport {
+  id: string;
+  generated_by: string | null;
+  report_markdown: string;
+  data_snapshot: Record<string, unknown> | null;
+  created_at: string;
+}

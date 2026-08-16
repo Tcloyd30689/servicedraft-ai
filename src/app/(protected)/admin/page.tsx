@@ -29,6 +29,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
 import ActivityDetailModal from '@/components/dashboard/ActivityDetailModal';
 import SurveyManager from '@/components/admin/SurveyManager';
+import InsightsAnalytics from '@/components/admin/InsightsAnalytics';
 // TokenCalculator removed — replaced by live API Usage tracker
 
 // ─── Protected user — cannot be deleted or restricted ────────
@@ -3106,10 +3107,7 @@ export default function AdminPage() {
             >
               <SurveyManager readOnly={readOnly} />
 
-              {/* ─── Reserved for Sprint A-3 analytics sections ───────────
-                  A-3 will add its analytics cards below the Survey Manager.
-                  Keep them as sibling <LiquidCard> blocks inside this
-                  space-y-6 container so spacing stays consistent. */}
+              <InsightsAnalytics readOnly={readOnly} />
             </motion.div>
           )}
 

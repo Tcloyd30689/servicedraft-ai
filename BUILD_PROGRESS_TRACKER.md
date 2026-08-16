@@ -4450,3 +4450,112 @@ children. SurveyManager correctly matched the existing idiom, so it was left alo
 row ended at `rating='up'`. A direct read of the table during this sprint showed `down`. The row
 count and upsert behaviour were correct; the reported final value was not. Incidental data claims
 in QA self-reports are worth spot-checking.
+
+---
+
+Sprint A-3 — Insights Dashboard + AI Reports
+**Status:** [x] COMPLETE (2026-08-16) — v1.3.11-beta — sprint 8 of 13 of the Master Update Batch, Phase 2 (branch `updates-2026-08`, worktree `servicedraft-ai-updates`; branch pushed to origin per Tyler's authorization, never merged to main)
+
+Completes the Insights tab: live aggregates, and owner-triggered Gemini reports saved to
+`insight_reports`.
+
+**SHARED AGGREGATION — `src/lib/insightsAggregate.ts` (NEW).** Deliberately factored out so the
+dashboard numbers and the snapshot stored inside a report can never drift. Exports
+`buildInsightsAggregate(svc)` and `buildInsightsSample(svc)`. Everything aggregates IN JAVASCRIPT
+over plain `.select()` calls — no raw SQL, no RPC, no views. Every source query is explicitly
+ordered newest-first and capped at `MAX_ROWS_SCANNED = 2000`, so a growing table can never turn an
+admin page load into an unbounded scan. Empty database is a first-class case: zeros, empty arrays,
+and `ratio: null` — never NaN. `safeRatio()` returns null when total is 0; `safePct()` returns 0.
+
+**AGGREGATES API — `/api/admin/insights` GET (NEW).** Owner-gated with the A-2 `verifyAdmin()`
+that returns `role`; qa_tester allowed since it is read-only. Returns feedback totals and ratio
+(overall, byStyle, byStoryType), the 10 most recent thumbs-down comments, per-survey summaries
+(choice counts / recent text answers), and narrative usage patterns (generations by style and
+story type, plus regenerated / customized / proofread / saved / exported rates as count + pct).
+Privacy: `recentDownComments` deliberately carries NO `user_id` and NO `tracker_id` — this is
+owner analytics, not a per-user dump. Verified against the live payload, not just the code.
+
+**REPORT API — `/api/admin/insights/report` (NEW).**
+GET with no param lists the 20 newest reports WITHOUT `report_markdown` / `data_snapshot` (both
+large), resolving generator emails with a second query mapped in JavaScript rather than a join.
+GET `?id=` returns one full report. A malformed uuid is deliberately treated as 404 Not Found
+rather than leaking a 500. POST generates: owner only (qa_tester 403 BEFORE the rate limiter and
+before any Gemini call, so a QA attempt can never burn owner quota or money), rate limited to 5
+per owner per 15 minutes, `generateWithGemini(prompt, userPrompt, 8000)`, then
+`logTokenUsage(userId, 'insights_report', usage)` fire-and-forget with a label that collides with
+none of the seven existing ones. Saves `{ generated_by, report_markdown, data_snapshot }`.
+
+*Deliberate asymmetry worth remembering:* if the DB insert fails, the route STILL returns 200
+`success: true` with `saved: false` and the markdown, so a paid generation is never thrown away.
+The UI branches on `data.saved`, not on `success`, and warns via toast when it could not be saved.
+
+**COST CONTROL.** The Gemini payload is bounded by real `.slice()` code, never by asking the model
+to be brief: 12 narratives at 600 chars per field, 25 thumbs-down comments at 300 chars, 30 survey
+answers at 200 chars, plus prompt-side trims on the aggregate buckets. QA computed a saturated
+worst case of 72,496 chars (~18,124 input tokens) → about $0.033 per report, or $0.17 for the full
+5-report rate window. "Cents not dollars" holds with a wide margin.
+
+**HONESTY RULE.** `INSIGHTS_REPORT_SYSTEM_PROMPT` lives inline at the top of the report route
+(house precedent: `convert-recommendation/route.ts`) and deliberately does NOT interpolate
+`MANDATORY_OUTPUT_RULES`, which is narrative-specific (full caps, implied first person) and would
+wreck a report. It carries a HONESTY RULES block stated to outrank every other instruction:
+never invent a finding, quote, trend or percentage; never extrapolate from one or two data points;
+never manufacture or round up numbers; and "Not enough data yet to say" is a CORRECT and EXPECTED
+answer, always preferred over a confident guess. Claims must cite the counts they rest on.
+
+**MARKDOWN RENDERING — `src/components/admin/MarkdownReport.tsx` (NEW).** This repo has NO
+markdown library (verified: nothing in package.json, nothing transitive in node_modules) and
+`dangerouslySetInnerHTML` appears nowhere in `src/`. Rather than add a dependency mid-batch, the
+renderer is hand-rolled and builds REACT ELEMENTS from parsed lines — no HTML injection. The
+Gemini prompt is hard-constrained to the exact subset the renderer supports (`##`/`###`,
+paragraphs, `-` bullets, `1.` ordered, `**bold**`), and every forbidden construct degrades to
+visible paragraph text rather than vanishing or throwing.
+
+**INSIGHTS TAB UI — `src/components/admin/InsightsAnalytics.tsx` (NEW).** Feedback stat cards,
+by-style and by-story-type charts, recent thumbs-down comments, survey summaries, usage patterns,
+the GENERATE INSIGHTS REPORT button (wrapped in `{!readOnly && ...}` per G-4a/G-4b), and a
+past-reports list opening a modal. Charts copy the existing house chrome exactly — grid, axes and
+tooltip all CSS variables. `admin/page.tsx` took only TWO hunks: the import, and replacing A-2's
+reserved comment with `<InsightsAnalytics readOnly={readOnly} />`.
+
+**Files changed:** NEW `src/lib/insightsAggregate.ts`, NEW `src/app/api/admin/insights/route.ts`,
+NEW `src/app/api/admin/insights/report/route.ts`, NEW `src/components/admin/MarkdownReport.tsx`,
+NEW `src/components/admin/InsightsAnalytics.tsx`, `src/types/database.ts` (+`InsightReport`),
+`src/app/(protected)/admin/page.tsx` (2 hunks) (+ version files). No protected file touched, no
+migration, no SQL, no RLS change, nothing deleted, no new dependency.
+
+**QA results:** `tsc` clean; `npm run build` clean (42s, no Turbopack hang), manifest lists both
+`/api/admin/insights` and `/api/admin/insights/report`; lint shows the 28 pre-existing problems and
+ZERO new ones. Unauthenticated: all three endpoints 403. As the qa_tester bot: aggregates GET 200
+against REAL production data (547 tracker rows, 2 feedback rows — usage rates came back
+regenerated 10.1%, customized 12.1%, proofread 23%, saved 28.2%, exported 49.4%); report list 200
+`[]`; unknown id 404; malformed uuid 404 (not 500); **POST 403 `Forbidden — qa_tester is
+read-only` with the list still `[]` afterwards, proving no row was created.** A leak probe on the
+live payload confirmed no `user_id`, `tracker_id`, or `email` fields. Screenshots read at desktop
+1440x900 and mobile 390x844: Survey Manager and the new sections coexist in order with uniform
+spacing, stat cards match Overview styling, three charts render with correct theming while the
+survey and past-report sections show correct empty states, the GENERATE button is ABSENT for
+qa_tester, no horizontal overflow at either width, and a DOM probe for `NaN`, `NaN%`, `undefined`,
+`Infinity` and `[object Object]` returned **0 hits**. The markdown parser was unit-tested in
+isolated Node against 20 hostile inputs (stray `#`, unmatched `**`, tables, code fences, mixed
+bullets, CRLF, empty string) with 0 crashes and 0 content lost. **0 Gemini calls; session tally
+unchanged at 1 of 10. Zero production rows written.**
+
+**Bug found and fixed by QA:** the "By story type" chart rendered **"!epair Complete"** — the
+leading `R` clipped by the SVG edge, because `YAxis width={110}` was copied from the admin page
+but A-3's labels are longer and sit in a half-width two-up grid. Widened to a named
+`Y_AXIS_WIDTH = 132` in the new file only. Worth noting the DOM probe could not have caught this:
+it took reading the actual pixels.
+
+**Known limitation, honestly stated:** END-TO-END REPORT GENERATION WAS NOT EXERCISED. The QA bot
+is `qa_tester` and is denied POST by design, so the Gemini call, the `insight_reports` insert, the
+`saved:false` fallback, and the modal rendering a real report remain unverified against
+production. This was NOT worked around — no direct Gemini call, no service-key insert, no mocked
+row. Everything verifiable without owner credentials was verified instead. **Closing the loop
+needs one owner-account click of GENERATE INSIGHTS REPORT.**
+
+**Handed back, not fixed (neither is an A-3 defect):** (1) Recharts' default hover cursor paints a
+light-grey band across bars on the dark theme — it is the library default and behaves identically
+in the admin page's own bar charts, so fixing it only here would make A-3 diverge; it is a
+repo-wide cosmetic item for a future sprint. (2) Two sample queries lack an explicit `.order()`;
+both are bounded and neither affects correctness.
