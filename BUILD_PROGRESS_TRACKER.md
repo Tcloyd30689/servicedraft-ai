@@ -4637,8 +4637,8 @@ the dev server logged `[signupNotify] Sent attempt notification to 1 recipient(s
 orchestrator confirmed the email in the owner's Gmail inbox. Resend-code is deliberately not hooked.
 
 **(9) GEMINI 3.8 FLASH.** NEW side-effect-free `src/lib/gemini/modelId.ts`
-(`GEMINI_MODEL_ID='gemini-3.8-flash'`, label, $0.75/$3.75 per 1M — third-party figures,
-introductory through 2026-12-31, $1.50/$7.50 after; Google's pricing page would not load) imported
+(`GEMINI_MODEL_ID='gemini-3.8-flash'`, label, $0.75/$3.75 per 1M — confirmed against Google's official
+Standard-tier pricing page via Tyler's screenshots; introductory through 2026-12-31, $1.50/$7.50 after) imported
 by `gemini/client.ts`, `usageLogger.ts`, `TokenCalculator.tsx` (new default entry, old kept) and
 the admin API-usage label. Model id verified against Google's model docs; all five live calls
 this sprint (generate ×2, proofread ×2, refine ×1) returned 200 through it with no model errors.
@@ -4672,7 +4672,7 @@ rows; QA deleted nothing.
 **Known limitations / for Tyler:** (1) Legacy proofread_feedback rows from the QA round carry a
 full issue sentence as `issue_type`; they display truncated under the chart until deleted.
 (2) The notify-attempt route is pre-auth by nature; abuse is bounded by the per-IP rate limit,
-not by auth. (3) Pricing constants are third-party figures — confirm on Google's pricing page
-when it loads. (4) Still untested by an owner: the survey popup end to end and GENERATE
+not by auth. (3) Pricing constants CONFIRMED against Google's official Standard-tier page (Tyler's screenshots,
+2026-10-20): $0.75/$3.75 through 2026-12-31, $1.50/$7.50 after. (4) Still untested by an owner: the survey popup end to end and GENERATE
 INSIGHTS REPORT (both need owner credentials; see Sprints A-2/A-3), plus a judgement call on
 Gemini 3.8 Flash output quality.
