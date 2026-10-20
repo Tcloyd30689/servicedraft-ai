@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { notifyOwnersOfSignup } from '@/lib/signupNotify';
 
 export async function POST(request: Request) {
   try {
@@ -65,6 +66,24 @@ export async function POST(request: Request) {
     if (profileError) {
       console.error('[/api/signup/complete-profile] Profile upsert error:', profileError.message);
       return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 });
+    }
+
+    // Informational owner notification. Fire-and-forget: never awaited, never changes this response.
+    try {
+      const forwarded = request.headers.get('x-forwarded-for');
+      const ip = forwarded ? forwarded.split(',')[0]?.trim() || null : request.headers.get('x-real-ip');
+      const userAgent = request.headers.get('user-agent');
+      void notifyOwnersOfSignup('created', {
+        email: user.email || '',
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        position,
+        userId: user.id,
+        ip,
+        userAgent,
+      }).catch(() => {});
+    } catch {
+      // Never let notification plumbing affect the signup response.
     }
 
     return NextResponse.json({ success: true, username });

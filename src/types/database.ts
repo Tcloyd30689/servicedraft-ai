@@ -151,6 +151,23 @@ export interface SurveyResponse {
   created_at: string;
 }
 
+/** One thumbs-up / thumbs-down vote on a single Review & Proofread suggestion. */
+export interface ProofreadFeedback {
+  id: string;
+  tracker_id: string | null;
+  user_id: string;
+  proofread_run_id: string;
+  suggestion_index: number;
+  suggestion_text: string | null;
+  issue_type: string | null;
+  rating: 'up' | 'down';
+  comment: string | null;
+  story_type: string | null;
+  narrative_style: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface InsightReport {
   id: string;
   generated_by: string | null;

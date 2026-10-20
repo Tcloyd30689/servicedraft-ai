@@ -47,6 +47,11 @@ const INSIGHTS_REPORT_SYSTEM_PROMPT = `You are a product analyst reviewing beta 
 
 You will be given aggregated statistics plus a small, deliberately capped sample of raw user data. Write a short, honest analysis report for the product owner.
 
+The data contains TWO SEPARATE feedback streams that must never be blended:
+- GENERATED STORY FEEDBACK — thumbs up/down a user left on a whole generated narrative.
+- PROOFREAD SUGGESTION FEEDBACK — thumbs up/down a user left on an individual suggestion made by the Review & Proofread tool.
+Analyze each stream on its own. Never add their counts together, never compare one stream's ratio against the other's as if they measured the same thing, and never attribute a comment from one stream to the other.
+
 HONESTY RULES — these outrank every other instruction in this prompt:
 - This is a SMALL BETA DATASET. It is normal and expected for there to be very little data, or none at all. Treat thin data as thin data.
 - NEVER invent a finding, a quote, a user, a trend, or a percentage. Use only what appears in the supplied data.
@@ -65,13 +70,16 @@ OUTPUT FORMAT — the reader's markdown renderer is hand-rolled and supports onl
 
 FORBIDDEN — never output any of the following, under any circumstance: tables, code fences or backticks, links, images, blockquotes, horizontal rules, and "#" level-1 headings. Do not use single "*" or "_" for emphasis; use "**bold**" only.
 
-REPORT STRUCTURE — use exactly these four "##" sections, in this order:
+REPORT STRUCTURE — use exactly these five "##" sections, in this order:
 
 ## Patterns in Negative Feedback
-What the thumbs-down ratings and comments actually show. Cite counts. If there are too few to read anything into, say so.
+What the GENERATED STORY thumbs-down ratings and comments actually show. Cite counts. If there are too few to read anything into, say so. Do not include proofread-suggestion feedback here.
 
 ## Style-Specific Issues
-Break the problems down by narrative_style. Say which styles have enough data to judge and which do not.
+Break the GENERATED STORY problems down by narrative_style. Say which styles have enough data to judge and which do not.
+
+## Proofread Suggestion Feedback
+What the PROOFREAD SUGGESTION ratings and comments actually show, on their own. Cite the proofread counts only. Where issue_type data exists, say which suggestion types are being rejected and why, quoting only comments from the proofread block. If the proofread table is empty or nearly empty, say so plainly.
 
 ## Survey Takeaways
 What the survey responses actually indicate. Paraphrase only real answers that appear in the data.
@@ -102,16 +110,33 @@ function toPromptAggregates(a: InsightsAggregate) {
       .slice(0, PROMPT_MAX_BUCKETS)
       .map((b) => ({ ...b, key: b.key.slice(0, PROMPT_BUCKET_KEY_CHARS) }));
 
+  // Defensive: an older snapshot or a concurrent deploy could lack the key.
+  const pr = a.proofreadFeedback;
+
   return {
-    feedback: {
+    generated_story_feedback: {
       up: a.feedback.up,
       down: a.feedback.down,
       total: a.feedback.total,
       ratio: a.feedback.ratio,
       byStyle: trimKey(a.feedback.byStyle),
       byStoryType: trimKey(a.feedback.byStoryType),
+      recent_down_comment_count: a.recentDownComments.length,
     },
-    recent_down_comment_count: a.recentDownComments.length,
+    proofread_suggestion_feedback: pr
+      ? {
+          up: pr.up,
+          down: pr.down,
+          total: pr.total,
+          ratio: pr.ratio,
+          byStyle: trimKey(pr.byStyle),
+          byStoryType: trimKey(pr.byStoryType),
+          byIssueType: trimKey(pr.byIssueType),
+          distinctRuns: pr.distinctRuns,
+          distinctUsers: pr.distinctUsers,
+          recent_down_comment_count: pr.recentDownComments.length,
+        }
+      : null,
     surveys: a.surveys.slice(0, PROMPT_MAX_SURVEYS).map((s) => ({
       question_text: s.question_text.slice(0, PROMPT_QUESTION_CHARS),
       input_type: s.input_type,
@@ -158,12 +183,35 @@ function buildUserPrompt(aggregates: InsightsAggregate, sample: InsightsSample):
     });
   }
 
+  parts.push('===== GENERATED STORY FEEDBACK =====');
+  parts.push(
+    'Ratings left on whole generated narratives. Counts are in "generated_story_feedback" above.'
+  );
   parts.push(`THUMBS-DOWN COMMENTS (${sample.downComments.length}, truncated):`);
   parts.push(
     sample.downComments.length === 0
       ? '(none)'
       : sample.downComments.map((c, i) => `${i + 1}. ${c}`).join('\n')
   );
+  parts.push('');
+
+  // Bounded by SAMPLE_MAX_PROOFREAD_DOWN_COMMENTS in buildInsightsSample; the
+  // extra .slice() here is belt-and-braces so this block can never grow.
+  const proofreadComments = (sample.proofreadDownComments ?? []).slice(0, 25);
+  parts.push('===== PROOFREAD SUGGESTION FEEDBACK =====');
+  parts.push(
+    'Ratings left on INDIVIDUAL Review & Proofread suggestions. Counts are in "proofread_suggestion_feedback" above. Analyze separately from the generated-story block; never combine the two.'
+  );
+  parts.push(`PROOFREAD THUMBS-DOWN COMMENTS (${proofreadComments.length}, truncated):`);
+  if (proofreadComments.length === 0) {
+    parts.push('(none)');
+  } else {
+    proofreadComments.forEach((c, i) => {
+      parts.push(`${i + 1}. issue_type=${c.issue_type || 'unspecified'}`);
+      parts.push(`SUGGESTION: ${c.suggestion_text || '(not recorded)'}`);
+      parts.push(`USER COMMENT: ${c.comment}`);
+    });
+  }
   parts.push('');
 
   parts.push(`SURVEY FREE-TEXT ANSWERS (${sample.surveyTextAnswers.length}, truncated):`);
@@ -175,7 +223,7 @@ function buildUserPrompt(aggregates: InsightsAggregate, sample: InsightsSample):
   parts.push('');
 
   parts.push(
-    'Write the report using ONLY the data above. Where the data is too thin to support a conclusion, say so.'
+    'Write the report using ONLY the data above. Keep the GENERATED STORY and PROOFREAD SUGGESTION streams separate — never blend their counts. Where the data is too thin to support a conclusion, say so.'
   );
 
   return parts.join('\n');

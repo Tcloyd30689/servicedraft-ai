@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Copy, Check } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useTypingAnimation } from '@/hooks/useTypingAnimation';
 import type { NarrativeData } from '@/stores/narrativeStore';
 import type { HighlightRange } from '@/lib/highlightUtils';
@@ -12,6 +14,83 @@ interface NarrativeDisplayProps {
   highlights?: HighlightRange[];
   highlightActive?: boolean;
   issueDescriptions?: string[];
+}
+
+/**
+ * Copy plain text to the clipboard. Prefers the async Clipboard API and falls
+ * back to a hidden textarea + execCommand for older/insecure contexts.
+ */
+async function copyPlainText(text: string): Promise<boolean> {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fall through to the legacy path
+  }
+
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.opacity = '0';
+    textarea.style.pointerEvents = 'none';
+    document.body.appendChild(textarea);
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Small copy-to-clipboard icon button pinned to the top-right of a narrative
+ * field, like the copy control on a code block. Copies the FULL plain text of
+ * the field (never the partially-typed animation text) and swaps to a check
+ * mark for ~1.5s after a successful copy.
+ */
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const handleCopy = async () => {
+    const ok = await copyPlainText(text);
+    if (!ok) {
+      toast.error('Could not copy to clipboard', { id: 'narrative-copy' });
+      return;
+    }
+    setCopied(true);
+    toast.success('Copied', { id: 'narrative-copy' });
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title={copied ? 'Copied' : label}
+      aria-label={label}
+      aria-live="polite"
+      className="absolute top-2 right-2 z-10 inline-flex items-center justify-center h-7 w-7 rounded-md border border-transparent text-[var(--text-secondary)] hover:text-[var(--accent-bright)] hover:border-[var(--accent-border)] hover:bg-[var(--accent-10)] transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-bright)]"
+      style={copied ? { color: 'var(--accent-bright)' } : undefined}
+    >
+      {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+    </button>
+  );
 }
 
 /**
@@ -122,6 +201,73 @@ function getSectionHighlights(
   return results;
 }
 
+/**
+ * One narrative text field: the bordered box, its copy button, the typing
+ * cursor, and the plain / animating / highlighted text body.
+ */
+function NarrativeField({
+  label,
+  fullText,
+  displayText,
+  isAnimating,
+  highlights,
+  highlightActive,
+  issueDescriptions,
+  minHeightClass,
+}: {
+  label: string;
+  fullText: string;
+  displayText: string;
+  isAnimating: boolean;
+  highlights: HighlightRange[];
+  highlightActive: boolean;
+  issueDescriptions: string[];
+  minHeightClass?: string;
+}) {
+  return (
+    <div
+      className={`relative bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4 pr-12 ${minHeightClass ?? ''}`}
+    >
+      <CopyButton text={fullText} label={`Copy ${label}`} />
+      <p className="font-data text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
+        {isAnimating ? (
+          displayText
+        ) : highlights.length > 0 ? (
+          <HighlightedText
+            text={fullText}
+            highlights={highlights}
+            active={highlightActive}
+            issueDescriptions={issueDescriptions}
+          />
+        ) : (
+          fullText
+        )}
+      </p>
+      {isAnimating && (
+        <span className="inline-block w-0.5 h-4 bg-[var(--accent-hover)] animate-pulse ml-0.5 align-middle" />
+      )}
+    </div>
+  );
+}
+
+/**
+ * 'Skip animation' control, pinned to the top-right corner of the whole
+ * narrative container (NOT the per-field copy buttons, which live inside each
+ * field box). Only rendered while a typing animation is running.
+ */
+function SkipAnimationButton({ onSkip }: { onSkip: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSkip}
+      aria-label="Skip animation"
+      className="absolute top-0 right-0 z-10 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+    >
+      Skip animation
+    </button>
+  );
+}
+
 export default function NarrativeDisplay({
   narrative,
   displayFormat,
@@ -166,69 +312,54 @@ export default function NarrativeDisplay({
   if (displayFormat === 'block') {
     const isAnimating = animate && blockText.isAnimating;
     return (
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide">
+      <div className="relative space-y-4">
+        {isAnimating && <SkipAnimationButton onSkip={blockText.skip} />}
+        <h3 className="text-sm font-medium text-[var(--text-secondary)] uppercase tracking-wide pr-28">
           Block Narrative
         </h3>
-        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4 min-h-[200px]">
-          <p className="font-data text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
-            {isAnimating ? (
-              blockText.displayText
-            ) : hasHighlights ? (
-              <HighlightedText
-                text={narrative.block_narrative}
-                highlights={highlights}
-                active={highlightActive}
-                issueDescriptions={issueDescriptions}
-              />
-            ) : (
-              narrative.block_narrative
-            )}
-          </p>
-          {blockText.isAnimating && (
-            <span className="inline-block w-0.5 h-4 bg-[var(--accent-hover)] animate-pulse ml-0.5 align-middle" />
-          )}
-        </div>
-        {blockText.isAnimating && (
-          <button
-            onClick={blockText.skip}
-            className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-          >
-            Skip animation
-          </button>
-        )}
+        <NarrativeField
+          label="BLOCK NARRATIVE"
+          fullText={narrative.block_narrative}
+          displayText={blockText.displayText}
+          isAnimating={isAnimating}
+          highlights={hasHighlights ? highlights : []}
+          highlightActive={highlightActive}
+          issueDescriptions={issueDescriptions}
+          minHeightClass="min-h-[200px]"
+        />
       </div>
     );
   }
 
-  const isAnyAnimating = animate && (concernText.isAnimating || causeText.isAnimating || correctionText.isAnimating);
+  const isConcernAnimating = animate && concernText.isAnimating;
+  const isCauseAnimating = animate && causeText.isAnimating;
+  const isCorrectionAnimating = animate && correctionText.isAnimating;
+  const isAnyAnimating = isConcernAnimating || isCauseAnimating || isCorrectionAnimating;
+
+  const skipAll = () => {
+    concernText.skip();
+    causeText.skip();
+    correctionText.skip();
+  };
 
   return (
-    <div className="space-y-5">
+    <div className="relative space-y-5">
+      {isAnyAnimating && <SkipAnimationButton onSkip={skipAll} />}
+
       {/* Concern */}
       <div>
-        <h3 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-2">
+        <h3 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-2 pr-28">
           Concern
         </h3>
-        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4">
-          <p className="font-data text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
-            {animate && concernText.isAnimating ? (
-              concernText.displayText
-            ) : concernHighlights.length > 0 ? (
-              <HighlightedText
-                text={narrative.concern}
-                highlights={concernHighlights}
-                active={highlightActive}
-                issueDescriptions={issueDescriptions}
-              />
-            ) : (
-              narrative.concern
-            )}
-          </p>
-          {concernText.isAnimating && (
-            <span className="inline-block w-0.5 h-4 bg-[var(--accent-hover)] animate-pulse ml-0.5 align-middle" />
-          )}
-        </div>
+        <NarrativeField
+          label="CONCERN"
+          fullText={narrative.concern}
+          displayText={concernText.displayText}
+          isAnimating={isConcernAnimating}
+          highlights={concernHighlights}
+          highlightActive={highlightActive}
+          issueDescriptions={issueDescriptions}
+        />
       </div>
 
       {/* Cause */}
@@ -236,25 +367,15 @@ export default function NarrativeDisplay({
         <h3 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-2">
           Cause
         </h3>
-        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4">
-          <p className="font-data text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
-            {animate && causeText.isAnimating ? (
-              causeText.displayText
-            ) : causeHighlights.length > 0 ? (
-              <HighlightedText
-                text={narrative.cause}
-                highlights={causeHighlights}
-                active={highlightActive}
-                issueDescriptions={issueDescriptions}
-              />
-            ) : (
-              narrative.cause
-            )}
-          </p>
-          {causeText.isAnimating && (
-            <span className="inline-block w-0.5 h-4 bg-[var(--accent-hover)] animate-pulse ml-0.5 align-middle" />
-          )}
-        </div>
+        <NarrativeField
+          label="CAUSE"
+          fullText={narrative.cause}
+          displayText={causeText.displayText}
+          isAnimating={isCauseAnimating}
+          highlights={causeHighlights}
+          highlightActive={highlightActive}
+          issueDescriptions={issueDescriptions}
+        />
       </div>
 
       {/* Correction */}
@@ -262,39 +383,16 @@ export default function NarrativeDisplay({
         <h3 className="text-sm font-medium text-[var(--accent-text-emphasis)] uppercase tracking-wide mb-2">
           Correction
         </h3>
-        <div className="bg-[var(--bg-input)] border border-[var(--accent-border)] rounded-lg p-4">
-          <p className="font-data text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap text-sm">
-            {animate && correctionText.isAnimating ? (
-              correctionText.displayText
-            ) : correctionHighlights.length > 0 ? (
-              <HighlightedText
-                text={narrative.correction}
-                highlights={correctionHighlights}
-                active={highlightActive}
-                issueDescriptions={issueDescriptions}
-              />
-            ) : (
-              narrative.correction
-            )}
-          </p>
-          {correctionText.isAnimating && (
-            <span className="inline-block w-0.5 h-4 bg-[var(--accent-hover)] animate-pulse ml-0.5 align-middle" />
-          )}
-        </div>
+        <NarrativeField
+          label="CORRECTION"
+          fullText={narrative.correction}
+          displayText={correctionText.displayText}
+          isAnimating={isCorrectionAnimating}
+          highlights={correctionHighlights}
+          highlightActive={highlightActive}
+          issueDescriptions={issueDescriptions}
+        />
       </div>
-
-      {isAnyAnimating && (
-        <button
-          onClick={() => {
-            concernText.skip();
-            causeText.skip();
-            correctionText.skip();
-          }}
-          className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-        >
-          Skip animation
-        </button>
-      )}
     </div>
   );
 }

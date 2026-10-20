@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
 import type { GeminiUsageMetadata } from '@/lib/gemini/client';
+import { GEMINI_MODEL_ID, GEMINI_INPUT_COST_PER_1M, GEMINI_OUTPUT_COST_PER_1M } from '@/lib/gemini/modelId';
 
-// Gemini 3 Flash Preview pricing (per token)
-const INPUT_COST_PER_TOKEN = 0.0000005; // $0.50 per 1M tokens
-const OUTPUT_COST_PER_TOKEN = 0.000003; // $3.00 per 1M tokens
+// Pricing (per token) derived from per-1M constants in modelId.ts
+const INPUT_COST_PER_TOKEN = GEMINI_INPUT_COST_PER_1M / 1_000_000;
+const OUTPUT_COST_PER_TOKEN = GEMINI_OUTPUT_COST_PER_1M / 1_000_000;
 
 /**
  * Fire-and-forget server-side token usage logger.
@@ -30,7 +31,7 @@ export function logTokenUsage(
         prompt_tokens: usage.promptTokenCount,
         completion_tokens: usage.candidatesTokenCount,
         total_tokens: usage.totalTokenCount,
-        model_name: 'gemini-3-flash-preview',
+        model_name: GEMINI_MODEL_ID,
         estimated_cost_usd: estimatedCost,
       });
     } catch (err) {

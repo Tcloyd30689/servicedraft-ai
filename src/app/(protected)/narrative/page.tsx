@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Settings, Search, Pencil, Save, Share2, CheckCircle, RotateCcw, AlertTriangle, SlidersHorizontal, Star } from 'lucide-react';
 import { logActivity } from '@/lib/activityLogger';
 import { createTrackerEntry, updateTrackerAction } from '@/lib/narrativeTracker';
 import { findHighlightRanges, type HighlightRange } from '@/lib/highlightUtils';
@@ -40,6 +40,8 @@ interface ParsedIssue {
 interface ProofreadData {
   flagged_issues: ParsedIssue[];
   suggested_edits: string[];
+  /** Fixed-list category key per issue, same index as suggested_edits. Optional for old payloads. */
+  issue_categories?: string[];
   overall_rating: 'PASS' | 'NEEDS_REVIEW' | 'FAIL';
   summary: string;
 }
@@ -377,9 +379,11 @@ export default function NarrativePage() {
   };
 
   // Refine — sends the CURRENTLY DISPLAYED narrative to the refine API for a
-  // single light-touch adjustment. For quick actions (more_detail/less_detail/
-  // simplify/expand) refineAction is sent; for 'custom' the guarded custom
-  // instruction is sent instead. The chosen narrativeStyle is always included.
+  // single light-touch adjustment. For any non-custom RefineAction (more_detail,
+  // condense, plain_language, justify, plus the legacy keys) refineAction is sent
+  // as-is; for 'custom' the guarded custom instruction is sent instead. Nothing
+  // here is hardcoded to a specific action list. The chosen narrativeStyle is
+  // always included.
   const handleRefine = async (action: RefineAction) => {
     if (!state.narrative) return;
 
@@ -786,6 +790,34 @@ export default function NarrativePage() {
               </Button>
             </LiquidCard>
 
+            {/* Narrative Style switcher — separate from the Refine panel.
+                Changing the style regenerates the story at the new style
+                (handleStyleChange is the ONLY place a style change is allowed). */}
+            <LiquidCard size="compact">
+              <div className="flex items-center gap-2 text-[var(--text-primary)] font-semibold text-sm mb-3">
+                <SlidersHorizontal size={16} className="text-[var(--accent-hover)]" />
+                NARRATIVE STYLE
+              </div>
+              <div className="flex bg-[var(--bg-input)] rounded-lg border border-[var(--accent-border)] overflow-hidden">
+                {STYLE_SWITCHER_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handleStyleChange(opt.value)}
+                    disabled={isAnyLoading || isSaving}
+                    aria-pressed={state.narrativeStyle === opt.value}
+                    className={`flex-1 py-2 px-1.5 text-[11px] leading-tight text-center font-medium transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                      state.narrativeStyle === opt.value
+                        ? 'bg-[var(--accent-hover)] text-white shadow-[0_0_10px_var(--accent-30)]'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-10)]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </LiquidCard>
+
             {/* Customization */}
             <LiquidCard size="compact">
               <button
@@ -923,70 +955,62 @@ export default function NarrativePage() {
 
           {/* Right Panel — Narrative Display */}
           <div className="flex-1 min-w-0">
-            <LiquidCard size="standard">
-              {/* Regenerating overlay */}
-              {isRegenerating && (
-                <div className="flex items-center justify-center py-12">
-                  <LoadingSpinner size="medium" message="Regenerating narrative..." />
-                </div>
-              )}
+            {/* Narrative card + rating card. Desktop (lg+): side by side, the
+                narrative takes the remaining width and the rating card is a fixed
+                narrow column pinned to the TOP of the row that hugs its own
+                content (items-start), so a long narrative never leaves a tall
+                empty card under the thumbs.
+                Mobile: the rating card stacks BELOW the narrative, full width. */}
+            <div className="flex flex-col lg:flex-row gap-4 lg:items-start">
+              <div className="flex-1 min-w-0">
+                <LiquidCard size="standard" className="h-full">
+                  {/* Regenerating overlay */}
+                  {isRegenerating && (
+                    <div className="flex items-center justify-center py-12">
+                      <LoadingSpinner size="medium" message="Regenerating narrative..." />
+                    </div>
+                  )}
 
-              {isRefining && (
-                <div className="flex items-center justify-center py-12">
-                  <LoadingSpinner size="medium" message="Refining narrative..." />
-                </div>
-              )}
+                  {isRefining && (
+                    <div className="flex items-center justify-center py-12">
+                      <LoadingSpinner size="medium" message="Refining narrative..." />
+                    </div>
+                  )}
 
-              {isApplyingEdits && (
-                <div className="flex items-center justify-center py-12">
-                  <LoadingSpinner size="medium" message="Applying suggested edits..." />
-                </div>
-              )}
+                  {isApplyingEdits && (
+                    <div className="flex items-center justify-center py-12">
+                      <LoadingSpinner size="medium" message="Applying suggested edits..." />
+                    </div>
+                  )}
 
-              {!isRegenerating && !isRefining && !isApplyingEdits && (
-                <>
-                  <NarrativeDisplay
-                    narrative={state.narrative}
-                    displayFormat={state.displayFormat}
-                    animate={animateNarrative}
-                    highlights={highlightRanges}
-                    highlightActive={highlightActive}
-                    issueDescriptions={issueDescriptions}
-                  />
-                  {state.narrative && (
-                    <NarrativeFeedback
-                      trackerId={state.trackerId}
-                      storyType={state.storyType}
-                      narrativeStyle={state.narrativeStyle}
+                  {!isRegenerating && !isRefining && !isApplyingEdits && (
+                    <NarrativeDisplay
+                      narrative={state.narrative}
+                      displayFormat={state.displayFormat}
+                      animate={animateNarrative}
+                      highlights={highlightRanges}
+                      highlightActive={highlightActive}
+                      issueDescriptions={issueDescriptions}
                     />
                   )}
-                </>
-              )}
-            </LiquidCard>
-
-            {/* Narrative Style switcher — separate from the Refine panel.
-                Changing the style regenerates the story at the new style. */}
-            <div className="mt-4">
-              <label className="block text-[var(--text-muted)] text-xs font-medium mb-1.5">
-                NARRATIVE STYLE
-              </label>
-              <div className="flex bg-[var(--bg-input)] rounded-lg border border-[var(--accent-border)] overflow-hidden max-w-md">
-                {STYLE_SWITCHER_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => handleStyleChange(opt.value)}
-                    disabled={isAnyLoading || isSaving}
-                    className={`flex-1 py-1.5 px-2 text-[11px] font-medium transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                      state.narrativeStyle === opt.value
-                        ? 'bg-[var(--accent-hover)] text-white shadow-[0_0_10px_var(--accent-30)]'
-                        : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--accent-10)]'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+                </LiquidCard>
               </div>
+
+              {/* Rating card — same gating as before: only when a narrative exists
+                  and no regenerate / refine / apply-edits is in flight. */}
+              {state.narrative && !isRegenerating && !isRefining && !isApplyingEdits && (
+                <LiquidCard size="compact" className="w-full lg:w-[240px] shrink-0">
+                  <div className="flex items-center gap-2 text-[var(--text-primary)] font-semibold text-sm mb-3">
+                    <Star size={16} className="text-[var(--accent-hover)]" />
+                    RATE THIS STORY
+                  </div>
+                  <NarrativeFeedback
+                    trackerId={state.trackerId}
+                    storyType={state.storyType}
+                    narrativeStyle={state.narrativeStyle}
+                  />
+                </LiquidCard>
+              )}
             </div>
 
             {/* Bottom Action Buttons */}

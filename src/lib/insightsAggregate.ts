@@ -33,6 +33,10 @@ export const UNSPECIFIED_KEY = 'unspecified';
 const MAX_RECENT_DOWN_COMMENTS = 10;
 /** Recent free-text survey answers surfaced per question. */
 const MAX_RECENT_TEXT_ANSWERS = 10;
+/** Proofread feedback: how many issue_type buckets the dashboard charts. */
+const MAX_ISSUE_TYPE_BUCKETS = 10;
+/** Proofread feedback: suggestion_text context shown beside a down comment. */
+const RECENT_SUGGESTION_TEXT_CHARS = 200;
 
 /* ---------------------------------------------------------------- types -- */
 
@@ -104,11 +108,49 @@ export interface UsageAggregate {
   };
 }
 
+/**
+ * One recent thumbs-down on a proofread suggestion. Owner analytics only:
+ * carries NO user_id, NO tracker_id and NO proofread_run_id.
+ */
+export interface ProofreadRecentDownComment {
+  comment: string;
+  issue_type: string | null;
+  /** Truncated to RECENT_SUGGESTION_TEXT_CHARS. */
+  suggestion_text: string | null;
+  narrative_style: string | null;
+  story_type: string | null;
+  created_at: string;
+}
+
+/**
+ * Thumbs up/down left on individual REVIEW & PROOFREAD suggestions
+ * (public.proofread_feedback). Kept as its own top-level aggregate and NEVER
+ * merged into `feedback`, which counts generated-story ratings only.
+ */
+export interface ProofreadFeedbackAggregate {
+  up: number;
+  down: number;
+  total: number;
+  ratio: number | null;
+  byStyle: RatioBucket[];
+  byStoryType: RatioBucket[];
+  /** Top MAX_ISSUE_TYPE_BUCKETS issue_type values by volume; null → 'unspecified'. */
+  byIssueType: RatioBucket[];
+  /** Count of distinct proofread runs rated — a count only, no ids. */
+  distinctRuns: number;
+  /** Count of distinct raters — a count only, no ids. */
+  distinctUsers: number;
+  recentDownComments: ProofreadRecentDownComment[];
+}
+
 export interface InsightsAggregate {
+  /** Generated-story ratings (public.narrative_feedback). */
   feedback: FeedbackAggregate;
   recentDownComments: RecentDownComment[];
   surveys: SurveyAggregate[];
   usage: UsageAggregate;
+  /** Proofread-suggestion ratings (public.proofread_feedback) — isolated from `feedback`. */
+  proofreadFeedback: ProofreadFeedbackAggregate;
 }
 
 /* ------------------------------------------------------- report sampling -- */
@@ -120,6 +162,10 @@ export const SAMPLE_MAX_DOWN_COMMENTS = 25;
 export const SAMPLE_DOWN_COMMENT_CHARS = 300;
 export const SAMPLE_MAX_SURVEY_ANSWERS = 30;
 export const SAMPLE_SURVEY_ANSWER_CHARS = 200;
+export const SAMPLE_MAX_PROOFREAD_DOWN_COMMENTS = 25;
+export const SAMPLE_PROOFREAD_COMMENT_CHARS = 300;
+export const SAMPLE_PROOFREAD_SUGGESTION_CHARS = 200;
+export const SAMPLE_PROOFREAD_ISSUE_TYPE_CHARS = 60;
 
 export interface SampleNarrative {
   narrative_style: string | null;
@@ -131,12 +177,24 @@ export interface SampleNarrative {
   had_thumbs_down: boolean;
 }
 
+/** One sampled thumbs-down on a proofread suggestion, every field truncated. */
+export interface SampleProofreadDownComment {
+  /** Truncated to SAMPLE_PROOFREAD_ISSUE_TYPE_CHARS. */
+  issue_type: string | null;
+  /** Truncated to SAMPLE_PROOFREAD_SUGGESTION_CHARS. */
+  suggestion_text: string | null;
+  /** Truncated to SAMPLE_PROOFREAD_COMMENT_CHARS. */
+  comment: string;
+}
+
 export interface InsightsSample {
   narratives: SampleNarrative[];
-  /** Each truncated to SAMPLE_DOWN_COMMENT_CHARS. */
+  /** Generated-story thumbs-down comments, each truncated to SAMPLE_DOWN_COMMENT_CHARS. */
   downComments: string[];
   /** Each truncated to SAMPLE_SURVEY_ANSWER_CHARS. */
   surveyTextAnswers: string[];
+  /** Proofread-suggestion thumbs-down comments — separate from downComments. */
+  proofreadDownComments: SampleProofreadDownComment[];
 }
 
 /* ------------------------------------------------------------ internals -- */
@@ -146,6 +204,22 @@ interface FeedbackRow {
   comment: string | null;
   narrative_style: string | null;
   story_type: string | null;
+  created_at: string;
+}
+
+/**
+ * user_id and proofread_run_id are read ONLY to count distinct values; they
+ * never leave this module.
+ */
+interface ProofreadFeedbackRow {
+  rating: string | null;
+  comment: string | null;
+  issue_type: string | null;
+  suggestion_text: string | null;
+  narrative_style: string | null;
+  story_type: string | null;
+  proofread_run_id: string | null;
+  user_id: string | null;
   created_at: string;
 }
 
@@ -234,7 +308,7 @@ function sortCountBuckets(map: Map<string, number>): CountBucket[] {
  * Throws on a driver error; callers translate that into a 500.
  */
 export async function buildInsightsAggregate(svc: ServiceClient): Promise<InsightsAggregate> {
-  const [feedbackRes, questionsRes, responsesRes, trackerRes] = await Promise.all([
+  const [feedbackRes, questionsRes, responsesRes, trackerRes, proofreadRes] = await Promise.all([
     svc
       .from('narrative_feedback')
       .select('rating, comment, narrative_style, story_type, created_at')
@@ -255,12 +329,20 @@ export async function buildInsightsAggregate(svc: ServiceClient): Promise<Insigh
       .select('narrative_style, story_type, is_regenerated, is_customized, is_proofread, is_saved, is_exported')
       .order('created_at', { ascending: false })
       .limit(MAX_ROWS_SCANNED),
+    svc
+      .from('proofread_feedback')
+      .select(
+        'rating, comment, issue_type, suggestion_text, narrative_style, story_type, proofread_run_id, user_id, created_at'
+      )
+      .order('created_at', { ascending: false })
+      .limit(MAX_ROWS_SCANNED),
   ]);
 
   const feedbackRows = unwrap<FeedbackRow>('narrative feedback', feedbackRes);
   const questionRows = unwrap<SurveyQuestionRow>('survey questions', questionsRes);
   const responseRows = unwrap<SurveyResponseRow>('survey responses', responsesRes);
   const trackerRows = unwrap<TrackerStatsRow>('narrative tracker', trackerRes);
+  const proofreadRows = unwrap<ProofreadFeedbackRow>('proofread feedback', proofreadRes);
 
   /* -- feedback ------------------------------------------------------- */
 
@@ -403,7 +485,87 @@ export async function buildInsightsAggregate(svc: ServiceClient): Promise<Insigh
     },
   };
 
-  return { feedback, recentDownComments, surveys, usage };
+  /* -- proofread suggestion feedback (ISOLATED from `feedback`) -------- */
+
+  let prUp = 0;
+  let prDown = 0;
+  const prStyleMap = new Map<string, { up: number; down: number }>();
+  const prStoryMap = new Map<string, { up: number; down: number }>();
+  const prIssueMap = new Map<string, { up: number; down: number }>();
+  const prRunIds = new Set<string>();
+  const prUserIds = new Set<string>();
+  const prRecentDown: ProofreadRecentDownComment[] = [];
+
+  for (const row of proofreadRows) {
+    const isUp = row.rating === 'up';
+    const isDown = row.rating === 'down';
+    if (!isUp && !isDown) continue;
+
+    if (isUp) prUp += 1;
+    else prDown += 1;
+
+    // Counted, never emitted.
+    if (typeof row.proofread_run_id === 'string' && row.proofread_run_id.length > 0) {
+      prRunIds.add(row.proofread_run_id);
+    }
+    if (typeof row.user_id === 'string' && row.user_id.length > 0) {
+      prUserIds.add(row.user_id);
+    }
+
+    const styleKey = bucketKey(row.narrative_style);
+    const storyKey = bucketKey(row.story_type);
+    const issueKey = bucketKey(row.issue_type);
+
+    const styleBucket = prStyleMap.get(styleKey) || { up: 0, down: 0 };
+    if (isUp) styleBucket.up += 1;
+    else styleBucket.down += 1;
+    prStyleMap.set(styleKey, styleBucket);
+
+    const storyBucket = prStoryMap.get(storyKey) || { up: 0, down: 0 };
+    if (isUp) storyBucket.up += 1;
+    else storyBucket.down += 1;
+    prStoryMap.set(storyKey, storyBucket);
+
+    const issueBucket = prIssueMap.get(issueKey) || { up: 0, down: 0 };
+    if (isUp) issueBucket.up += 1;
+    else issueBucket.down += 1;
+    prIssueMap.set(issueKey, issueBucket);
+
+    // Rows arrive newest-first, so the first N matches are the most recent.
+    if (
+      isDown &&
+      prRecentDown.length < MAX_RECENT_DOWN_COMMENTS &&
+      typeof row.comment === 'string' &&
+      row.comment.trim().length > 0
+    ) {
+      const suggestion =
+        typeof row.suggestion_text === 'string' ? row.suggestion_text.trim() : '';
+      prRecentDown.push({
+        comment: row.comment.trim(),
+        issue_type: row.issue_type,
+        suggestion_text: suggestion.length > 0 ? suggestion.slice(0, RECENT_SUGGESTION_TEXT_CHARS) : null,
+        narrative_style: row.narrative_style,
+        story_type: row.story_type,
+        created_at: row.created_at,
+      });
+    }
+  }
+
+  const prTotal = prUp + prDown;
+  const proofreadFeedback: ProofreadFeedbackAggregate = {
+    up: prUp,
+    down: prDown,
+    total: prTotal,
+    ratio: safeRatio(prUp, prTotal),
+    byStyle: sortRatioBuckets(prStyleMap),
+    byStoryType: sortRatioBuckets(prStoryMap),
+    byIssueType: sortRatioBuckets(prIssueMap).slice(0, MAX_ISSUE_TYPE_BUCKETS),
+    distinctRuns: prRunIds.size,
+    distinctUsers: prUserIds.size,
+    recentDownComments: prRecentDown,
+  };
+
+  return { feedback, recentDownComments, surveys, usage, proofreadFeedback };
 }
 
 /* --------------------------------------------------------- public API 2 -- */
@@ -416,6 +578,9 @@ export async function buildInsightsAggregate(svc: ServiceClient): Promise<Insigh
  *   - 12 narratives, each field truncated to 600 chars
  *   - 25 thumbs-down comments, each truncated to 300 chars
  *   - 30 survey free-text answers, each truncated to 200 chars
+ *   - 25 proofread-suggestion thumbs-down comments at 300 chars, with their
+ *     issue_type (60) and suggestion_text (200) for context — kept separate
+ *     from the generated-story comments above
  *
  * Narratives that received a thumbs-down are preferred; the remainder is
  * back-filled with the most recent rows.
@@ -532,5 +697,36 @@ export async function buildInsightsSample(svc: ServiceClient): Promise<InsightsS
       .map((value) => value.slice(0, SAMPLE_SURVEY_ANSWER_CHARS));
   }
 
-  return { narratives, downComments, surveyTextAnswers };
+  /* -- proofread-suggestion thumbs-down comments (separate bucket) ---- */
+
+  const proofreadDownRes = await svc
+    .from('proofread_feedback')
+    .select('comment, issue_type, suggestion_text')
+    .eq('rating', 'down')
+    .not('comment', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(SAMPLE_MAX_PROOFREAD_DOWN_COMMENTS * 3);
+
+  const proofreadDownComments: SampleProofreadDownComment[] = unwrap<{
+    comment: string | null;
+    issue_type: string | null;
+    suggestion_text: string | null;
+  }>('proofread thumbs-down comments', proofreadDownRes)
+    .map((row) => ({
+      comment: typeof row.comment === 'string' ? row.comment.trim() : '',
+      issue_type: typeof row.issue_type === 'string' ? row.issue_type.trim() : '',
+      suggestion_text: typeof row.suggestion_text === 'string' ? row.suggestion_text.trim() : '',
+    }))
+    .filter((row) => row.comment.length > 0)
+    .slice(0, SAMPLE_MAX_PROOFREAD_DOWN_COMMENTS)
+    .map((row) => ({
+      issue_type: row.issue_type.length > 0 ? row.issue_type.slice(0, SAMPLE_PROOFREAD_ISSUE_TYPE_CHARS) : null,
+      suggestion_text:
+        row.suggestion_text.length > 0
+          ? row.suggestion_text.slice(0, SAMPLE_PROOFREAD_SUGGESTION_CHARS)
+          : null,
+      comment: row.comment.slice(0, SAMPLE_PROOFREAD_COMMENT_CHARS),
+    }));
+
+  return { narratives, downComments, surveyTextAnswers, proofreadDownComments };
 }

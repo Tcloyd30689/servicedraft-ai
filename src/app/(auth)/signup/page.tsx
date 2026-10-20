@@ -194,6 +194,13 @@ function SignupContent() {
       return;
     }
 
+    // Informational owner notification. Fire-and-forget: never awaited, never affects this flow.
+    void fetch('/api/signup/notify-attempt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    }).catch(() => {});
+
     setOtpEmail(email);
     setResendCooldown(60);
     setCodeExpiry(1200);

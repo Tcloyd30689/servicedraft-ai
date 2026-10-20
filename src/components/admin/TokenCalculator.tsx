@@ -3,9 +3,16 @@
 import { useState, useMemo } from 'react';
 import { Calculator, ChevronDown, Info, Zap, Calendar, DollarSign } from 'lucide-react';
 import LiquidCard from '@/components/ui/LiquidCard';
+import { GEMINI_MODEL_ID, GEMINI_MODEL_LABEL, GEMINI_INPUT_COST_PER_1M, GEMINI_OUTPUT_COST_PER_1M } from '@/lib/gemini/modelId';
 
 // ─── Gemini Model Pricing (per 1M tokens, as of March 2026) ──
 const MODELS = [
+  {
+    id: GEMINI_MODEL_ID,
+    label: GEMINI_MODEL_LABEL,
+    inputPer1M: GEMINI_INPUT_COST_PER_1M,
+    outputPer1M: GEMINI_OUTPUT_COST_PER_1M,
+  },
   {
     id: 'gemini-3-flash-preview',
     label: 'Gemini 3 Flash Preview',
@@ -29,7 +36,7 @@ const MODELS = [
 type ModelId = (typeof MODELS)[number]['id'];
 
 export default function TokenCalculator() {
-  const [modelId, setModelId] = useState<ModelId>('gemini-3-flash-preview');
+  const [modelId, setModelId] = useState<ModelId>(GEMINI_MODEL_ID);
   const [inputTokens, setInputTokens] = useState(1500);
   const [outputTokens, setOutputTokens] = useState(800);
   const [narrativesPerMonth, setNarrativesPerMonth] = useState(100);

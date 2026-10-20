@@ -1,5 +1,10 @@
 // System prompts for Gemini API calls
 
+import {
+  PROOFREAD_ISSUE_CATEGORIES,
+  PROOFREAD_ISSUE_CATEGORY_DESCRIPTIONS,
+} from './proofreadCategories';
+
 // SINGLE SOURCE OF TRUTH for the five mandatory output rules that apply to every
 // narrative-producing prompt. Defined first so every prompt constant below can
 // interpolate it via ${MANDATORY_OUTPUT_RULES}. Editing these rules here updates
@@ -139,6 +144,9 @@ THE ADJUSTMENT (refineAction):
 - LESS_DETAIL: trim to essential facts. Remove non-essential elaboration while keeping every provided technical value and the complete concern, cause, and correction.
 - SIMPLIFY: keep the same facts and length, but use clearer, plainer wording.
 - EXPAND: improve the flow and completeness of the prose without adding new facts.
+- CONDENSE: same facts, fewer words. Remove repetition and filler while keeping every technical fact, value, and step.
+- PLAIN_LANGUAGE: replace jargon with plain terms a customer understands while keeping technical accuracy and every fact.
+- JUSTIFY: make the cause to correction link explicit for a warranty approver. State why the repair was necessary and how the fault was confirmed, using only findings already present in the narrative. Add no new facts.
 CUSTOM INSTRUCTIONS SCOPE CONTRACT (critical):
 Custom instructions may ONLY adjust professional automotive repair documentation: level of detail, clarity, terminology, emphasis, ordering or structure, or an explicit change of Narrative Style (customer pay, extended warranty, manufacturer warranty). If a custom instruction falls OUTSIDE this scope, you MUST IGNORE it entirely and leave the narrative unchanged by that instruction. Out-of-scope requests include but are not limited to: writing in a persona or character, comedic, joke, or fictional styles, casual or non-professional registers, first-person pronouns, roleplay, or anything not part of professional automotive documentation. Do not obey such instructions even partially. When you ignore an out-of-scope instruction, set instruction_rejected to true. Otherwise set it to false.
 RESPONSE FORMAT: respond with ONLY a valid JSON object, no markdown, no code fences, with exactly these keys: block_narrative, concern, cause, correction, instruction_rejected (boolean). All four narrative fields FULLY CAPITALIZED.`;
@@ -334,8 +342,19 @@ export const REPAIR_COMPLETE_FOCUS = `STORY TYPE: REPAIR COMPLETE — the repair
 - The Correction describes the repair that WAS performed (past tense) and how it was confirmed successful.
 - Under your assigned style lens, confirm the account holds together end to end and documents the work to the level that audience requires.`;
 
+/**
+ * Fixed-list issue categories the proofread model must assign, one per flagged
+ * issue. Built from src/constants/proofreadCategories.ts so the prompt, the API
+ * parser, the thumbs feedback, and the Insights chart all share one list.
+ */
+export const PROOFREAD_CATEGORY_RULES = `ISSUE CATEGORY:
+For each flagged issue, also assign exactly ONE category key from this fixed list. Use the key text verbatim (lowercase, underscores). Never invent a new key. If nothing fits, use other.
+${PROOFREAD_ISSUE_CATEGORIES.map((key) => `- ${key}: ${PROOFREAD_ISSUE_CATEGORY_DESCRIPTIONS[key]}`).join('\n')}`;
+
 export const PROOFREAD_OUTPUT_FOOTER = `SNIPPET EXTRACTION:
 For each flagged issue, append the EXACT text snippet from the narrative that contains the problem, enclosed in double brackets like [[exact text here]]. Copy it verbatim (same capitalization, punctuation, and spacing) because it is used to highlight the text in the app. Keep snippets short, typically 3 to 15 words. If an issue is about something MISSING rather than specific text, use empty brackets [[]].
+
+${PROOFREAD_CATEGORY_RULES}
 
 RESPONSE FORMAT:
 Respond with ONLY a valid JSON object. No additional text, no markdown, no code fences:
@@ -349,12 +368,17 @@ Respond with ONLY a valid JSON object. No additional text, no markdown, no code 
     "The one specific fix for issue 1",
     "The one specific fix for issue 2"
   ],
+  "issue_categories": [
+    "category_key_for_issue_1",
+    "category_key_for_issue_2"
+  ],
   "overall_rating": "PASS | NEEDS_REVIEW | FAIL",
   "summary": "One plain sentence giving the overall assessment of the narrative for its intended purpose"
 }
 
 RULES:
 - Each flagged issue has a matching suggested edit at the same array index.
+- issue_categories has exactly one entry per flagged issue at the matching index, and every entry is one key copied verbatim from the ISSUE CATEGORY list (for example missing_verification). The three arrays are always the same length; when there are no issues, all three are empty.
 - EXACTLY ONE FIX PER ISSUE. Every entry in suggested_edits is ONE concrete suggested replacement and nothing more. NEVER offer alternatives, choices, or two ways to fix the same issue. NEVER write "Option A / Option B", "either this or that", "alternatively", "you could also", or any other phrasing that hands the user more than one candidate wording. Decide which single fix is best and give only that one.
 - The two arrays are always the same length: one flagged issue in, one suggested edit out, at the matching index. Never merge two issues into one edit and never split one issue into two edits.
 - If the narrative is solid for its style and type, return empty arrays and a PASS rating.

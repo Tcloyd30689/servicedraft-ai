@@ -13,7 +13,38 @@ interface RefineResponse {
 }
 
 const VALID_NARRATIVE_STYLES = ['customer_pay', 'extended_warranty', 'manufacturer_warranty'];
-const VALID_REFINE_ACTIONS = ['more_detail', 'less_detail', 'simplify', 'expand'];
+// Quick-refine keys. The original four are kept so older clients and saved
+// requests keep working; condense / plain_language / justify are the distinct
+// actions surfaced by the current Quick Refine UI.
+const VALID_REFINE_ACTIONS = [
+  'more_detail',
+  'less_detail',
+  'simplify',
+  'expand',
+  'condense',
+  'plain_language',
+  'justify',
+];
+
+// One precise instruction per refine action, appended under the REFINE ACTION
+// header so the model knows exactly what the single light-touch adjustment is.
+// Phrased to match the adjustment definitions in REFINE_SYSTEM_PROMPT.
+const REFINE_ACTION_INSTRUCTIONS: Record<string, string> = {
+  more_detail:
+    'Surface more of the diagnostic and procedural specificity ALREADY present in the narrative or the original input context: readings, test steps, part names, and verification steps. Add professional connective language. NEVER invent new technical values or findings.',
+  less_detail:
+    'Trim to essential facts. Remove non-essential elaboration while keeping every provided technical value and the complete concern, cause, and correction.',
+  simplify:
+    'Keep the same facts and length, but use clearer, plainer wording.',
+  expand:
+    'Improve the flow and completeness of the prose without adding new facts.',
+  condense:
+    'Same facts, fewer words. Remove repetition, filler, and redundant connective phrases. Keep EVERY technical fact, value, code, part name, and verification step. Do not drop any step of the concern, cause, or correction; only shorten how it is said.',
+  plain_language:
+    'Replace jargon, abbreviations, and shop shorthand with plain terms a customer would understand, while keeping technical accuracy and every fact, value, and part name. Where a technical term must stay (a part name or diagnostic code), keep it and add a brief plain-language description beside it. Do not change the length materially and do not remove any step.',
+  justify:
+    'Strengthen the justification for the repair so a warranty approver can follow it. Make the cause -> correction link explicit: state WHY the repair was necessary and HOW the fault was confirmed, using only the diagnostic steps, readings, and findings already present in the narrative or the original input context. Use confident, definitive wording (no might, could, or possibly). Add no new tests, readings, or findings that were not provided.',
+};
 
 const NARRATIVE_STYLE_LABELS: Record<string, string> = {
   customer_pay: 'CUSTOMER PAY',
@@ -86,8 +117,9 @@ export async function POST(request: Request) {
       : 'manufacturer_warranty';
     const action = VALID_REFINE_ACTIONS.includes(refineAction) ? refineAction : null;
 
+    const actionInstruction = action ? REFINE_ACTION_INSTRUCTIONS[action] : undefined;
     const actionBlock = action
-      ? `REFINE ACTION: ${action.toUpperCase()}\n`
+      ? `REFINE ACTION: ${action.toUpperCase()}\n${actionInstruction ? `REFINE ACTION INSTRUCTION: ${actionInstruction}\n` : ''}`
       : '';
 
     const inputContextBlock = originalInputContext

@@ -15,6 +15,12 @@ type Rating = 'up' | 'down';
 
 const MAX_COMMENT_LENGTH = 500;
 
+/**
+ * Vertical "Was this helpful?" panel. Designed to live in its own narrow
+ * LiquidCard beside the narrative (~220-260px on desktop, full width on
+ * mobile): prompt line, two large thumbs, then the optional thumbs-down
+ * comment box and SUBMIT.
+ */
 export function NarrativeFeedback({
   trackerId,
   storyType,
@@ -87,21 +93,33 @@ export function NarrativeFeedback({
   const thumbStyle = (isActive: boolean) => ({
     color: isActive ? 'var(--accent-bright)' : 'var(--text-muted)',
     backgroundColor: isActive ? 'var(--accent-20)' : 'var(--accent-10)',
+    borderColor: isActive ? 'var(--accent-bright)' : 'var(--accent-border)',
     boxShadow: isActive ? 'var(--shadow-glow-sm)' : 'none',
   });
 
+  // Kept small so a full-width button never pushes past the card edge.
   const hoverMotion = isDisabled
     ? undefined
-    : { scale: 1.12, boxShadow: '0 0 14px 2px var(--accent-bright)' };
-  const tapMotion = isDisabled ? undefined : { scale: 1.04 };
+    : { scale: 1.03, boxShadow: '0 0 14px 2px var(--accent-bright)' };
+  const tapMotion = isDisabled ? undefined : { scale: 0.98 };
+
+  const thumbButtonClass =
+    'flex items-center justify-center w-full min-w-[56px] min-h-[56px] rounded-xl border disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-bright)]';
 
   return (
-    <div className="mt-3">
-      <div className="flex items-center gap-2">
-        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          Was this helpful?
-        </span>
+    <div className="flex flex-col gap-3 w-full min-w-0">
+      <p
+        className="text-sm font-medium"
+        style={{ color: 'var(--text-secondary)' }}
+      >
+        Was this helpful?
+      </p>
 
+      {/* Two large thumbs side by side; auto-fit stacks them when the card is too narrow. */}
+      <div
+        className="grid gap-2 w-full"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(72px, 1fr))' }}
+      >
         <motion.button
           type="button"
           onClick={() => handleVote('up')}
@@ -111,10 +129,10 @@ export function NarrativeFeedback({
           aria-pressed={rating === 'up'}
           whileHover={hoverMotion}
           whileTap={tapMotion}
-          className="shrink-0 flex items-center justify-center h-9 w-9 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+          className={thumbButtonClass}
           style={thumbStyle(rating === 'up')}
         >
-          <ThumbsUp size={16} fill={rating === 'up' ? 'currentColor' : 'none'} />
+          <ThumbsUp size={28} fill={rating === 'up' ? 'currentColor' : 'none'} aria-hidden="true" />
         </motion.button>
 
         <motion.button
@@ -126,16 +144,23 @@ export function NarrativeFeedback({
           aria-pressed={rating === 'down'}
           whileHover={hoverMotion}
           whileTap={tapMotion}
-          className="shrink-0 flex items-center justify-center h-9 w-9 rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
+          className={thumbButtonClass}
           style={thumbStyle(rating === 'down')}
         >
-          <ThumbsDown size={16} fill={rating === 'down' ? 'currentColor' : 'none'} />
+          <ThumbsDown size={28} fill={rating === 'down' ? 'currentColor' : 'none'} aria-hidden="true" />
         </motion.button>
-
-        {saved && !isSaving && (
-          <Check size={14} style={{ color: 'var(--accent-bright)' }} aria-hidden="true" />
-        )}
       </div>
+
+      {saved && !isSaving && (
+        <div
+          className="flex items-center gap-1.5 text-xs"
+          style={{ color: 'var(--accent-bright)' }}
+          role="status"
+        >
+          <Check size={14} aria-hidden="true" />
+          <span>Feedback saved</span>
+        </div>
+      )}
 
       <AnimatePresence initial={false}>
         {showComment && (
@@ -146,22 +171,23 @@ export function NarrativeFeedback({
             transition={{ duration: 0.18 }}
             className="overflow-hidden"
           >
-            <div className="mt-2 max-w-md">
+            <div className="flex flex-col gap-1.5 w-full min-w-0">
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 maxLength={MAX_COMMENT_LENGTH}
-                rows={2}
+                rows={3}
                 placeholder="What was wrong? (optional)"
-                className="w-full rounded-lg px-3 py-2 text-sm resize-none border focus:outline-none"
+                aria-label="Feedback comment"
+                className="w-full min-w-0 rounded-lg px-3 py-2 text-sm resize-none border focus:outline-none"
                 style={{
                   backgroundColor: 'var(--bg-input)',
                   borderColor: 'var(--accent-border)',
                   color: 'var(--text-primary)',
                 }}
               />
-              <div className="flex items-center justify-between mt-1.5">
-                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] shrink-0" style={{ color: 'var(--text-muted)' }}>
                   {comment.length}/{MAX_COMMENT_LENGTH}
                 </span>
                 <motion.button
@@ -170,15 +196,15 @@ export function NarrativeFeedback({
                   disabled={isDisabled}
                   title="Submit feedback"
                   aria-label="Submit feedback"
-                  whileHover={isDisabled ? undefined : { scale: 1.05, boxShadow: 'var(--shadow-glow-sm)' }}
+                  whileHover={isDisabled ? undefined : { scale: 1.03, boxShadow: 'var(--shadow-glow-sm)' }}
                   whileTap={isDisabled ? undefined : { scale: 0.97 }}
-                  className="text-xs font-medium px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-xs font-medium tracking-wide px-3 py-1.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{
                     color: 'var(--btn-text-on-accent)',
                     backgroundColor: 'var(--accent-hover)',
                   }}
                 >
-                  Submit
+                  SUBMIT
                 </motion.button>
               </div>
             </div>

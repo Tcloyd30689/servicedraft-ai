@@ -2,11 +2,17 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateWithGemini, parseJsonResponse } from '@/lib/gemini/client';
 import { buildProofreadSystemPrompt } from '@/constants/prompts';
+import {
+  normalizeProofreadIssueCategory,
+  type ProofreadIssueCategory,
+} from '@/constants/proofreadCategories';
 import { logTokenUsage } from '@/lib/usageLogger';
 
 interface RawProofreadResponse {
   flagged_issues: string[];
   suggested_edits: string[];
+  /** Fixed-list category key per flagged issue (same index). Optional: older model output omits it. */
+  issue_categories?: unknown;
   overall_rating: 'PASS' | 'NEEDS_REVIEW' | 'FAIL';
   summary: string;
 }
@@ -21,6 +27,20 @@ function extractSnippet(issueText: string): ParsedIssue {
   const snippet = match ? match[1].trim() : '';
   const issue = issueText.replace(/\[\[.*?\]\]/, '').trim();
   return { issue, snippet };
+}
+
+/**
+ * Build the issue_categories array aligned by index with the flagged issues /
+ * suggested edits. Defensive on purpose: a missing array, a non-array, a short
+ * array, or an unknown key all degrade to 'other' rather than failing the run.
+ */
+function alignIssueCategories(raw: unknown, count: number): ProofreadIssueCategory[] {
+  const list = Array.isArray(raw) ? raw : [];
+  const out: ProofreadIssueCategory[] = [];
+  for (let i = 0; i < count; i++) {
+    out.push(normalizeProofreadIssueCategory(list[i]));
+  }
+  return out;
 }
 
 export async function POST(request: Request) {
@@ -87,9 +107,17 @@ CORRECTION: ${correction}
     // Extract [[snippet]] from each flagged issue
     const parsedIssues: ParsedIssue[] = rawIssues.map(extractSnippet);
 
+    // One fixed-list category per issue, aligned by index with both arrays.
+    // Backward compatible: old-shape model output (no issue_categories) -> 'other'.
+    const issueCategories = alignIssueCategories(
+      parsed.issue_categories,
+      Math.max(parsedIssues.length, parsed.suggested_edits.length),
+    );
+
     return NextResponse.json({
       flagged_issues: parsedIssues,
       suggested_edits: parsed.suggested_edits,
+      issue_categories: issueCategories,
       overall_rating: parsed.overall_rating,
       summary: parsed.summary,
     });

@@ -4559,3 +4559,120 @@ light-grey band across bars on the dark theme — it is the library default and 
 in the admin page's own bar charts, so fixing it only here would make A-3 diverge; it is a
 repo-wide cosmetic item for a future sprint. (2) Two sample queries lack an explicit `.order()`;
 both are bounded and neither affects correctness.
+
+
+---
+
+Sprint B-1 — Pre-Release Fixes Batch (Rating Card, Proofread Feedback, Insights Split, Sign-up Alerts, Gemini 3.8)
+**Status:** [x] COMPLETE (2026-10-20) — v1.3.12-beta — Phase 2, out-of-plan batch requested by Tyler after his manual test pass (branch `updates-2026-08`, worktree `servicedraft-ai-updates`; branch pushed to origin per Tyler's standing authorization, never merged to main)
+
+Eight owner-requested changes plus a model bump, built by six parallel builders on disjoint
+file sets (Workflow tool, one orchestrator session), verified by a QA-vision verifier as the
+`qa_tester` bot, then a follow-up builder for two loose ends QA surfaced. QA passed in ONE
+round with zero structural issues.
+
+**(1) RATING CARD.** `NarrativeFeedback` moved OUT of the story LiquidCard into its own
+"RATE THIS STORY" card to the RIGHT of the narrative on desktop (240px column, top-aligned,
+hugs its content — `lg:items-start`, changed from `items-stretch` after QA noticed a tall empty
+card on long narratives) and stacked below on mobile. The component itself is now a vertical
+panel with 56px+ thumbs, a "Feedback saved" line, same props/export/API/gating as before.
+
+**(2) SKIP ANIMATION** moved from bottom-left to an absolutely-positioned control at the
+TOP-RIGHT of the narrative container; headings got `pr-28` so text never runs under it.
+
+**(3) COPY BUTTONS.** Every narrative field (BLOCK / CONCERN / CAUSE / CORRECTION) now renders
+through a shared `NarrativeField` wrapper with a code-block-style copy button (Copy → Check for
+1.5s, "Copied" toast). Copies the full plain source text even mid-animation; QA read the
+clipboard back and matched it (121 chars).
+
+**(4) STYLE TOGGLE** (Customer Pay / Extended Warranty / Manufacturer Warranty) rebuilt as its
+own "NARRATIVE STYLE" LiquidCard in the LEFT column directly under REGENERATE STORY, same
+header idiom as REFINE STORY; `handleStyleChange` behavior unchanged; old strip removed.
+
+**(5) QUICK REFINE REWORK.** The overlapping four (More/Less Detail, Simplify, Expand) are
+replaced in the UI by four distinct actions with one-line captions: MORE DETAIL
+(`more_detail`), CONDENSE (`condense`), PLAIN LANGUAGE (`plain_language`), STRENGTHEN
+JUSTIFICATION (`justify`). `/api/refine` accepts all seven keys (old three kept, additive) and
+appends a per-action `REFINE ACTION INSTRUCTION:` line; `REFINE_SYSTEM_PROMPT` gained matching
+CONDENSE / PLAIN_LANGUAGE / JUSTIFY bullets. CONDENSE exercised live: 783 → 373 chars, facts
+intact.
+
+**(6) PER-SUGGESTION PROOFREAD FEEDBACK.** Small thumbs beside EACH suggested edit in
+`ProofreadResults` (clickable regardless of the checkbox; stopPropagation). Thumbs-up POSTs
+immediately; thumbs-down POSTs then opens a "Suggestion Feedback" modal (existing `Modal`,
+stack-aware) with a 5000-char textarea, SUBMIT and SKIP. NEW `POST /api/proofread-feedback`:
+cookie client for identity, service-role client for data, `user_id` ONLY from the session,
+manual upsert on (user_id, proofread_run_id, suggestion_index), null-body guard, 401/400 paths
+probed. NEW table **`public.proofread_feedback`** — **the orchestrator applied this migration to
+production via the Supabase MCP connector** (additive new table only, RLS enabled with no
+policies, nothing existing touched); SQL recorded as `supabase/migrations/013_proofread_feedback.sql`.
+This is a deliberate, documented deviation from SPRINT_PROTOCOL §3 "never run SQL", whose
+purpose was that the planned batch's schema was pre-applied; this feature was not in that plan.
+Follow-up (same sprint): the proofread prompt now emits a fixed-list category per flagged issue
+(`src/constants/proofreadCategories.ts`, 11 keys e.g. `vague_or_generic`, `missing_cause_link`,
+`harmful_warranty_language`, `other`), `/api/proofread` ADDS a parallel `issue_categories[]`
+(defensive, unknown → `other`, existing fields untouched), and the UI sends the category KEY as
+`issue_type` so the Insights by-issue-type chart can actually aggregate across runs. Verified
+live: categories `["vague_or_generic","missing_cause_link"]`, aligned 2/2/2.
+
+**(7) INSIGHTS SPLIT.** `insightsAggregate.ts` gained a SEPARATE top-level `proofreadFeedback`
+key (totals/ratio, byStyle, byStoryType, byIssueType top 10, distinctRuns, distinctUsers count,
+recentDownComments with NO user_id/tracker_id) never blended into `feedback`. `/api/admin/insights`
+returns it; the report route adds a labeled PROOFREAD SUGGESTION FEEDBACK block, a fifth report
+section, and renames `feedback` → `generated_story_feedback` in the PROMPT ONLY (API/snapshot
+keys unchanged). `InsightsAnalytics.tsx` has a "Feedback Source" segmented control —
+GENERATED STORIES | PROOFREAD SUGGESTIONS | BOTH (default) — and the proofread section mirrors
+the story section (shared `RatioBarChart`/`StatCardGrid`/`SectionHeader` refactor; story section
+renders identically). QA fixed a clipped by-issue-type axis label (`truncateLabel` 40 chars +
+tooltip pill); the follow-up now shows human labels for known category keys.
+
+**(8) SIGN-UP OWNER ALERTS.** NEW `src/lib/signupNotify.ts` (`NOTIFY_ROLES = ['owner']`, one-line
+expansion to admin later) queries `public.users` by role with the service client and sends ONE
+Resend email from `noreply@servicedraft.ai`. Hooks: NEW pre-auth `POST /api/signup/notify-attempt`
+(email validated, 5/15min per-IP rate limit, always `{ok:true}`) called fire-and-forget from the
+signup page after the code request succeeds; and a try/catch-wrapped `void` call in
+`complete-profile` after the profile saves. **Explicit, Tyler-authorized exception to §3's
+"never touch signup"** — additive hooks only, no status/body/flow change. Verified end to end:
+the dev server logged `[signupNotify] Sent attempt notification to 1 recipient(s).` and the
+orchestrator confirmed the email in the owner's Gmail inbox. Resend-code is deliberately not hooked.
+
+**(9) GEMINI 3.8 FLASH.** NEW side-effect-free `src/lib/gemini/modelId.ts`
+(`GEMINI_MODEL_ID='gemini-3.8-flash'`, label, $0.75/$3.75 per 1M — third-party figures,
+introductory through 2026-12-31, $1.50/$7.50 after; Google's pricing page would not load) imported
+by `gemini/client.ts`, `usageLogger.ts`, `TokenCalculator.tsx` (new default entry, old kept) and
+the admin API-usage label. Model id verified against Google's model docs; all five live calls
+this sprint (generate ×2, proofread ×2, refine ×1) returned 200 through it with no model errors.
+
+**Files changed (23 + 9 new):** `narrative/page.tsx`, `CustomizationPanel.tsx`, `refine/route.ts`,
+`NarrativeDisplay.tsx`, `NarrativeFeedback.tsx`, `ProofreadResults.tsx`, `types/database.ts`,
+`insightsAggregate.ts`, `admin/insights/route.ts`, `admin/insights/report/route.ts`,
+`InsightsAnalytics.tsx`, `(auth)/signup/page.tsx`, `signup/complete-profile/route.ts`,
+`gemini/client.ts`, `usageLogger.ts`, `TokenCalculator.tsx`, `admin/page.tsx` (model label +
+pricing text only), `constants/prompts.ts`, `api/proofread/route.ts`, version files; NEW
+`api/proofread-feedback/route.ts`, `api/signup/notify-attempt/route.ts`,
+`ProofreadSuggestionFeedback.tsx`, `ProofreadFeedbackModal.tsx`, `lib/signupNotify.ts`,
+`lib/gemini/modelId.ts`, `constants/proofreadCategories.ts`, `docs/email-templates/signup-notification.md`,
+`supabase/migrations/013_proofread_feedback.sql`. No protected file touched (useAuth, middleware,
+api/me, Stripe untouched; verified by git status). Nothing deleted. No RLS change.
+
+**QA results:** `tsc` clean (three times: after build, after QA fixes, after follow-up); `npm run
+build` clean, exit 0, no Turbopack hang; lint 27 problems, all pre-existing, ZERO new. 32
+screenshots captured and READ at 1440×900 and 390×844 (`servicedraft-qa/shots/b1-release-fixes/`
+and `b2-proofread-category/`) covering every contract item; the orchestrator independently read
+the key desktop/mobile/modal/insights shots. API probes: unauth proofread-feedback 401;
+notify-attempt bad/null/garbage 400, valid 200; proofread-feedback upsert proven (three POSTs,
+same row id); `/api/admin/insights` as qa_tester 200 with `proofreadFeedback` present and no
+`user_id`/`tracker_id`/`email`/`proofread_run_id` substrings; DOM probe for NaN/undefined/Infinity/
+[object Object] 0 hits in all three segmented states × both viewports; horizontal overflow none;
+console errors 0. **Gemini calls: 5 of 10** (3 in QA round, 2 in follow-up). **R.O. `QABOT-B1`
+and `QABOT-B2` written to production** (narratives, trackers, 2 proofread_feedback rows, 1
+narrative_feedback row, usage/activity rows) plus one real owner email — Tyler can delete the
+rows; QA deleted nothing.
+
+**Known limitations / for Tyler:** (1) Legacy proofread_feedback rows from the QA round carry a
+full issue sentence as `issue_type`; they display truncated under the chart until deleted.
+(2) The notify-attempt route is pre-auth by nature; abuse is bounded by the per-IP rate limit,
+not by auth. (3) Pricing constants are third-party figures — confirm on Google's pricing page
+when it loads. (4) Still untested by an owner: the survey popup end to end and GENERATE
+INSIGHTS REPORT (both need owner credentials; see Sprints A-2/A-3), plus a judgement call on
+Gemini 3.8 Flash output quality.

@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GEMINI_MODEL_ID } from '@/lib/gemini/modelId';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -19,7 +20,7 @@ export async function generateWithGemini(
   maxOutputTokens: number = 30000,
 ): Promise<GeminiResponse> {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-3-flash-preview',
+    model: GEMINI_MODEL_ID,
     systemInstruction: systemPrompt,
     generationConfig: {
       maxOutputTokens,

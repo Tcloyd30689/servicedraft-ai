@@ -12,6 +12,12 @@
  *
  * The generate button is hidden entirely for read-only (qa_tester) viewers,
  * matching the Sprint G-4a/G-4b convention: see everything, mutate nothing.
+ *
+ * Feedback is TWO isolated streams, never blended:
+ *   - Generated Story Feedback      ← data.feedback / data.recentDownComments
+ *   - Proofread Suggestion Feedback ← data.proofreadFeedback
+ * A segmented control (GENERATED STORIES | PROOFREAD SUGGESTIONS | BOTH) picks
+ * which stream(s) are on screen; BOTH is the default.
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -20,7 +26,7 @@ import {
 } from 'recharts';
 import {
   ThumbsUp, ThumbsDown, MessageSquare, TrendingUp, Activity, Sparkles,
-  FileText, ClipboardList, AlertTriangle, RefreshCw, Clock,
+  FileText, ClipboardList, AlertTriangle, RefreshCw, Clock, SpellCheck, Tag,
   type LucideIcon,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -30,7 +36,12 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Modal from '@/components/ui/Modal';
 import MarkdownReport from '@/components/admin/MarkdownReport';
 import type { InsightReport } from '@/types/database';
-import type { InsightsAggregate } from '@/lib/insightsAggregate';
+import type {
+  InsightsAggregate,
+  ProofreadFeedbackAggregate,
+  RatioBucket,
+} from '@/lib/insightsAggregate';
+import { proofreadIssueCategoryLabel } from '@/constants/proofreadCategories';
 
 /* ------------------------------------------------------------- labels ---- */
 
@@ -58,6 +69,21 @@ function humanize(key: string): string {
 
 const styleLabel = (key: string): string => NARRATIVE_STYLE_LABELS[key] ?? humanize(key);
 const storyLabel = (key: string): string => STORY_TYPE_LABELS[key] ?? humanize(key);
+/**
+ * issue_type is now a fixed-list category KEY from the proofread tool
+ * (src/constants/proofreadCategories.ts), so known keys get their human label.
+ * Rows written before the category list existed hold the full flagged-issue
+ * sentence (up to 200 chars); those fall through to the humanizer and are
+ * truncated for the chart axis and the pill, with the full text in the pill's
+ * title tooltip.
+ */
+const ISSUE_LABEL_MAX_CHARS = 40;
+function truncateLabel(text: string, max: number): string {
+  const t = text.trim();
+  return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t;
+}
+const issueLabel = (key: string): string =>
+  proofreadIssueCategoryLabel(key) ?? truncateLabel(humanize(key), ISSUE_LABEL_MAX_CHARS);
 
 /**
  * Satisfaction as a percentage. `ratio` is null on an empty database, so the
@@ -66,6 +92,12 @@ const storyLabel = (key: string): string => STORY_TYPE_LABELS[key] ?? humanize(k
 function formatRatio(ratio: number | null | undefined): string {
   if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return '—';
   return `${Math.round(ratio * 100)}%`;
+}
+
+/** Integer counter that can never print NaN/undefined. */
+function formatCount(value: number | null | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return '0';
+  return value.toLocaleString();
 }
 
 function formatDate(iso: string): string {
@@ -137,6 +169,168 @@ const RATE_LABELS: { key: keyof InsightsAggregate['usage']['rates']; label: stri
   { key: 'exported', label: 'Exported' },
 ];
 
+/* ------------------------------------------------ feedback view switch ---- */
+
+type FeedbackView = 'stories' | 'proofread' | 'both';
+
+const FEEDBACK_VIEW_OPTIONS: { key: FeedbackView; label: string }[] = [
+  { key: 'stories', label: 'GENERATED STORIES' },
+  { key: 'proofread', label: 'PROOFREAD SUGGESTIONS' },
+  { key: 'both', label: 'BOTH' },
+];
+
+/** Section headers — referenced by QA, keep the strings stable. */
+const STORY_SECTION_TITLE = 'Generated Story Feedback';
+const PROOFREAD_SECTION_TITLE = 'Proofread Suggestion Feedback';
+
+/**
+ * Safe stand-in when the API payload predates `proofreadFeedback` (stale tab
+ * across a deploy). Every field is a real zero / empty value, never undefined.
+ */
+const EMPTY_PROOFREAD: ProofreadFeedbackAggregate = {
+  up: 0,
+  down: 0,
+  total: 0,
+  ratio: null,
+  byStyle: [],
+  byStoryType: [],
+  byIssueType: [],
+  distinctRuns: 0,
+  distinctUsers: 0,
+  recentDownComments: [],
+};
+
+/* ------------------------------------------------------ sub-components ---- */
+
+interface ChartRow {
+  name: string;
+  up: number;
+  down: number;
+}
+
+function toChartRows(buckets: RatioBucket[] | undefined, label: (key: string) => string): ChartRow[] {
+  return (buckets ?? []).map((b) => ({
+    name: label(b.key),
+    up: Number.isFinite(b.up) ? b.up : 0,
+    down: Number.isFinite(b.down) ? b.down : 0,
+  }));
+}
+
+/** The house up/down horizontal bar chart. One place for the chrome. */
+function RatioBarChart({ rows, emptyText }: { rows: ChartRow[]; emptyText: string }) {
+  if (rows.length === 0) {
+    return (
+      <p className="text-[var(--text-muted)] text-base text-center py-8">{emptyText}</p>
+    );
+  }
+  return (
+    <ResponsiveContainer width="100%" height={Math.max(rows.length * 40, 200)}>
+      <BarChart data={rows} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--accent-15)" horizontal={false} />
+        <XAxis type="number" stroke="var(--text-muted)" tick={{ fontSize: 11 }} allowDecimals={false} />
+        <YAxis dataKey="name" type="category" width={Y_AXIS_WIDTH} stroke="var(--text-muted)" tick={{ fontSize: 12 }} />
+        <Tooltip contentStyle={TOOLTIP_STYLE} />
+        <Bar dataKey="up" name="Thumbs up" fill="var(--accent-bright)" radius={[0, 4, 4, 0]} />
+        <Bar dataKey="down" name="Thumbs down" fill="var(--accent-30)" radius={[0, 4, 4, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+interface StatCard {
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  color: string;
+  sub: string;
+}
+
+function buildStatCards(
+  totals: { up: number; down: number; total: number; ratio: number | null } | undefined,
+  totalSub: string,
+): StatCard[] {
+  return [
+    {
+      label: 'Thumbs Up',
+      value: formatCount(totals?.up),
+      icon: ThumbsUp,
+      color: 'var(--accent-bright)',
+      sub: 'Helpful ratings',
+    },
+    {
+      label: 'Thumbs Down',
+      value: formatCount(totals?.down),
+      icon: ThumbsDown,
+      color: 'var(--accent-primary)',
+      sub: 'Needs work',
+    },
+    {
+      label: 'Total Feedback',
+      value: formatCount(totals?.total),
+      icon: MessageSquare,
+      color: 'var(--accent-hover)',
+      sub: totalSub,
+    },
+    {
+      label: 'Satisfaction',
+      // Preformatted string — an em-dash when ratio is null, never NaN%.
+      value: formatRatio(totals?.ratio ?? null),
+      icon: TrendingUp,
+      color: 'var(--accent-bright)',
+      sub: 'Thumbs up share',
+    },
+  ];
+}
+
+function StatCardGrid({ cards }: { cards: StatCard[] }) {
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {cards.map(({ label, value, icon: Icon, color, sub }) => (
+        <LiquidCard key={label} size="compact" className="!rounded-[16px] relative overflow-hidden">
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs sm:text-sm text-[var(--text-muted)] uppercase tracking-wider font-medium">
+                {label}
+              </p>
+              <Icon size={22} style={{ color, opacity: 0.6 }} />
+            </div>
+            <p className="text-2xl sm:text-4xl font-bold" style={{ color }}>{value}</p>
+            <p className="text-[var(--text-muted)] text-xs sm:text-sm mt-1">{sub}</p>
+          </div>
+        </LiquidCard>
+      ))}
+    </div>
+  );
+}
+
+/** Distinct section banner so BOTH mode reads as two separate blocks. */
+function SectionHeader({ icon: Icon, title, caption }: { icon: LucideIcon; title: string; caption: string }) {
+  return (
+    <div className="flex items-start gap-3 pt-2">
+      <div className="w-10 h-10 rounded-xl bg-[var(--accent-15)] border border-[var(--accent-20)] flex items-center justify-center shrink-0">
+        <Icon size={20} style={{ color: 'var(--accent-bright)' }} />
+      </div>
+      <div className="min-w-0">
+        <h2 className="text-xl font-bold text-[var(--text-primary)] leading-tight">{title}</h2>
+        <p className="text-sm text-[var(--text-muted)] mt-0.5">{caption}</p>
+      </div>
+    </div>
+  );
+}
+
+function ContextPill({ children, title }: { children: string; title?: string }) {
+  return (
+    <span
+      title={title}
+      className="inline-block max-w-full truncate align-bottom px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--accent-15)] border border-[var(--accent-20)] text-[var(--accent-bright)]"
+    >
+      {children}
+    </span>
+  );
+}
+
+/* ---------------------------------------------------------- component ---- */
+
 interface InsightsAnalyticsProps {
   /** qa_tester — may see everything, may generate nothing (Sprint G-4a/G-4b). */
   readOnly: boolean;
@@ -146,6 +340,8 @@ export default function InsightsAnalytics({ readOnly }: InsightsAnalyticsProps) 
   const [data, setData] = useState<InsightsAggregate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [feedbackView, setFeedbackView] = useState<FeedbackView>('both');
 
   const [reports, setReports] = useState<ReportListRow[]>([]);
   const [reportsLoading, setReportsLoading] = useState(true);
@@ -284,18 +480,32 @@ export default function InsightsAnalytics({ readOnly }: InsightsAnalyticsProps) 
 
   /* ─── Derived chart data ─────────────────────────────────── */
 
+  // Stale-payload guard: a tab left open across a deploy may lack the key.
+  const proofread: ProofreadFeedbackAggregate = data?.proofreadFeedback ?? EMPTY_PROOFREAD;
+
   const feedbackStyleData = useMemo(
-    () => (data?.feedback.byStyle ?? []).map((b) => ({
-      name: styleLabel(b.key), up: b.up, down: b.down,
-    })),
+    () => toChartRows(data?.feedback.byStyle, styleLabel),
     [data],
   );
 
   const feedbackStoryData = useMemo(
-    () => (data?.feedback.byStoryType ?? []).map((b) => ({
-      name: storyLabel(b.key), up: b.up, down: b.down,
-    })),
+    () => toChartRows(data?.feedback.byStoryType, storyLabel),
     [data],
+  );
+
+  const proofreadStyleData = useMemo(
+    () => toChartRows(proofread.byStyle, styleLabel),
+    [proofread],
+  );
+
+  const proofreadStoryData = useMemo(
+    () => toChartRows(proofread.byStoryType, storyLabel),
+    [proofread],
+  );
+
+  const proofreadIssueData = useMemo(
+    () => toChartRows(proofread.byIssueType, issueLabel).slice(0, 10),
+    [proofread],
   );
 
   const usageStyleData = useMemo(
@@ -305,41 +515,18 @@ export default function InsightsAnalytics({ readOnly }: InsightsAnalyticsProps) 
     [data],
   );
 
-  const statCards: { label: string; value: string; icon: LucideIcon; color: string; sub: string }[] =
-    useMemo(() => {
-      const fb = data?.feedback;
-      return [
-        {
-          label: 'Thumbs Up',
-          value: (fb?.up ?? 0).toLocaleString(),
-          icon: ThumbsUp,
-          color: 'var(--accent-bright)',
-          sub: 'Helpful ratings',
-        },
-        {
-          label: 'Thumbs Down',
-          value: (fb?.down ?? 0).toLocaleString(),
-          icon: ThumbsDown,
-          color: 'var(--accent-primary)',
-          sub: 'Needs work',
-        },
-        {
-          label: 'Total Feedback',
-          value: (fb?.total ?? 0).toLocaleString(),
-          icon: MessageSquare,
-          color: 'var(--accent-hover)',
-          sub: 'Ratings recorded',
-        },
-        {
-          label: 'Satisfaction',
-          // Preformatted string — an em-dash when ratio is null, never NaN%.
-          value: formatRatio(fb?.ratio ?? null),
-          icon: TrendingUp,
-          color: 'var(--accent-bright)',
-          sub: 'Thumbs up share',
-        },
-      ];
-    }, [data]);
+  const storyStatCards = useMemo(
+    () => buildStatCards(data?.feedback, 'Ratings on generated stories'),
+    [data],
+  );
+
+  const proofreadStatCards = useMemo(
+    () => buildStatCards(proofread, 'Ratings on proofread suggestions'),
+    [proofread],
+  );
+
+  const showStories = feedbackView === 'stories' || feedbackView === 'both';
+  const showProofread = feedbackView === 'proofread' || feedbackView === 'both';
 
   /* ─── Render ─────────────────────────────────────────────── */
 
@@ -364,127 +551,228 @@ export default function InsightsAnalytics({ readOnly }: InsightsAnalyticsProps) 
         </LiquidCard>
       ) : data ? (
         <>
-          {/* ─── A. Feedback stats ─────────────────────────── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {statCards.map(({ label, value, icon: Icon, color, sub }) => (
-              <LiquidCard key={label} size="compact" className="!rounded-[16px] relative overflow-hidden">
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs sm:text-sm text-[var(--text-muted)] uppercase tracking-wider font-medium">
+          {/* ─── Feedback source switch ────────────────────── */}
+          <LiquidCard size="compact" className="!rounded-[16px]">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <MessageSquare size={22} style={{ color: 'var(--accent-bright)' }} />
+                <div>
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">Feedback Source</h3>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    Story ratings and proofread-suggestion ratings are tracked separately.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                role="group"
+                aria-label="Feedback source"
+                className="inline-flex items-center gap-1 p-1 rounded-xl bg-[var(--accent-10)] border border-[var(--accent-border)] flex-wrap"
+              >
+                {FEEDBACK_VIEW_OPTIONS.map(({ key, label }) => {
+                  const active = feedbackView === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setFeedbackView(key)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wider transition-all duration-200 cursor-pointer whitespace-nowrap ${
+                        active
+                          ? 'bg-[var(--accent-primary)] text-white shadow-[var(--shadow-glow-sm)]'
+                          : 'text-[var(--text-secondary)] hover:bg-[var(--accent-20)] hover:text-[var(--accent-bright)]'
+                      }`}
+                    >
                       {label}
-                    </p>
-                    <Icon size={22} style={{ color, opacity: 0.6 }} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </LiquidCard>
+
+          {/* ═══ SECTION 1 — Generated Story Feedback ═══════════ */}
+          {showStories && (
+            <section className="space-y-4" aria-label={STORY_SECTION_TITLE}>
+              <SectionHeader
+                icon={FileText}
+                title={STORY_SECTION_TITLE}
+                caption="Thumbs up / down left on whole generated narratives."
+              />
+
+              {/* A. Stats */}
+              <StatCardGrid cards={storyStatCards} />
+
+              {/* B. Breakdown */}
+              <LiquidCard size="standard" className="!rounded-[16px]">
+                <div className="flex items-center gap-3 mb-4">
+                  <ThumbsUp size={22} style={{ color: 'var(--accent-bright)' }} />
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">Feedback Breakdown</h3>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-sm text-[var(--text-muted)] mb-2">By narrative style</p>
+                    <RatioBarChart rows={feedbackStyleData} emptyText="No feedback recorded yet." />
                   </div>
-                  <p className="text-2xl sm:text-4xl font-bold" style={{ color }}>{value}</p>
-                  <p className="text-[var(--text-muted)] text-xs sm:text-sm mt-1">{sub}</p>
+                  <div>
+                    <p className="text-sm text-[var(--text-muted)] mb-2">By story type</p>
+                    <RatioBarChart rows={feedbackStoryData} emptyText="No feedback recorded yet." />
+                  </div>
                 </div>
               </LiquidCard>
-            ))}
-          </div>
 
-          {/* ─── B. Feedback by style / story type ─────────── */}
-          <LiquidCard size="standard" className="!rounded-[16px]">
-            <div className="flex items-center gap-3 mb-4">
-              <ThumbsUp size={22} style={{ color: 'var(--accent-bright)' }} />
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">Feedback Breakdown</h3>
-            </div>
+              {/* C. Recent thumbs-down comments */}
+              <LiquidCard size="standard" className="!rounded-[16px]">
+                <div className="flex items-center gap-3 mb-4">
+                  <ThumbsDown size={22} style={{ color: 'var(--accent-bright)' }} />
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    Recent Thumbs-Down Comments
+                  </h3>
+                </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <p className="text-sm text-[var(--text-muted)] mb-2">By narrative style</p>
-                {feedbackStyleData.length > 0 ? (
-                  <ResponsiveContainer
-                    width="100%"
-                    height={Math.max(feedbackStyleData.length * 40, 200)}
-                  >
-                    <BarChart
-                      data={feedbackStyleData}
-                      layout="vertical"
-                      margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--accent-15)" horizontal={false} />
-                      <XAxis type="number" stroke="var(--text-muted)" tick={{ fontSize: 11 }} allowDecimals={false} />
-                      <YAxis dataKey="name" type="category" width={Y_AXIS_WIDTH} stroke="var(--text-muted)" tick={{ fontSize: 12 }} />
-                      <Tooltip contentStyle={TOOLTIP_STYLE} />
-                      <Bar dataKey="up" name="Thumbs up" fill="var(--accent-bright)" radius={[0, 4, 4, 0]} />
-                      <Bar dataKey="down" name="Thumbs down" fill="var(--accent-30)" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-[var(--text-muted)] text-base text-center py-8">
-                    No feedback recorded yet.
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <p className="text-sm text-[var(--text-muted)] mb-2">By story type</p>
-                {feedbackStoryData.length > 0 ? (
-                  <ResponsiveContainer
-                    width="100%"
-                    height={Math.max(feedbackStoryData.length * 40, 200)}
-                  >
-                    <BarChart
-                      data={feedbackStoryData}
-                      layout="vertical"
-                      margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--accent-15)" horizontal={false} />
-                      <XAxis type="number" stroke="var(--text-muted)" tick={{ fontSize: 11 }} allowDecimals={false} />
-                      <YAxis dataKey="name" type="category" width={Y_AXIS_WIDTH} stroke="var(--text-muted)" tick={{ fontSize: 12 }} />
-                      <Tooltip contentStyle={TOOLTIP_STYLE} />
-                      <Bar dataKey="up" name="Thumbs up" fill="var(--accent-bright)" radius={[0, 4, 4, 0]} />
-                      <Bar dataKey="down" name="Thumbs down" fill="var(--accent-30)" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-[var(--text-muted)] text-base text-center py-8">
-                    No feedback recorded yet.
-                  </p>
-                )}
-              </div>
-            </div>
-          </LiquidCard>
-
-          {/* ─── C. Recent thumbs-down comments ────────────── */}
-          <LiquidCard size="standard" className="!rounded-[16px]">
-            <div className="flex items-center gap-3 mb-4">
-              <ThumbsDown size={22} style={{ color: 'var(--accent-bright)' }} />
-              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-                Recent Thumbs-Down Comments
-              </h3>
-            </div>
-
-            {data.recentDownComments.length > 0 ? (
-              <div className="space-y-3">
-                {data.recentDownComments.slice(0, 10).map((c, i) => (
-                  <div
-                    key={`down-${i}`}
-                    className="p-3 rounded-lg bg-[var(--accent-10)] border border-[var(--accent-15)]"
-                  >
-                    <p className="text-sm text-[var(--text-secondary)] mb-2 whitespace-pre-wrap">
-                      {c.comment}
-                    </p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--accent-15)] border border-[var(--accent-20)] text-[var(--accent-bright)]">
-                        {styleLabel(c.narrative_style ?? 'unspecified')}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--accent-15)] border border-[var(--accent-20)] text-[var(--accent-bright)]">
-                        {storyLabel(c.story_type ?? 'unspecified')}
-                      </span>
-                      <span className="text-xs text-[var(--text-muted)] ml-auto">
-                        {formatDate(c.created_at)}
-                      </span>
-                    </div>
+                {data.recentDownComments.length > 0 ? (
+                  <div className="space-y-3">
+                    {data.recentDownComments.slice(0, 10).map((c, i) => (
+                      <div
+                        key={`down-${i}`}
+                        className="p-3 rounded-lg bg-[var(--accent-10)] border border-[var(--accent-15)]"
+                      >
+                        <p className="text-sm text-[var(--text-secondary)] mb-2 whitespace-pre-wrap">
+                          {c.comment}
+                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <ContextPill>{styleLabel(c.narrative_style ?? 'unspecified')}</ContextPill>
+                          <ContextPill>{storyLabel(c.story_type ?? 'unspecified')}</ContextPill>
+                          <span className="text-xs text-[var(--text-muted)] ml-auto">
+                            {formatDate(c.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[var(--text-muted)] text-base text-center py-8">
-                No thumbs-down comments yet.
-              </p>
-            )}
-          </LiquidCard>
+                ) : (
+                  <p className="text-[var(--text-muted)] text-base text-center py-8">
+                    No thumbs-down comments yet.
+                  </p>
+                )}
+              </LiquidCard>
+            </section>
+          )}
+
+          {/* Divider between the two streams in BOTH mode. */}
+          {showStories && showProofread && (
+            <div className="border-t border-[var(--accent-15)] my-2" aria-hidden="true" />
+          )}
+
+          {/* ═══ SECTION 2 — Proofread Suggestion Feedback ══════ */}
+          {showProofread && (
+            <section className="space-y-4" aria-label={PROOFREAD_SECTION_TITLE}>
+              <SectionHeader
+                icon={SpellCheck}
+                title={PROOFREAD_SECTION_TITLE}
+                caption="Thumbs up / down left on individual Review & Proofread suggestions."
+              />
+
+              {/* A. Stats */}
+              <StatCardGrid cards={proofreadStatCards} />
+
+              {/* B. Breakdown — style, story type, issue type */}
+              <LiquidCard size="standard" className="!rounded-[16px]">
+                <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+                  <div className="flex items-center gap-3">
+                    <ThumbsUp size={22} style={{ color: 'var(--accent-bright)' }} />
+                    <h3 className="text-lg font-semibold text-[var(--text-primary)]">Suggestion Feedback Breakdown</h3>
+                  </div>
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <span className="text-sm text-[var(--text-muted)]">
+                      <span className="font-medium text-[var(--text-primary)]">
+                        {formatCount(proofread.distinctRuns)}
+                      </span>{' '}
+                      proofread runs rated
+                    </span>
+                    <span className="text-sm text-[var(--text-muted)]">
+                      <span className="font-medium text-[var(--text-primary)]">
+                        {formatCount(proofread.distinctUsers)}
+                      </span>{' '}
+                      {proofread.distinctUsers === 1 ? 'user' : 'users'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <p className="text-sm text-[var(--text-muted)] mb-2">By narrative style</p>
+                    <RatioBarChart rows={proofreadStyleData} emptyText="No suggestion feedback recorded yet." />
+                  </div>
+                  <div>
+                    <p className="text-sm text-[var(--text-muted)] mb-2">By story type</p>
+                    <RatioBarChart rows={proofreadStoryData} emptyText="No suggestion feedback recorded yet." />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Tag size={14} style={{ color: 'var(--text-muted)' }} />
+                    <p className="text-sm text-[var(--text-muted)]">By issue type (top 10)</p>
+                  </div>
+                  <RatioBarChart rows={proofreadIssueData} emptyText="No suggestion feedback recorded yet." />
+                </div>
+              </LiquidCard>
+
+              {/* C. Recent thumbs-down comments on suggestions */}
+              <LiquidCard size="standard" className="!rounded-[16px]">
+                <div className="flex items-center gap-3 mb-4">
+                  <ThumbsDown size={22} style={{ color: 'var(--accent-bright)' }} />
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    Recent Rejected Suggestions
+                  </h3>
+                </div>
+
+                {proofread.recentDownComments.length > 0 ? (
+                  <div className="space-y-3">
+                    {proofread.recentDownComments.slice(0, 10).map((c, i) => (
+                      <div
+                        key={`pr-down-${i}`}
+                        className="p-3 rounded-lg bg-[var(--accent-10)] border border-[var(--accent-15)]"
+                      >
+                        {c.suggestion_text && (
+                          <div className="mb-2 px-3 py-2 rounded-lg bg-[var(--bg-input)] border border-[var(--accent-border)]">
+                            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium mb-1">
+                              Suggestion
+                            </p>
+                            <p className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap">
+                              {c.suggestion_text}
+                            </p>
+                          </div>
+                        )}
+                        <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium mb-1">
+                          User feedback
+                        </p>
+                        <p className="text-sm text-[var(--text-secondary)] mb-2 whitespace-pre-wrap">
+                          {c.comment}
+                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <ContextPill title={c.issue_type ?? undefined}>
+                            {issueLabel(c.issue_type ?? 'unspecified')}
+                          </ContextPill>
+                          <ContextPill>{styleLabel(c.narrative_style ?? 'unspecified')}</ContextPill>
+                          <ContextPill>{storyLabel(c.story_type ?? 'unspecified')}</ContextPill>
+                          <span className="text-xs text-[var(--text-muted)] ml-auto">
+                            {formatDate(c.created_at)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[var(--text-muted)] text-base text-center py-8">
+                    No rejected suggestions with comments yet.
+                  </p>
+                )}
+              </LiquidCard>
+            </section>
+          )}
 
           {/* ─── D. Survey summaries ───────────────────────── */}
           <LiquidCard size="standard" className="!rounded-[16px]">

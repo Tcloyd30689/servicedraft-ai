@@ -30,6 +30,7 @@ import Modal from '@/components/ui/Modal';
 import ActivityDetailModal from '@/components/dashboard/ActivityDetailModal';
 import SurveyManager from '@/components/admin/SurveyManager';
 import InsightsAnalytics from '@/components/admin/InsightsAnalytics';
+import { GEMINI_MODEL_ID, GEMINI_INPUT_COST_PER_1M, GEMINI_OUTPUT_COST_PER_1M } from '@/lib/gemini/modelId';
 // TokenCalculator removed — replaced by live API Usage tracker
 
 // ─── Protected user — cannot be deleted or restricted ────────
@@ -2715,8 +2716,8 @@ export default function AdminPage() {
               <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--accent-5)] border border-[var(--accent-15)]">
                 <Info size={18} className="flex-shrink-0" style={{ color: 'var(--accent-hover)' }} />
                 <p className="text-sm text-[var(--text-muted)]">
-                  <span className="font-medium text-[var(--accent-bright)]">Model: gemini-3-flash-preview</span>
-                  {' | Input: $0.50/1M tokens | Output: $3.00/1M tokens'}
+                  <span className="font-medium text-[var(--accent-bright)]">Model: {GEMINI_MODEL_ID}</span>
+                  {` | Input: $${GEMINI_INPUT_COST_PER_1M.toFixed(2)}/1M tokens | Output: $${GEMINI_OUTPUT_COST_PER_1M.toFixed(2)}/1M tokens`}
                 </p>
               </div>
 
